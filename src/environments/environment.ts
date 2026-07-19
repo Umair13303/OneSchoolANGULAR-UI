@@ -6,7 +6,7 @@ export const environment = {
   production: false,
 
   // Backend API base URL  (no trailing slash)
-  apiUrl: 'https://demooneschoolbe.runasp.net/api',
+  apiUrl: 'http://localhost:5000/api',
 
   // File / media server URL  (no trailing slash)
   fileServerUrl: 'http://localhost:5002/api',

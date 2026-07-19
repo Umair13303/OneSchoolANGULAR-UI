@@ -12,8 +12,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 export const environment = {
   production: true,
-  
-  apiUrl: 'https://demooneschoolbe.runasp.net/api',
+
+  apiUrl: 'https://REPLACE_WITH_YOUR_DOMAIN/api',
 
   fileServerUrl: 'https://REPLACE_WITH_YOUR_FILESERVER_DOMAIN/api',
 
