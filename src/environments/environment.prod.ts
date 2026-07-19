@@ -13,7 +13,7 @@
 export const environment = {
   production: true,
 
-  apiUrl: 'https://REPLACE_WITH_YOUR_DOMAIN/api',
+    apiUrl: 'https://demooneschoolbe.runasp.net/api',
 
   fileServerUrl: 'https://REPLACE_WITH_YOUR_FILESERVER_DOMAIN/api',
 
