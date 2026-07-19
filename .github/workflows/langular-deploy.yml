@@ -33,6 +33,6 @@ jobs:
           password: ${{ secrets.PUBLISH_PWD }}
           # Angular 17+ usually outputs to 'dist/<project-name>/browser'
           # Adjust this folder name based on your actual output
-          local-dir: ./dist/oneschool-ui-repo/browser/ 
+          local-dir: ./dist/school-management-ui/browser/
           server-dir: /wwwroot/
           dangerous-clean-slate: true
