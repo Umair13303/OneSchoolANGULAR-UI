@@ -1,4 +1,4 @@
-name: Build and Deploy Angular to MonsterASP
+name: Build and pos Deploy Angular to MonsterASP
 
 on:
   push:
