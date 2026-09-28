@@ -382,6 +382,21 @@ const ICONS  = ['menu_book','calculate','science','language','mosque','computer'
       outline: none; transition: border-color 0.15s;
     }
     .search-input:focus { border-color: var(--accent); }
+
+    @media (max-width: 768px) {
+      .two-col { display: flex !important; flex-direction: column !important; gap: 16px !important; }
+      .assign-modal {
+        max-width: 100vw;
+        border-radius: var(--r-2xl) var(--r-2xl) 0 0;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+      }
+      .modal-actions {
+        flex-direction: column-reverse;
+        gap: 8px;
+        .btn-primary, .btn-secondary { width: 100%; justify-content: center; min-height: 42px; }
+      }
+    }
   `]
 })
 export class TeacherAssignmentsComponent implements OnInit {

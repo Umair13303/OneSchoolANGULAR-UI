@@ -35,38 +35,47 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
         <table class="table">
           <thead>
             <tr>
-              <th>#</th>
-              <th>Class Name</th>
+              <th class="col-idx">#</th>
+              <th class="col-name">Class Name</th>
               <th class="col-section">Section</th>
               @if (isSuperAdmin) { <th class="col-institute">Institute</th> }
               <th class="col-subjects">Subjects</th>
-              <th>Status</th>
-              <th>Actions</th>
+              <th class="col-status">Status</th>
+              <th class="col-actions">Actions</th>
             </tr>
           </thead>
           <tbody>
             @for (c of classes(); track c.classId; let i = $index) {
               <tr>
-                <td class="idx">{{ i + 1 }}</td>
-                <td><strong>{{ c.className }}</strong>{{ c.section ? ' — ' + c.section : '' }}</td>
+                <td class="col-idx idx">{{ i + 1 }}</td>
+                <td class="col-name">
+                  <div class="class-cell">
+                    <span class="class-name-text">{{ c.className }}</span>
+                    @if (c.section) {
+                      <span class="class-sec-pill">Sec {{ c.section }}</span>
+                    }
+                  </div>
+                </td>
                 <td class="col-section">{{ c.section || '—' }}</td>
                 @if (isSuperAdmin) { <td class="col-institute">{{ c.instituteName || '—' }}</td> }
                 <td class="col-subjects"><span class="subj-badge">{{ c.subjectCount }}</span></td>
-                <td>
+                <td class="col-status">
                   <span class="badge" [class.active]="c.isActive">
                     {{ c.isActive ? 'Active' : 'Inactive' }}
                   </span>
                 </td>
-                <td class="actions">
-                  <button class="act-btn edit" (click)="openEdit(c)" title="Edit">
-                    <span class="material-icons-round">edit</span>
-                  </button>
-                  <button class="act-btn toggle" (click)="toggleStatus(c)" [title]="c.isActive ? 'Deactivate' : 'Activate'">
-                    <span class="material-icons-round">{{ c.isActive ? 'toggle_on' : 'toggle_off' }}</span>
-                  </button>
-                  <button class="act-btn danger" (click)="deleteClass(c)" title="Delete">
-                    <span class="material-icons-round">delete</span>
-                  </button>
+                <td class="col-actions">
+                  <div class="actions">
+                    <button class="act-btn edit" (click)="openEdit(c)" title="Edit">
+                      <span class="material-icons-round">edit</span>
+                    </button>
+                    <button class="act-btn toggle" (click)="toggleStatus(c)" [title]="c.isActive ? 'Deactivate' : 'Activate'">
+                      <span class="material-icons-round">{{ c.isActive ? 'toggle_on' : 'toggle_off' }}</span>
+                    </button>
+                    <button class="act-btn danger" (click)="deleteClass(c)" title="Delete">
+                      <span class="material-icons-round">delete</span>
+                    </button>
+                  </div>
                 </td>
               </tr>
             }
@@ -131,39 +140,57 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
   `,
   styles: [`
     .table-card { padding: 0; overflow: hidden; }
-    .table-card table { overflow-x: auto; }
+    .table-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
     .table { width: 100%; border-collapse: collapse; }
     .table th {
-      padding: 11px 16px; font-size: 11.5px; font-weight: 700;
+      padding: 11px 14px; font-size: 11px; font-weight: 700;
       color: var(--t4); text-transform: uppercase; letter-spacing: 0.5px;
       background: var(--surface-2); border-bottom: 1px solid var(--border);
-      text-align: left;
+      text-align: left; white-space: nowrap;
     }
     .table td {
-      padding: 13px 16px; font-size: 13.5px; color: var(--t2);
-      border-bottom: 1px solid var(--border);
+      padding: 12px 14px; font-size: 13.5px; color: var(--t2);
+      border-bottom: 1px solid var(--border); vertical-align: middle;
     }
     .table tbody tr:last-child td { border-bottom: none; }
     .table tbody tr:hover { background: var(--surface-2); }
 
-    .idx { color: var(--t4); font-size: 12px; width: 36px; }
+    .col-idx { width: 44px; text-align: center; }
+    .idx { color: var(--t4); font-size: 12px; }
 
+    .class-cell {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .class-name-text { font-weight: 700; color: var(--t1); }
+    .class-sec-pill {
+      font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px;
+      background: var(--accent-s); color: var(--accent); border: 1px solid var(--accent-g);
+      white-space: nowrap;
+    }
+
+    .col-status { text-align: center; width: 90px; }
     .badge {
       display: inline-flex; padding: 3px 10px; border-radius: 99px;
-      font-size: 11.5px; font-weight: 700;
+      font-size: 11px; font-weight: 700;
       background: var(--red-s, #fee2e2); color: var(--red, #ef4444);
+      white-space: nowrap;
     }
     .badge.active { background: var(--green-s, #dcfce7); color: var(--green, #16a34a); }
 
+    .col-subjects { width: 80px; text-align: center; }
     .subj-badge {
       display: inline-flex; align-items: center; justify-content: center;
       min-width: 26px; height: 22px; padding: 0 8px;
-      background: var(--accent-s); color: var(--accent);
+      background: var(--surface-3); color: var(--t2);
       border-radius: 99px; font-size: 12px; font-weight: 700;
     }
 
-    .actions { display: flex; gap: 6px; }
+    .col-actions { text-align: right; width: 120px; }
+    .actions {
+      display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px;
+      white-space: nowrap;
+    }
     .act-btn {
       display: inline-flex; align-items: center; justify-content: center;
       width: 32px; height: 32px; border-radius: 8px; border: 1.5px solid var(--border);
@@ -183,29 +210,22 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
     }
     .modal {
       background: var(--surface); border-radius: var(--r-2xl);
-      padding: 28px; width: 100%; max-width: 420px;
+      padding: 24px; width: 100%; max-width: 440px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.2); border: 1px solid var(--border);
     }
-    .modal-header { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; }
+    .modal-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
     .modal-icon { font-size: 22px; color: var(--accent); }
     h3 { font-size: 17px; font-weight: 800; color: var(--t1); }
 
-    .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
-    .field label { font-size: 12.5px; font-weight: 700; color: var(--t2); }
-    .field input {
-      padding: 10px 13px; border-radius: 10px;
-      border: 1.5px solid var(--border); background: var(--surface-2);
+    .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+    .field label { font-size: 12px; font-weight: 700; color: var(--t2); }
+    .field input, .field select {
+      padding: 10px 12px; border-radius: 8px;
+      border: 1.5px solid var(--border); background: var(--surface);
       font-size: 14px; color: var(--t1); outline: none;
-      transition: border-color 0.15s;
+      transition: border-color 0.15s; width: 100%; box-sizing: border-box;
     }
-    .field input:focus { border-color: var(--accent); }
-    .field select {
-      padding: 10px 13px; border-radius: 10px;
-      border: 1.5px solid var(--border); background: var(--surface-2);
-      font-size: 14px; color: var(--t1); outline: none;
-      transition: border-color 0.15s; font-family: inherit;
-    }
-    .field select:focus { border-color: var(--accent); }
+    .field input:focus, .field select:focus { border-color: var(--accent); }
     .req { color: #ef4444; }
     .opt { font-weight: 400; color: var(--t4); font-size: 11px; }
 
@@ -227,32 +247,44 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
 
     .error-msg { color: #ef4444; font-size: 12.5px; margin-bottom: 12px; }
 
-    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 6px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px; }
     .btn-secondary {
-      padding: 9px 20px; border-radius: 10px; border: 1.5px solid var(--border);
+      padding: 9px 18px; border-radius: 8px; border: 1.5px solid var(--border);
       background: var(--surface-2); font-size: 13.5px; font-weight: 700;
       color: var(--t2); cursor: pointer;
     }
     .btn-primary {
-      padding: 9px 20px; border-radius: 10px; border: none;
+      padding: 9px 18px; border-radius: 8px; border: none;
       background: var(--accent); font-size: 13.5px; font-weight: 700;
       color: #fff; cursor: pointer; display: flex; align-items: center; gap: 6px;
     }
     .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
     /* ── Mobile ─────────────────────────────────────── */
-    @media (max-width: 768px) {
-      /* Hide Section & Subjects columns, keep Name + Status + Actions */
-      .col-section   { display: none; }
-      .col-institute { display: none; }
-      .col-subjects  { display: none; }
-      .table th, .table td { padding: 10px 10px; }
-      .actions { gap: 4px; }
+    @media (max-width: 640px) {
+      /* Keep Index, Class Name + Section, Status, and Actions aligned */
+      .col-section   { display: none !important; }
+      .col-institute { display: none !important; }
+      .col-subjects  { display: none !important; }
+      .table th, .table td { padding: 10px 8px; }
+      .col-idx { width: 30px; }
+      .col-actions { width: 104px; }
       .act-btn { width: 30px; height: 30px; }
       .act-btn .material-icons-round { font-size: 15px; }
-    }
-    @media (max-width: 480px) {
-      .idx { display: none; }
+
+      .modal-overlay { align-items: flex-end; }
+      .modal {
+        max-width: 100vw;
+        border-radius: var(--r-2xl) var(--r-2xl) 0 0;
+        padding: 20px 16px 24px;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+      }
+      .modal-actions {
+        flex-direction: column-reverse;
+        gap: 8px;
+        .btn-primary, .btn-secondary { width: 100%; justify-content: center; min-height: 42px; }
+      }
     }
   `]
 })

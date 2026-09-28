@@ -459,6 +459,25 @@ const PERIOD_ICONS = ['menu_book','calculate','science','language','mosque','com
     .assign-empty p { font-size: 13px; text-align: center; }
 
     .modal-actions { padding: 14px 22px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+
+    @media (max-width: 768px) {
+      .two-col { display: flex !important; flex-direction: column !important; gap: 16px !important; }
+      .add-form { flex-wrap: wrap; gap: 8px; }
+      .add-input { width: 100%; flex: 1 1 100%; }
+      .add-select { max-width: 100%; width: 100%; flex: 1 1 100%; }
+      .subject-cards { grid-template-columns: repeat(2, 1fr); padding: 0 14px 14px; }
+      .assign-modal {
+        max-width: 100vw;
+        border-radius: var(--r-2xl) var(--r-2xl) 0 0;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+      }
+      .modal-actions {
+        flex-direction: column-reverse;
+        gap: 8px;
+        .btn-primary, .btn-secondary { width: 100%; justify-content: center; min-height: 42px; }
+      }
+    }
   `]
 })
 export class SubjectsComponent implements OnInit {

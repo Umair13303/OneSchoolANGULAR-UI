@@ -20,16 +20,25 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
     @if (loading()) { <app-loading /> }
     @else {
       <div class="card">
+        <div class="table-scroll">
         <table class="table">
-          <thead><tr><th>Label</th><th>Start Date</th><th>End Date</th><th>Status</th><th></th></tr></thead>
+          <thead>
+            <tr>
+              <th class="col-label">Label</th>
+              <th class="col-start">Start Date</th>
+              <th class="col-end">End Date</th>
+              <th class="col-status">Status</th>
+              <th class="col-actions"></th>
+            </tr>
+          </thead>
           <tbody>
             @for (y of years(); track y.academicYearId) {
               <tr>
-                <td><strong>{{ y.yearLabel }}</strong></td>
-                <td>{{ y.startDate | date:'dd-MMM-yyyy' }}</td>
-                <td>{{ y.endDate | date:'dd-MMM-yyyy' }}</td>
-                <td><span class="badge" [class.active]="y.isActive">{{ y.isActive ? 'Active' : 'Inactive' }}</span></td>
-                <td class="actions-td">
+                <td class="col-label"><strong>{{ y.yearLabel }}</strong></td>
+                <td class="col-start">{{ y.startDate | date:'dd-MMM-yyyy' }}</td>
+                <td class="col-end">{{ y.endDate | date:'dd-MMM-yyyy' }}</td>
+                <td class="col-status"><span class="badge" [class.active]="y.isActive">{{ y.isActive ? 'Active' : 'Inactive' }}</span></td>
+                <td class="col-actions actions-td">
                   <button class="btn-icon calendar-btn" title="Manage Calendar" (click)="goToCalendar(y)">
                     <span class="material-icons-round">event_note</span>
                     <span class="btn-icon-label">Calendar</span>
@@ -42,6 +51,7 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
             }
           </tbody>
         </table>
+        </div>
       </div>
     }
 
@@ -71,6 +81,7 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
     }
   `,
   styles: [`
+    .table-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .badge{padding:3px 10px;border-radius:12px;font-size:12px;background:var(--red-s);color:var(--red)}
     .badge.active{background:var(--green-s);color:var(--green)}
     .actions-td{text-align:right;white-space:nowrap;padding-right:12px}
@@ -90,6 +101,13 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
     .toggle-track.on{background:var(--accent)}
     .toggle-thumb{width:18px;height:18px;border-radius:50%;background:#fff;position:absolute;top:3px;left:3px;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.2)}
     .toggle-track.on .toggle-thumb{transform:translateX(18px)}
+
+    @media (max-width: 640px) {
+      .col-start, .col-end { display: none !important; }
+      .table th, .table td { padding: 10px 8px; }
+      .calendar-btn .btn-icon-label { display: none; }
+      .calendar-btn { padding: 5px; }
+    }
   `]
 })
 export class AcademicYearsComponent implements OnInit {

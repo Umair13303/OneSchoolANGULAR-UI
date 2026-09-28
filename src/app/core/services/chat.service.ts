@@ -88,8 +88,11 @@ export class ChatService {
       const myId = this.auth.currentUser()?.userId;
       const isActiveConv = this.activeConvId() === msg.conversationId;
 
-      if (isActiveConv)
-        this.messages.update(m => [...m, msg]);
+      if (isActiveConv) {
+        this.messages.update(m =>
+          m.some(x => x.chatMessageId === msg.chatMessageId) ? m : [...m, msg]
+        );
+      }
       this.loadConversations();
 
       // Show toast for messages from others.

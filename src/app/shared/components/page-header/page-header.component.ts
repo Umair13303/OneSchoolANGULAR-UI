@@ -15,10 +15,28 @@ import { CommonModule } from '@angular/common';
     </div>
   `,
   styles: [`
-    .ph { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; gap: 16px; }
+    .ph { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
     .ph-title { font-size: 21px; font-weight: 800; color: var(--t1); letter-spacing: -0.4px; }
     .ph-sub   { font-size: 13px; color: var(--t4); margin-top: 3px; }
     .ph-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+    @media (max-width: 640px) {
+      .ph {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+      .ph-actions {
+        width: 100%;
+        display: flex;
+        ::ng-deep button, ::ng-deep .btn-primary, ::ng-deep .btn-secondary, ::ng-deep a {
+          width: 100% !important;
+          justify-content: center !important;
+          min-height: 42px !important;
+        }
+      }
+    }
   `]
 })
 export class PageHeaderComponent {

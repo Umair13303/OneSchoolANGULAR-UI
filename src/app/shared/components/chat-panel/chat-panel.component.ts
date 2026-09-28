@@ -14,8 +14,8 @@ import { environment } from '../../../../environments/environment';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <!-- FAB -->
-    <button class="chat-fab" (click)="togglePanel()" [class.has-unread]="chatSvc.totalUnread() > 0" [class.open]="panelOpen()">
+    <!-- FAB Floating Action Button -->
+    <button class="chat-fab" (click)="togglePanel()" [class.has-unread]="chatSvc.totalUnread() > 0" [class.open]="panelOpen()" aria-label="Toggle chat">
       <span class="material-icons-round fab-icon">{{ panelOpen() ? 'close' : 'chat' }}</span>
       @if (chatSvc.totalUnread() > 0 && !panelOpen()) {
         <span class="fab-badge">{{ chatSvc.totalUnread() > 99 ? '99+' : chatSvc.totalUnread() }}</span>
@@ -23,12 +23,13 @@ import { environment } from '../../../../environments/environment';
     </button>
 
     @if (panelOpen()) {
+      <div class="chat-panel-backdrop" (click)="panelOpen.set(false)"></div>
       <div class="chat-panel">
 
-        <!-- ── Conversation view ── -->
+        <!-- ── 1. ACTIVE CONVERSATION VIEW (Where user reads and writes messages) ── -->
         @if (activeConv()) {
           <div class="panel-header">
-            <button class="back-btn" (click)="closeConv()">
+            <button class="back-btn" (click)="closeConv()" title="Back to conversations">
               <span class="material-icons-round">arrow_back</span>
             </button>
             <div class="conv-info">
@@ -40,18 +41,23 @@ import { environment } from '../../../../environments/environment';
                   {{ initials(activeConv()!.name) }}
                 }
               </div>
-              <div>
-                <p class="conv-name">{{ activeConv()!.name }}</p>
+              <div class="conv-header-text">
+                <p class="conv-name" [title]="activeConv()!.name">{{ activeConv()!.name }}</p>
                 <p class="conv-sub">
                   @if (activeConv()!.conversationType === 'group') {
-                    {{ activeConv()!.members.length }} members
+                    <span>{{ activeConv()!.members.length }} members</span>
                   } @else if (activeConv()!.isOnline) {
-                    <span class="live-dot"></span> Online
+                    <span class="live-status"><span class="live-dot"></span> Online</span>
                   } @else {
-                    Offline
+                    <span class="offline-status">Offline</span>
                   }
                 </p>
               </div>
+            </div>
+            <div class="header-actions">
+              <button class="icon-sm" (click)="panelOpen.set(false)" title="Close chat">
+                <span class="material-icons-round">close</span>
+              </button>
             </div>
           </div>
 
@@ -80,12 +86,12 @@ import { environment } from '../../../../environments/environment';
                       </a>
                     }
                     @if (item.msg.content) {
-                      <span>{{ item.msg.content }}</span>
+                      <span class="msg-text">{{ item.msg.content }}</span>
                     }
                   </div>
                   @if (item.msg.senderId === myId()) {
-                    <button class="msg-delete-btn" (click)="confirmDeleteMsg(item.msg.chatMessageId)" title="Delete">
-                      <span class="material-icons-round">delete</span>
+                    <button class="msg-delete-btn" (click)="confirmDeleteMsg(item.msg.chatMessageId)" title="Delete message">
+                      <span class="material-icons-round">delete_outline</span>
                     </button>
                   }
                 </div>
@@ -96,9 +102,9 @@ import { environment } from '../../../../environments/environment';
             }
             @if (chatSvc.messages().length === 0) {
               <div class="no-msgs">
-                <span class="material-icons-round">waving_hand</span>
-                <p>No messages yet</p>
-                <span>Say hello to start the conversation</span>
+                <span class="material-icons-round">chat_bubble_outline</span>
+                <p>Start a conversation with {{ activeConv()!.name }}</p>
+                <span>Write your message below and press Send</span>
               </div>
             }
           </div>
@@ -118,15 +124,17 @@ import { environment } from '../../../../environments/environment';
               </button>
             </div>
           }
+
+          <!-- Write message input area -->
           <div class="input-bar">
-            <button class="icon-sm attach-btn" (click)="fileInput.click()" title="Attach file">
+            <button class="icon-sm attach-btn" (click)="fileInput.click()" title="Attach file" type="button">
               <span class="material-icons-round">attach_file</span>
             </button>
             <input #fileInput type="file" hidden accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
                    (change)="onFileSelected($event)" />
-            <input #inputEl [(ngModel)]="draft" placeholder="Type a message…"
-                   (keydown.enter)="send()" class="msg-input" />
-            <button class="send-btn" (click)="send()" [disabled]="!draft.trim() && !pendingFile()" [class.uploading]="uploading()">
+            <input #inputEl [(ngModel)]="draft" [placeholder]="'Type your message to ' + activeConv()!.name + '…'"
+                   (keydown.enter)="send()" class="msg-input" autocomplete="off" />
+            <button class="send-btn" (click)="send()" [disabled]="!draft.trim() && !pendingFile()" [class.uploading]="uploading()" type="button" title="Send message">
               @if (uploading()) {
                 <span class="material-icons-round spin">sync</span>
               } @else {
@@ -135,16 +143,15 @@ import { environment } from '../../../../environments/environment';
             </button>
           </div>
 
-        <!-- ── Conversation list ── -->
+        <!-- ── 2. CONVERSATIONS LIST ── -->
         } @else if (view() === 'list') {
           <div class="panel-header">
             <div class="panel-title">
-              <span class="material-icons-round">forum</span>
-              <span>Messages</span>
+              <span class="material-icons-round">chat</span>
+              <span>Messages & Discussions</span>
             </div>
             <div class="header-actions">
-              <div class="conn-dot" [class.online]="chatSvc.connected()" [title]="chatSvc.connected() ? 'Connected' : 'Reconnecting…'"></div>
-              <!-- Notification toggle -->
+              <div class="conn-dot" [class.online]="chatSvc.connected()" [title]="chatSvc.connected() ? 'SignalR Online' : 'Connecting…'"></div>
               <button class="icon-sm notif-toggle"
                       [class.notif-off]="!swalSvc.enabled()"
                       (click)="swalSvc.toggle()"
@@ -153,7 +160,7 @@ import { environment } from '../../../../environments/environment';
                   {{ swalSvc.enabled() ? 'notifications_active' : 'notifications_off' }}
                 </span>
               </button>
-              <button class="icon-sm" (click)="view.set('new-dm')" title="New Message">
+              <button class="icon-sm" (click)="view.set('new-dm')" title="Start New Chat">
                 <span class="material-icons-round">person_add</span>
               </button>
               @if (canCreateGroup()) {
@@ -162,10 +169,13 @@ import { environment } from '../../../../environments/environment';
                 </button>
               }
               @if (isBroadcaster()) {
-                <button class="icon-sm" (click)="view.set('broadcast')" title="Broadcast">
+                <button class="icon-sm" (click)="view.set('broadcast')" title="Broadcast announcement">
                   <span class="material-icons-round">campaign</span>
                 </button>
               }
+              <button class="icon-sm" (click)="panelOpen.set(false)" title="Close chat">
+                <span class="material-icons-round">close</span>
+              </button>
             </div>
           </div>
 
@@ -193,13 +203,13 @@ import { environment } from '../../../../environments/environment';
                       <span class="conv-time">{{ c.lastMessageAt | date:'h:mm a' }}</span>
                     }
                   </div>
-                  <p class="conv-last" [class.unread]="c.unreadCount > 0">{{ c.lastMessage || 'No messages yet' }}</p>
+                  <p class="conv-last" [class.unread]="c.unreadCount > 0">{{ c.lastMessage || 'Click to write a message…' }}</p>
                 </div>
                 @if (c.unreadCount > 0) {
                   <span class="unread-badge">{{ c.unreadCount }}</span>
                 }
-                <button class="conv-delete-btn" (click)="confirmDeleteConv($event, c)" title="Delete">
-                  <span class="material-icons-round">delete</span>
+                <button class="conv-delete-btn" (click)="confirmDeleteConv($event, c)" title="Delete conversation">
+                  <span class="material-icons-round">delete_outline</span>
                 </button>
               </div>
             }
@@ -207,49 +217,98 @@ import { environment } from '../../../../environments/environment';
               <div class="empty-state">
                 <span class="material-icons-round">forum</span>
                 <p>No conversations yet</p>
-                <span>Start a new message above</span>
+                <span>Select a teacher or user below to start chatting:</span>
+                <button class="start-btn" (click)="view.set('new-dm')">
+                  <span class="material-icons-round">person_add</span> Select Teacher / User
+                </button>
               </div>
             }
           </div>
 
-        <!-- ── New DM: pick a user ── -->
+        <!-- ── 3. SELECT USER / TEACHER TO CHAT ── -->
         } @else if (view() === 'new-dm') {
           <div class="panel-header">
-            <button class="back-btn" (click)="view.set('list')">
+            <button class="back-btn" (click)="view.set('list')" title="Back">
               <span class="material-icons-round">arrow_back</span>
             </button>
-            <div class="panel-title"><span>New Message</span></div>
+            <div class="panel-title"><span>Select Teacher / User</span></div>
+            <div class="header-actions">
+              <button class="icon-sm" (click)="panelOpen.set(false)" title="Close">
+                <span class="material-icons-round">close</span>
+              </button>
+            </div>
           </div>
+
           <div class="search-row">
             <span class="material-icons-round search-icon">search</span>
-            <input [(ngModel)]="search" placeholder="Search people…" class="search-input" />
+            <input [(ngModel)]="search" placeholder="Search teachers, admins, users…" class="search-input" />
           </div>
+
+          <div class="select-instruction-bar">
+            <span class="material-icons-round info-icon">touch_app</span>
+            <span>Click any user below to open the chat conversation:</span>
+          </div>
+
           <div class="conv-list">
             @for (u of filteredUsers(); track u.userId) {
-              <div class="conv-item" (click)="startDm(u)">
-                <div class="conv-avatar" [style.background]="avatarColor(u.fullName)" [class.online-ring]="u.isOnline">{{ initials(u.fullName) }}</div>
+              <div class="conv-item new-dm-item" (click)="startDm(u)" [class.loading]="loadingUserId() === u.userId">
+                <div class="conv-avatar" [style.background]="avatarColor(u.fullName)" [class.online-ring]="u.isOnline">
+                  {{ initials(u.fullName) }}
+                </div>
                 <div class="conv-body">
                   <div class="conv-name">{{ u.fullName }}</div>
-                  <p class="conv-last">{{ u.roleName }}</p>
+                  <div class="conv-role-badge">
+                    <span class="badge badge-sm badge-outline">{{ u.roleName || 'User' }}</span>
+                    @if (u.isOnline) {
+                      <span class="live-dot-sm" title="Online"></span>
+                    }
+                  </div>
                 </div>
+                <button class="chat-now-btn" (click)="startDm(u); $event.stopPropagation()">
+                  @if (loadingUserId() === u.userId) {
+                    <span class="material-icons-round spin">sync</span> Opening…
+                  } @else {
+                    <span class="material-icons-round">chat</span> Message
+                  }
+                </button>
+              </div>
+            }
+            @if (filteredUsers().length === 0) {
+              <div class="empty-state">
+                <span class="material-icons-round">person_search</span>
+                <p>No users found</p>
+                <span>Try searching with a different name</span>
               </div>
             }
           </div>
 
-        <!-- ── New Group ── -->
+        <!-- ── 4. CREATE GROUP ── -->
         } @else if (view() === 'new-group') {
           <div class="panel-header">
             <button class="back-btn" (click)="view.set('list')">
               <span class="material-icons-round">arrow_back</span>
             </button>
-            <div class="panel-title"><span>New Group</span></div>
+            <div class="panel-title"><span>Create Group</span></div>
+            <div class="header-actions">
+              <button class="icon-sm" (click)="panelOpen.set(false)">
+                <span class="material-icons-round">close</span>
+              </button>
+            </div>
           </div>
           <div class="group-form">
-            <input [(ngModel)]="groupName" placeholder="Group name…" class="msg-input group-name-input" />
-            <div class="search-row">
-              <span class="material-icons-round search-icon">search</span>
-              <input [(ngModel)]="search" placeholder="Add members…" class="search-input" />
+            <div class="form-group-field">
+              <label class="group-field-label">Group Name</label>
+              <input [(ngModel)]="groupName" placeholder="e.g. Science Teachers, Grade 5 Staff…" class="msg-input group-name-input" />
             </div>
+
+            <div class="form-group-field">
+              <label class="group-field-label">Add Members</label>
+              <div class="search-row inner-search">
+                <span class="material-icons-round search-icon">search</span>
+                <input [(ngModel)]="search" placeholder="Search teachers or staff…" class="search-input" />
+              </div>
+            </div>
+
             @if (selectedUserIds().size > 0) {
               <div class="selected-chips">
                 @for (uid of selectedUserIds(); track uid) {
@@ -259,45 +318,54 @@ import { environment } from '../../../../environments/environment';
                 }
               </div>
             }
+
             <div class="conv-list nested">
               @for (u of filteredUsers(); track u.userId) {
-                <div class="conv-item" (click)="toggleUser(u.userId)" [class.selected]="selectedUserIds().has(u.userId)">
+                <div class="conv-item member-pick-item" (click)="toggleUser(u.userId)" [class.selected]="selectedUserIds().has(u.userId)">
                   <div class="conv-avatar" [style.background]="avatarColor(u.fullName)">{{ initials(u.fullName) }}</div>
                   <div class="conv-body">
                     <div class="conv-name">{{ u.fullName }}</div>
                     <p class="conv-last">{{ u.roleName }}</p>
                   </div>
-                  @if (selectedUserIds().has(u.userId)) {
-                    <span class="material-icons-round check-icon">check_circle</span>
-                  }
+                  <div class="checkbox-circle" [class.checked]="selectedUserIds().has(u.userId)">
+                    @if (selectedUserIds().has(u.userId)) {
+                      <span class="material-icons-round check-icon">check</span>
+                    }
+                  </div>
                 </div>
               }
             </div>
+
             <button class="create-btn" [disabled]="!groupName.trim() || selectedUserIds().size === 0"
                     (click)="createGroup()">
-              Create Group {{ selectedUserIds().size > 0 ? '(' + selectedUserIds().size + ')' : '' }}
+              Create Group {{ selectedUserIds().size > 0 ? '(' + selectedUserIds().size + ' members)' : '' }}
             </button>
           </div>
 
-        <!-- ── Broadcast ── -->
+        <!-- ── 5. BROADCAST ── -->
         } @else if (view() === 'broadcast') {
           <div class="panel-header">
             <button class="back-btn" (click)="view.set('list')">
               <span class="material-icons-round">arrow_back</span>
             </button>
-            <div class="panel-title"><span>Broadcast</span></div>
+            <div class="panel-title"><span>Broadcast Message</span></div>
+            <div class="header-actions">
+              <button class="icon-sm" (click)="panelOpen.set(false)">
+                <span class="material-icons-round">close</span>
+              </button>
+            </div>
           </div>
           <div class="group-form">
-            <p class="bc-hint">Send a message to a preset group. The group is auto-created on first use.</p>
+            <p class="bc-hint">Send announcements to all staff or parents of specific classes instantly.</p>
             <button class="bc-btn" (click)="openBroadcast('staff')">
               <span class="bc-icon"><span class="material-icons-round">people</span></span>
-              <span class="bc-label">All Staff</span>
+              <span class="bc-label">All Staff & Faculty</span>
               <span class="material-icons-round bc-chevron">chevron_right</span>
             </button>
             @for (cls of classes(); track cls.classId) {
               <button class="bc-btn" (click)="openBroadcast('class-parents', cls.classId)">
                 <span class="bc-icon"><span class="material-icons-round">family_restroom</span></span>
-                <span class="bc-label">{{ cls.className }} — Parents</span>
+                <span class="bc-label">{{ cls.className }} — All Parents</span>
                 <span class="material-icons-round bc-chevron">chevron_right</span>
               </button>
             }
@@ -312,234 +380,339 @@ import { environment } from '../../../../environments/environment';
 
     /* FAB */
     .chat-fab {
-      width: 56px; height: 56px; border-radius: 50%; border: none;
-      background: linear-gradient(135deg, var(--accent), var(--accent-d));
+      width: 58px; height: 58px; border-radius: 50%; border: none;
+      background: linear-gradient(135deg, var(--accent, #6366f1), var(--accent-d, #4f46e5));
       color: #fff; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      box-shadow: var(--sh-lg);
+      box-shadow: 0 8px 24px rgba(79, 70, 229, 0.4);
       transition: transform .2s cubic-bezier(.34,1.56,.64,1), box-shadow .2s;
       position: relative;
     }
-    .chat-fab:hover { transform: translateY(-2px) scale(1.06); box-shadow: var(--sh-xl); }
+    .chat-fab:hover { transform: translateY(-2px) scale(1.06); box-shadow: 0 12px 30px rgba(79, 70, 229, 0.5); }
     .chat-fab:active { transform: scale(.94); }
     .chat-fab.has-unread:not(.open) { animation: fabPulse 2.2s ease-in-out infinite; }
-    .fab-icon { font-size: 24px; transition: transform .2s; }
+    .fab-icon { font-size: 26px; transition: transform .2s; }
     .chat-fab.open .fab-icon { transform: rotate(90deg); }
     @keyframes fabPulse {
-      0%, 100% { box-shadow: var(--sh-lg), 0 0 0 0 rgba(var(--accent-rgb),.35); }
-      50%      { box-shadow: var(--sh-lg), 0 0 0 9px rgba(var(--accent-rgb),0); }
+      0%, 100% { box-shadow: 0 8px 24px rgba(79, 70, 229, 0.4), 0 0 0 0 rgba(99,102,241,.4); }
+      50%      { box-shadow: 0 8px 24px rgba(79, 70, 229, 0.4), 0 0 0 12px rgba(99,102,241,0); }
     }
     .fab-badge {
-      position: absolute; top: -3px; right: -3px; background: var(--red); color: #fff;
-      font-size: 10px; font-weight: 700; border-radius: 20px; padding: 2px 6px;
-      min-width: 18px; text-align: center; border: 2px solid var(--surface);
-      box-shadow: 0 2px 6px rgba(0,0,0,.25);
+      position: absolute; top: -3px; right: -3px; background: #ef4444; color: #fff;
+      font-size: 10.5px; font-weight: 700; border-radius: 20px; padding: 2px 7px;
+      min-width: 20px; text-align: center; border: 2px solid var(--surface, #fff);
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+
+    .chat-panel-backdrop {
+      display: none;
     }
 
     /* Panel */
     .chat-panel {
-      position: absolute; bottom: 68px; right: 0;
-      width: 380px; height: 580px; max-height: calc(100vh - 108px);
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--r-2xl); box-shadow: var(--sh-xl);
+      position: absolute; bottom: 72px; right: 0;
+      width: 410px; height: 620px; max-height: calc(100vh - 110px);
+      background: var(--surface, #fff); border: 1px solid var(--border, #e2e8f0);
+      border-radius: 20px; box-shadow: 0 20px 45px rgba(0,0,0,0.18);
       display: flex; flex-direction: column; overflow: hidden;
-      animation: panelIn .2s cubic-bezier(.16,1,.3,1);
+      animation: panelIn .22s cubic-bezier(.16,1,.3,1);
+      z-index: 1205;
     }
-    @keyframes panelIn { from { opacity: 0; transform: translateY(18px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes panelIn {
+      from { opacity: 0; transform: translateY(18px) scale(.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
 
     /* Header */
     .panel-header {
-      display: flex; align-items: center; gap: 10px; padding: 14px 16px;
-      background: linear-gradient(135deg, var(--accent), var(--accent-d)); color: #fff; flex-shrink: 0;
+      display: flex; align-items: center; gap: 10px; padding: 13px 16px;
+      background: linear-gradient(135deg, var(--accent, #6366f1), var(--accent-d, #4f46e5));
+      color: #fff; flex-shrink: 0;
     }
     .panel-title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; flex: 1; }
     .panel-title .material-icons-round { font-size: 20px; }
-    .header-actions { display: flex; align-items: center; gap: 2px; margin-left: auto; }
+    .header-actions { display: flex; align-items: center; gap: 4px; margin-left: auto; }
     .conn-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.4); margin-right: 4px; transition: background .2s; }
-    .conn-dot.online { background: var(--green); box-shadow: 0 0 0 3px rgba(74,222,128,.25); }
+    .conn-dot.online { background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,.3); }
     .notif-toggle.notif-off { opacity: .55; }
-    .icon-sm { background: none; border: none; color: #fff; cursor: pointer; padding: 5px; border-radius: 8px; display: flex; transition: background .15s; }
-    .icon-sm:hover { background: rgba(255,255,255,.18); }
-    .icon-sm .material-icons-round { font-size: 19px; }
-    .back-btn { background: none; border: none; color: #fff; cursor: pointer; padding: 4px; display: flex; border-radius: 8px; transition: background .15s; }
-    .back-btn:hover { background: rgba(255,255,255,.18); }
+    .icon-sm { background: none; border: none; color: #fff; cursor: pointer; padding: 6px; border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: background .15s; }
+    .icon-sm:hover { background: rgba(255,255,255,.2); }
+    .icon-sm .material-icons-round { font-size: 20px; }
+    .back-btn { background: none; border: none; color: #fff; cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: background .15s; }
+    .back-btn:hover { background: rgba(255,255,255,.2); }
     .back-btn .material-icons-round { font-size: 22px; }
 
     /* Search */
     .search-row {
       display: flex; align-items: center; gap: 8px; position: relative;
-      padding: 10px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
-      background: var(--surface);
+      padding: 10px 14px; border-bottom: 1px solid var(--border, #e2e8f0); flex-shrink: 0;
+      background: var(--surface, #fff);
     }
-    .search-icon { position: absolute; left: 26px; font-size: 17px; color: var(--t4); pointer-events: none; }
+    .search-row.inner-search {
+      border: none; padding: 0 0 10px;
+    }
+    .search-icon { position: absolute; left: 24px; font-size: 18px; color: var(--t4, #94a3b8); pointer-events: none; }
+    .inner-search .search-icon { left: 12px; }
     .search-input {
-      flex: 1; border: 1.5px solid var(--border); background: var(--surface-2); outline: none;
-      font-size: 13px; color: var(--t1); border-radius: var(--r-lg); padding: 8px 12px 8px 32px;
+      flex: 1; border: 1.5px solid var(--border, #e2e8f0); background: var(--surface-2, #f8fafc); outline: none;
+      font-size: 13.5px; color: var(--t1, #0f172a); border-radius: 12px; padding: 8px 12px 8px 34px;
       transition: border-color .15s, box-shadow .15s, background .15s;
     }
-    .search-input:focus { border-color: var(--accent); background: var(--surface); box-shadow: 0 0 0 3px var(--accent-g); }
-    .search-input::placeholder { color: var(--t4); }
+    .search-input:focus { border-color: var(--accent, #6366f1); background: var(--surface, #fff); box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+    .search-input::placeholder { color: var(--t4, #94a3b8); }
+
+    .select-instruction-bar {
+      display: flex; align-items: center; gap: 6px; padding: 8px 14px;
+      background: #eff6ff; color: #1e40af; font-size: 12px; font-weight: 500;
+      border-bottom: 1px solid #dbeafe;
+    }
+    .select-instruction-bar .info-icon { font-size: 16px; color: #3b82f6; }
 
     /* Conversation list */
-    .conv-list { flex: 1; overflow-y: auto; background: var(--surface); }
-    .conv-list.nested { flex: initial; max-height: 220px; border: 1px solid var(--border); border-radius: var(--r-lg); margin-top: 8px; }
+    .conv-list { flex: 1; overflow-y: auto; background: var(--surface, #fff); }
+    .conv-list.nested { flex: initial; max-height: 220px; border: 1px solid var(--border, #e2e8f0); border-radius: 12px; margin-top: 8px; }
     .conv-item {
-      display: flex; align-items: center; gap: 11px; padding: 10px 14px; cursor: pointer;
-      border-bottom: 1px solid var(--border); transition: background .12s;
-      background: var(--surface); position: relative;
+      display: flex; align-items: center; gap: 12px; padding: 11px 14px; cursor: pointer;
+      border-bottom: 1px solid var(--border, #f1f5f9); transition: background .12s;
+      background: var(--surface, #fff); position: relative;
     }
-    .conv-item:hover { background: var(--surface-2); }
-    .conv-item.selected { background: var(--accent-s); }
+    .conv-item:hover { background: var(--surface-2, #f8fafc); }
+    .conv-item.selected { background: rgba(99,102,241,0.08); }
     .conv-avatar {
-      width: 40px; height: 40px; border-radius: 50%;
-      background: var(--accent); color: #fff; font-size: 13px; font-weight: 700;
+      width: 42px; height: 42px; border-radius: 50%;
+      background: var(--accent, #6366f1); color: #fff; font-size: 13.5px; font-weight: 700;
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-      box-shadow: 0 0 0 2px var(--surface);
+      box-shadow: 0 0 0 2px var(--surface, #fff);
     }
-    .conv-avatar.group-avatar { background: var(--purple); }
-    .conv-avatar.group-avatar .material-icons-round { font-size: 19px; }
-    .conv-avatar.online-ring { box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--green); }
+    .conv-avatar.group-avatar { background: #8b5cf6; }
+    .conv-avatar.group-avatar .material-icons-round { font-size: 20px; }
+    .conv-avatar.online-ring { box-shadow: 0 0 0 2px var(--surface, #fff), 0 0 0 3.5px #22c55e; }
 
     .conv-body { flex: 1; min-width: 0; }
     .conv-row1 { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-    .conv-name { font-size: 13.5px; font-weight: 600; color: var(--t2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .conv-name.unread { color: var(--t1); font-weight: 700; }
-    .conv-time { font-size: 10.5px; color: var(--t4); flex-shrink: 0; }
-    .conv-last { font-size: 12px; color: var(--t3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 2px 0 0; }
-    .conv-last.unread { color: var(--t2); font-weight: 500; }
+    .conv-name { font-size: 14px; font-weight: 600; color: var(--t2, #1e293b); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; }
+    .conv-name.unread { color: var(--t1, #0f172a); font-weight: 700; }
+    .conv-time { font-size: 11px; color: var(--t4, #94a3b8); flex-shrink: 0; }
+    .conv-last { font-size: 12.5px; color: var(--t3, #64748b); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 3px 0 0; }
+    .conv-last.unread { color: var(--t2, #1e293b); font-weight: 600; }
     .conv-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
-    .conv-sub { font-size: 11px; color: rgba(255,255,255,.75); margin: 1px 0 0; display: flex; align-items: center; gap: 4px; }
-    .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 2px rgba(74,222,128,.3); }
+    .conv-header-text { min-width: 0; flex: 1; }
+    .conv-header-text .conv-name { color: #fff; font-size: 14.5px; }
+    .conv-sub { font-size: 11.5px; color: rgba(255,255,255,.85); margin: 2px 0 0; display: flex; align-items: center; gap: 4px; }
+    .live-status { display: inline-flex; align-items: center; gap: 4px; color: #bbf7d0; font-weight: 500; }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 2px rgba(34,197,94,.4); }
+    .live-dot-sm { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; display: inline-block; margin-left: 5px; }
+    .conv-role-badge { display: flex; align-items: center; margin-top: 3px; }
+    .badge-outline { font-size: 11px; padding: 1px 7px; border-radius: 10px; background: var(--surface-2, #f1f5f9); color: var(--t2, #475569); border: 1px solid var(--border, #cbd5e1); }
+    
+    .chat-now-btn {
+      background: var(--accent, #6366f1); color: #fff; border: none; border-radius: 18px;
+      padding: 6px 14px; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 5px;
+      cursor: pointer; transition: transform .15s, background .15s; flex-shrink: 0;
+    }
+    .chat-now-btn:hover { background: var(--accent-d, #4f46e5); transform: translateY(-1px); }
+    .chat-now-btn .material-icons-round { font-size: 16px; }
 
     .unread-badge {
-      background: var(--accent); color: #fff; border-radius: 20px;
-      padding: 2px 7px; font-size: 11px; font-weight: 700; flex-shrink: 0; min-width: 18px; text-align: center;
+      background: var(--accent, #6366f1); color: #fff; border-radius: 20px;
+      padding: 2px 8px; font-size: 11px; font-weight: 700; flex-shrink: 0; min-width: 20px; text-align: center;
     }
     .conv-delete-btn {
-      background: none; border: none; cursor: pointer; padding: 5px; border-radius: 8px;
-      color: var(--t4); opacity: 0; transition: opacity .15s, background .15s, color .15s; flex-shrink: 0;
+      background: none; border: none; cursor: pointer; padding: 6px; border-radius: 8px;
+      color: var(--t4, #94a3b8); opacity: 0; transition: opacity .15s, background .15s, color .15s; flex-shrink: 0;
       display: flex; align-items: center; position: absolute; right: 10px;
     }
-    .conv-delete-btn .material-icons-round { font-size: 16px; }
+    .conv-delete-btn .material-icons-round { font-size: 18px; }
     .conv-item:hover .conv-delete-btn { opacity: 1; }
     .conv-item:hover .unread-badge { opacity: 0; }
-    .conv-delete-btn:hover { color: var(--red); background: var(--red-s); }
+    .conv-delete-btn:hover { color: #ef4444; background: rgba(239,68,68,0.1); }
     .empty-state, .no-msgs {
-      padding: 48px 24px; text-align: center; color: var(--t3); display: flex; flex-direction: column;
-      align-items: center; gap: 6px;
+      padding: 40px 20px; text-align: center; color: var(--t3, #64748b); display: flex; flex-direction: column;
+      align-items: center; gap: 8px;
     }
     .empty-state .material-icons-round, .no-msgs .material-icons-round {
-      font-size: 34px; color: var(--t4); margin-bottom: 4px;
+      font-size: 38px; color: var(--t4, #94a3b8); margin-bottom: 4px;
     }
-    .empty-state p, .no-msgs p { font-size: 13.5px; font-weight: 600; color: var(--t2); margin: 0; }
-    .empty-state span:last-child, .no-msgs span:last-child { font-size: 12px; color: var(--t4); }
+    .empty-state p, .no-msgs p { font-size: 14.5px; font-weight: 600; color: var(--t2, #1e293b); margin: 0; }
+    .empty-state span, .no-msgs span { font-size: 12.5px; color: var(--t4, #94a3b8); max-width: 260px; }
+    .start-btn {
+      margin-top: 10px; background: var(--accent, #6366f1); color: #fff; border: none; border-radius: 20px;
+      padding: 8px 18px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;
+      cursor: pointer; transition: transform .15s, box-shadow .15s;
+    }
+    .start-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99,102,241,0.3); }
 
     /* Messages */
-    .messages-area { flex: 1; overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 2px; background: var(--surface); }
-    .msg-row { display: flex; flex-direction: column; align-items: flex-start; max-width: 82%; margin-top: 10px; }
+    .messages-area {
+      flex: 1; overflow-y: auto; padding: 16px 14px; display: flex; flex-direction: column; gap: 3px;
+      background: var(--surface, #fff); scroll-behavior: smooth;
+    }
+    .msg-row { display: flex; flex-direction: column; align-items: flex-start; max-width: 84%; margin-top: 10px; }
     .msg-row:first-child { margin-top: 0; }
     .msg-row.grouped { margin-top: 2px; }
     .msg-row.mine { align-self: flex-end; align-items: flex-end; }
-    .msg-sender-label { font-size: 10.5px; font-weight: 600; color: var(--accent); margin-bottom: 3px; padding-left: 4px; }
-    .msg-wrapper { display: flex; align-items: center; gap: 4px; }
+    .msg-sender-label { font-size: 11px; font-weight: 600; color: var(--accent, #6366f1); margin-bottom: 3px; padding-left: 4px; }
+    .msg-wrapper { display: flex; align-items: center; gap: 5px; max-width: 100%; }
     .msg-row.mine .msg-wrapper { flex-direction: row-reverse; }
     .msg-bubble {
-      background: var(--surface-2); color: var(--t1); border-radius: 16px;
-      padding: 8px 13px; font-size: 13.5px; line-height: 1.45; word-break: break-word;
-      box-shadow: var(--sh-xs);
+      background: var(--surface-2, #f1f5f9); color: var(--t1, #0f172a); border-radius: 18px;
+      padding: 9px 14px; font-size: 13.5px; line-height: 1.45; word-break: break-word;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     }
     .msg-row:not(.mine) .msg-bubble { border-bottom-left-radius: 5px; }
     .msg-row:not(.mine).grouped .msg-bubble { border-top-left-radius: 5px; }
     .msg-row:not(.mine):not(.last) .msg-bubble { border-bottom-left-radius: 5px; }
-    .msg-row.mine .msg-bubble { background: linear-gradient(135deg, var(--accent), var(--accent-d)); color: #fff; border-bottom-right-radius: 5px; }
+    .msg-row.mine .msg-bubble {
+      background: linear-gradient(135deg, var(--accent, #6366f1), var(--accent-d, #4f46e5));
+      color: #fff; border-bottom-right-radius: 5px;
+    }
     .msg-row.mine.grouped .msg-bubble { border-top-right-radius: 5px; }
     .msg-row.mine:not(.last) .msg-bubble { border-bottom-right-radius: 5px; }
     .msg-delete-btn {
-      background: none; border: none; cursor: pointer; padding: 3px; border-radius: 6px;
-      color: var(--t4); opacity: 0; transition: opacity .15s;
+      background: none; border: none; cursor: pointer; padding: 4px; border-radius: 6px;
+      color: var(--t4, #94a3b8); opacity: 0; transition: opacity .15s;
       display: flex; align-items: center;
     }
-    .msg-delete-btn .material-icons-round { font-size: 14px; }
+    .msg-delete-btn .material-icons-round { font-size: 16px; }
     .msg-wrapper:hover .msg-delete-btn { opacity: 1; }
-    .msg-delete-btn:hover { color: var(--red); }
-    .msg-time { font-size: 10px; color: var(--t4); margin-top: 3px; padding: 0 4px; }
+    .msg-delete-btn:hover { color: #ef4444; }
+    .msg-time { font-size: 10.5px; color: var(--t4, #94a3b8); margin-top: 3px; padding: 0 4px; }
+
     /* Image/file in bubble */
     .msg-img-link { display: block; }
-    .msg-img { max-width: 210px; max-height: 190px; border-radius: 11px; display: block; cursor: pointer; object-fit: cover; }
+    .msg-img { max-width: 220px; max-height: 200px; border-radius: 12px; display: block; cursor: pointer; object-fit: cover; }
     .file-link { display: flex; align-items: center; gap: 8px; color: inherit; text-decoration: none; padding: 2px 0; }
     .msg-row.mine .file-link { color: rgba(255,255,255,.95); }
     .file-link .material-icons-round { font-size: 24px; flex-shrink: 0; }
     .file-link-body { display: flex; flex-direction: column; min-width: 0; }
     .file-link-name { font-size: 12.5px; font-weight: 600; word-break: break-all; }
     .file-link-size { font-size: 10.5px; opacity: .75; flex-shrink: 0; }
+
     /* Attachment input bar */
-    .attach-btn { color: var(--t3); border-radius: 8px; flex-shrink: 0; }
-    .attach-btn:hover { color: var(--accent); background: var(--accent-s); }
-    .attach-btn .material-icons-round { font-size: 20px; }
+    .attach-btn { color: var(--t3, #64748b); border-radius: 8px; flex-shrink: 0; }
+    .attach-btn:hover { color: var(--accent, #6366f1); background: rgba(99,102,241,0.1); }
+    .attach-btn .material-icons-round { font-size: 22px; }
+
     /* Attachment preview strip */
     .attachment-preview {
       display: flex; align-items: center; gap: 10px; padding: 8px 14px;
-      background: var(--accent-s); border-top: 1px solid var(--border);
-      font-size: 12px; color: var(--t1);
+      background: rgba(99,102,241,0.08); border-top: 1px solid var(--border, #e2e8f0);
+      font-size: 12px; color: var(--t1, #0f172a);
     }
     .attach-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
-    .attach-icon { font-size: 28px; color: var(--accent); flex-shrink: 0; }
+    .attach-icon { font-size: 28px; color: var(--accent, #6366f1); flex-shrink: 0; }
     .attach-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .attach-remove { background: none; border: none; cursor: pointer; color: var(--t3); display: flex; align-items: center; border-radius: 6px; padding: 2px; }
-    .attach-remove:hover { color: var(--red); background: var(--red-s); }
+    .attach-remove { background: none; border: none; cursor: pointer; color: var(--t3, #64748b); display: flex; align-items: center; border-radius: 6px; padding: 2px; }
+    .attach-remove:hover { color: #ef4444; background: rgba(239,68,68,0.1); }
     .attach-remove .material-icons-round { font-size: 16px; }
+
     /* Spinner */
     @keyframes spin { to { transform: rotate(360deg); } }
     .spin { animation: spin 1s linear infinite; display: inline-block; }
 
     /* Input */
-    .input-bar { display: flex; align-items: center; gap: 8px; padding: 12px; border-top: 1px solid var(--border); flex-shrink: 0; background: var(--surface); }
-    .msg-input { flex: 1; border: 1.5px solid var(--border); border-radius: 22px; padding: 9px 15px; font-size: 13px; background: var(--surface-2); color: var(--t1); outline: none; transition: border-color .15s, box-shadow .15s, background .15s; }
-    .msg-input:focus { border-color: var(--accent); background: var(--surface); box-shadow: 0 0 0 3px var(--accent-g); }
-    .send-btn {
-      background: linear-gradient(135deg, var(--accent), var(--accent-d)); color: #fff; border: none;
-      border-radius: 50%; width: 38px; height: 38px; cursor: pointer; display: flex; align-items: center;
-      justify-content: center; flex-shrink: 0; transition: transform .15s, box-shadow .15s; box-shadow: var(--sh-xs);
+    .input-bar {
+      display: flex; align-items: center; gap: 8px; padding: 12px 14px;
+      border-top: 1.5px solid var(--border, #e2e8f0); flex-shrink: 0; background: var(--surface, #fff);
+      box-shadow: 0 -3px 12px rgba(0,0,0,0.04);
     }
-    .send-btn:hover:not(:disabled) { transform: scale(1.08); box-shadow: var(--sh); }
-    .send-btn:disabled { opacity: .4; cursor: default; box-shadow: none; }
-    .send-btn .material-icons-round { font-size: 18px; }
+    .msg-input {
+      flex: 1; border: 1.5px solid var(--border, #cbd5e1); border-radius: 24px; padding: 10px 16px;
+      font-size: 14px; background: var(--surface-2, #f8fafc); color: var(--t1, #0f172a); outline: none;
+      transition: border-color .15s, box-shadow .15s, background .15s;
+    }
+    .msg-input:focus { border-color: var(--accent, #6366f1); background: var(--surface, #fff); box-shadow: 0 0 0 3px rgba(99,102,241,0.18); }
+    .send-btn {
+      background: linear-gradient(135deg, var(--accent, #6366f1), var(--accent-d, #4f46e5));
+      color: #fff; border: none; border-radius: 50%; width: 42px; height: 42px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      transition: transform .15s, box-shadow .15s; box-shadow: 0 2px 8px rgba(79,70,229,0.35);
+    }
+    .send-btn:hover:not(:disabled) { transform: scale(1.08); box-shadow: 0 4px 14px rgba(79,70,229,0.45); }
+    .send-btn:disabled { opacity: .45; cursor: default; box-shadow: none; }
+    .send-btn .material-icons-round { font-size: 20px; }
 
     /* Group form */
-    .group-form { padding: 14px; display: flex; flex-direction: column; gap: 0; flex: 1; overflow-y: auto; background: var(--surface); }
-    .group-name-input { border-radius: var(--r-lg); margin-bottom: 10px; }
-    .selected-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 2px; }
-    .chip { background: var(--accent-s); color: var(--accent); border-radius: 20px; padding: 3px 6px 3px 11px; font-size: 11.5px; font-weight: 500; display: flex; align-items: center; gap: 5px; }
-    .chip button { background: rgba(0,0,0,.06); border: none; cursor: pointer; color: inherit; font-size: 10px; padding: 2px; border-radius: 50%; width: 15px; height: 15px; display: flex; align-items: center; justify-content: center; }
-    .check-icon { color: var(--accent); font-size: 19px; margin-left: auto; }
-    .create-btn {
-      margin-top: 12px; background: linear-gradient(135deg, var(--accent), var(--accent-d)); color: #fff; border: none;
-      border-radius: var(--r-lg); padding: 11px; font-size: 13.5px; cursor: pointer; font-weight: 600;
-      box-shadow: var(--sh-xs); transition: transform .15s, box-shadow .15s;
+    .group-form {
+      padding: 16px; display: flex; flex-direction: column; gap: 10px;
+      flex: 1; overflow-y: auto; background: var(--surface, #fff); min-height: 0;
     }
-    .create-btn:hover:not(:disabled) { box-shadow: var(--sh); }
+    .form-group-field {
+      display: flex; flex-direction: column; gap: 4px; flex: 0 0 auto;
+    }
+    .group-field-label {
+      font-size: 11.5px; font-weight: 700; color: var(--t3, #64748b); text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .group-name-input {
+      flex: 0 0 auto !important; height: 42px !important; border-radius: 12px !important;
+      margin: 0 !important; padding: 10px 14px !important; font-size: 13.5px !important;
+    }
+    .selected-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0; flex: 0 0 auto; }
+    .chip {
+      background: rgba(99,102,241,0.1); color: var(--accent, #6366f1); border-radius: 20px;
+      padding: 4px 8px 4px 12px; font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 6px;
+    }
+    .chip button {
+      background: rgba(0,0,0,.08); border: none; cursor: pointer; color: inherit;
+      font-size: 11px; padding: 2px; border-radius: 50%; width: 16px; height: 16px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .member-pick-item {
+      border-radius: 10px; margin-bottom: 2px;
+    }
+    .checkbox-circle {
+      width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border, #cbd5e1);
+      display: flex; align-items: center; justify-content: center; margin-left: auto; transition: all .15s;
+    }
+    .checkbox-circle.checked {
+      background: var(--accent, #6366f1); border-color: var(--accent, #6366f1); color: #fff;
+    }
+    .checkbox-circle .check-icon { font-size: 15px; color: #fff; margin: 0; }
+    .create-btn {
+      margin-top: auto; flex: 0 0 auto; background: linear-gradient(135deg, var(--accent, #6366f1), var(--accent-d, #4f46e5));
+      color: #fff; border: none; border-radius: 12px; padding: 12px; font-size: 14px; cursor: pointer;
+      font-weight: 600; box-shadow: 0 2px 6px rgba(79,70,229,0.25); transition: transform .15s, box-shadow .15s;
+    }
+    .create-btn:hover:not(:disabled) { box-shadow: 0 4px 14px rgba(79,70,229,0.35); }
     .create-btn:disabled { opacity: .4; cursor: default; box-shadow: none; }
 
     /* Broadcast */
-    .bc-hint { font-size: 12px; color: var(--t3); margin: 0 0 14px; line-height: 1.5; }
+    .bc-hint { font-size: 12.5px; color: var(--t3, #64748b); margin: 0 0 14px; line-height: 1.5; }
     .bc-btn {
-      display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer;
-      background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-lg);
-      font-size: 13.5px; font-weight: 500; color: var(--t2); margin-bottom: 8px; width: 100%; text-align: left;
+      display: flex; align-items: center; gap: 12px; padding: 13px 14px; cursor: pointer;
+      background: var(--surface-2, #f8fafc); border: 1px solid var(--border, #e2e8f0); border-radius: 14px;
+      font-size: 14px; font-weight: 500; color: var(--t2, #1e293b); margin-bottom: 10px; width: 100%; text-align: left;
       transition: background .15s, border-color .15s, transform .1s;
     }
-    .bc-btn:hover { background: var(--accent-s); border-color: var(--accent); transform: translateX(2px); }
-    .bc-icon { width: 34px; height: 34px; border-radius: 10px; background: var(--accent-s); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .bc-icon .material-icons-round { font-size: 18px; color: var(--accent); }
+    .bc-btn:hover { background: rgba(99,102,241,0.08); border-color: var(--accent, #6366f1); transform: translateX(2px); }
+    .bc-icon { width: 36px; height: 36px; border-radius: 10px; background: rgba(99,102,241,0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .bc-icon .material-icons-round { font-size: 20px; color: var(--accent, #6366f1); }
     .bc-label { flex: 1; }
-    .bc-chevron { font-size: 18px; color: var(--t4); }
+    .bc-chevron { font-size: 20px; color: var(--t4, #94a3b8); }
 
-    /* Responsive: near-full-screen on small viewports */
-    @media (max-width: 480px) {
-      :host { bottom: 16px; right: 16px; }
+    /* Responsive: Mobile Fullscreen Bottom-Sheet View */
+    @media (max-width: 640px) {
+      :host {
+        bottom: 76px; right: 16px;
+      }
+      .chat-fab {
+        width: 52px; height: 52px;
+      }
+      .chat-panel-backdrop {
+        display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+        z-index: 1201; backdrop-filter: blur(2px);
+      }
       .chat-panel {
-        width: calc(100vw - 24px); height: calc(100vh - 100px);
-        right: -8px; bottom: 64px;
+        position: fixed; inset: auto 0 0 0;
+        width: 100vw; height: 90vh; max-height: 90vh;
+        border-radius: 20px 20px 0 0; border: none; border-top: 1px solid var(--border, #e2e8f0);
+        z-index: 1205; box-shadow: 0 -10px 30px rgba(0,0,0,0.25);
+      }
+      .input-bar {
+        padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
+      }
+      .msg-input, .search-input {
+        font-size: 16px !important;
       }
     }
   `]
@@ -552,6 +725,7 @@ export class ChatPanelComponent implements AfterViewChecked {
   panelOpen       = signal(false);
   view            = signal<'list' | 'new-dm' | 'new-group' | 'broadcast'>('list');
   activeConv      = signal<Conversation | null>(null);
+  loadingUserId   = signal<number | null>(null);
   search          = '';
   draft           = '';
   groupName       = '';
@@ -561,30 +735,37 @@ export class ChatPanelComponent implements AfterViewChecked {
   uploading       = signal(false);
   apiBase         = environment.apiUrl.replace('/api', '');
 
-  private avatarPalette = ['var(--accent)', 'var(--purple)', 'var(--green)', 'var(--amber)', 'var(--red)', 'var(--accent-d)'];
+  private avatarPalette = ['#6366f1', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#3b82f6'];
 
   @ViewChild('msgArea') msgArea?: ElementRef<HTMLDivElement>;
+  @ViewChild('inputEl') inputEl?: ElementRef<HTMLInputElement>;
 
   myId = computed(() => this.auth.currentUser()?.userId ?? 0);
 
   canCreateGroup = computed(() => {
     const role = (this.auth.currentUser()?.role ?? '').toLowerCase();
-    return ['superadmin','admin','principal'].includes(role);
+    return ['superadmin','admin','principal','teacher','headmaster','staff'].includes(role);
   });
 
   isBroadcaster = computed(() => {
     const role = (this.auth.currentUser()?.role ?? '').toLowerCase();
-    return ['superadmin','admin','principal','teacher'].includes(role);
+    return ['superadmin','admin','principal','teacher','headmaster'].includes(role);
   });
 
   filteredConvs = computed(() => {
-    const q = this.search.toLowerCase();
+    const q = this.search.toLowerCase().trim();
+    if (!q) return this.chatSvc.conversations();
     return this.chatSvc.conversations().filter(c => c.name.toLowerCase().includes(q));
   });
 
   filteredUsers = computed(() => {
-    const q = this.search.toLowerCase();
-    return this.chatSvc.allUsers().filter(u => u.fullName.toLowerCase().includes(q));
+    const q = this.search.toLowerCase().trim();
+    const users = this.chatSvc.allUsers();
+    if (!q) return users;
+    return users.filter(u =>
+      u.fullName.toLowerCase().includes(q) ||
+      (u.roleName && u.roleName.toLowerCase().includes(q))
+    );
   });
 
   /** Consecutive messages from the same sender are visually grouped (Messenger-style). */
@@ -616,11 +797,10 @@ export class ChatPanelComponent implements AfterViewChecked {
         if (conv) {
           this.openConv(conv);
         } else {
-          // conv not loaded yet — load then open
           setTimeout(() => {
             const c2 = this.chatSvc.conversations().find(c => c.conversationId === r.conversationId);
             if (c2) this.openConv(c2);
-          }, 400);
+          }, 300);
         }
         this.panelOpen.set(true);
       });
@@ -658,6 +838,9 @@ export class ChatPanelComponent implements AfterViewChecked {
     this.activeConv.set(c);
     this.chatSvc.loadMessages(c.conversationId);
     this.draft = '';
+    setTimeout(() => {
+      this.inputEl?.nativeElement?.focus();
+    }, 120);
   }
 
   closeConv() {
@@ -667,29 +850,52 @@ export class ChatPanelComponent implements AfterViewChecked {
 
   send() {
     const conv = this.activeConv();
-    const hasText = !!this.draft.trim();
+    const text = this.draft.trim();
     const hasFile = !!this.pendingFile();
-    if (!conv || (!hasText && !hasFile)) return;
+    if (!conv || (!text && !hasFile)) return;
+
+    this.draft = '';
 
     if (hasFile) {
       // Use REST endpoint so attachment metadata is persisted
-      const text = this.draft.trim();
-      this.draft = '';
       const attachment = this.pendingFile()!;
       this.pendingFile.set(null);
       this.chatSvc.sendMessageWithAttachment(conv.conversationId, text, attachment).subscribe({
         next: msg => {
-          // SignalR will also deliver it; dedupe by id
           this.chatSvc.messages.update(m =>
             m.some(x => x.chatMessageId === msg.chatMessageId) ? m : [...m, msg]
           );
+          this.chatSvc.loadConversations();
+        },
+        error: err => {
+          console.error('Failed to send attachment message', err);
         }
       });
     } else {
-      const text = this.draft.trim();
-      this.draft = '';
-      this.chatSvc.sendMessage(conv.conversationId, text).catch(() => {});
+      if (this.chatSvc.connected()) {
+        this.chatSvc.sendMessage(conv.conversationId, text).catch(() => {
+          // Fallback to REST if SignalR fails
+          this.sendRestFallback(conv.conversationId, text);
+        });
+      } else {
+        // Direct REST send
+        this.sendRestFallback(conv.conversationId, text);
+      }
     }
+  }
+
+  private sendRestFallback(convId: number, text: string) {
+    this.chatSvc.sendMessageWithAttachment(convId, text, null).subscribe({
+      next: msg => {
+        this.chatSvc.messages.update(m =>
+          m.some(x => x.chatMessageId === msg.chatMessageId) ? m : [...m, msg]
+        );
+        this.chatSvc.loadConversations();
+      },
+      error: err => {
+        console.error('Failed to send message via fallback', err);
+      }
+    });
   }
 
   onFileSelected(event: Event) {
@@ -711,19 +917,34 @@ export class ChatPanelComponent implements AfterViewChecked {
   }
 
   startDm(u: ChatUser) {
-    this.chatSvc.startDm(u.userId).subscribe(r => {
-      this.chatSvc.loadConversations();
-      setTimeout(() => {
-        const conv = this.chatSvc.conversations().find(c => c.conversationId === r.conversationId);
+    this.loadingUserId.set(u.userId);
+    this.chatSvc.startDm(u.userId).subscribe({
+      next: (r) => {
+        this.loadingUserId.set(null);
+        this.chatSvc.loadConversations();
         const placeholder: Conversation = {
-          conversationId: r.conversationId, name: u.fullName, conversationType: 'direct',
-          classId: null, lastMessage: '', lastMessageAt: null, unreadCount: 0,
-          isOnline: u.isOnline, otherUserId: u.userId, members: []
+          conversationId: r.conversationId,
+          name: u.fullName,
+          conversationType: 'direct',
+          classId: null,
+          lastMessage: '',
+          lastMessageAt: null,
+          unreadCount: 0,
+          isOnline: u.isOnline,
+          otherUserId: u.userId,
+          members: [
+            { userId: this.myId(), fullName: this.auth.currentUser()?.fullName ?? 'Me', roleName: this.auth.currentUser()?.role ?? '', isAdmin: true, isOnline: true },
+            { userId: u.userId, fullName: u.fullName, roleName: u.roleName, isAdmin: false, isOnline: u.isOnline }
+          ]
         };
-        this.openConv(conv ?? placeholder);
+        this.openConv(placeholder);
         this.view.set('list');
         this.search = '';
-      }, 200);
+      },
+      error: (err) => {
+        this.loadingUserId.set(null);
+        console.error('Error starting conversation', err);
+      }
     });
   }
 
@@ -769,9 +990,7 @@ export class ChatPanelComponent implements AfterViewChecked {
   }
 
   private loadClasses() {
-    // Only load for broadcasters
     if (!this.isBroadcaster()) return;
-    // Reuse existing class data if already loaded
     if (this.classes().length > 0) return;
     this.chatSvc['http']
       .get<{ classId: number; className: string }[]>(`${this.chatSvc['base'].replace('/chat', '')}/class`)
@@ -806,6 +1025,7 @@ export class ChatPanelComponent implements AfterViewChecked {
   }
 
   initials(name: string) {
+    if (!name) return '?';
     return name.split(' ').map(n => n[0] ?? '').slice(0, 2).join('').toUpperCase();
   }
 }
