@@ -181,7 +181,12 @@ import { environment } from '../../../../environments/environment';
 
           <div class="search-row">
             <span class="material-icons-round search-icon">search</span>
-            <input [(ngModel)]="search" placeholder="Search conversations…" class="search-input" />
+            <input [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Search conversations…" class="search-input" />
+            @if (search()) {
+              <button class="icon-sm clear-search-btn" (click)="search.set('')" title="Clear search">
+                <span class="material-icons-round">close</span>
+              </button>
+            }
           </div>
 
           <div class="conv-list">
@@ -241,7 +246,12 @@ import { environment } from '../../../../environments/environment';
 
           <div class="search-row">
             <span class="material-icons-round search-icon">search</span>
-            <input [(ngModel)]="search" placeholder="Search teachers, admins, users…" class="search-input" />
+            <input [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Search teachers, admins, users…" class="search-input" />
+            @if (search()) {
+              <button class="icon-sm clear-search-btn" (click)="search.set('')" title="Clear search">
+                <span class="material-icons-round">close</span>
+              </button>
+            }
           </div>
 
           <div class="select-instruction-bar">
@@ -305,7 +315,12 @@ import { environment } from '../../../../environments/environment';
               <label class="group-field-label">Add Members</label>
               <div class="search-row inner-search">
                 <span class="material-icons-round search-icon">search</span>
-                <input [(ngModel)]="search" placeholder="Search teachers or staff…" class="search-input" />
+                <input [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Search teachers or staff…" class="search-input" />
+                @if (search()) {
+                  <button class="icon-sm clear-search-btn" (click)="search.set('')" title="Clear search">
+                    <span class="material-icons-round">close</span>
+                  </button>
+                }
               </div>
             </div>
 
@@ -455,11 +470,19 @@ import { environment } from '../../../../environments/environment';
     .inner-search .search-icon { left: 12px; }
     .search-input {
       flex: 1; border: 1.5px solid var(--border, #e2e8f0); background: var(--surface-2, #f8fafc); outline: none;
-      font-size: 13.5px; color: var(--t1, #0f172a); border-radius: 12px; padding: 8px 12px 8px 34px;
+      font-size: 13.5px; color: var(--t1, #0f172a); border-radius: 12px; padding: 8px 32px 8px 34px;
       transition: border-color .15s, box-shadow .15s, background .15s;
     }
     .search-input:focus { border-color: var(--accent, #6366f1); background: var(--surface, #fff); box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
     .search-input::placeholder { color: var(--t4, #94a3b8); }
+    .clear-search-btn {
+      position: absolute; right: 24px; color: var(--t4, #94a3b8);
+      background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      padding: 0; width: 22px; height: 22px; border-radius: 50%;
+    }
+    .inner-search .clear-search-btn { right: 8px; }
+    .clear-search-btn:hover { color: var(--t1, #0f172a); background: var(--surface-3, #e2e8f0); }
+    .clear-search-btn .material-icons-round { font-size: 15px; }
 
     .select-instruction-bar {
       display: flex; align-items: center; gap: 6px; padding: 8px 14px;
@@ -726,7 +749,7 @@ export class ChatPanelComponent implements AfterViewChecked {
   view            = signal<'list' | 'new-dm' | 'new-group' | 'broadcast'>('list');
   activeConv      = signal<Conversation | null>(null);
   loadingUserId   = signal<number | null>(null);
-  search          = '';
+  search          = signal('');
   draft           = '';
   groupName       = '';
   selectedUserIds = signal<Set<number>>(new Set());
@@ -753,13 +776,13 @@ export class ChatPanelComponent implements AfterViewChecked {
   });
 
   filteredConvs = computed(() => {
-    const q = this.search.toLowerCase().trim();
+    const q = this.search().toLowerCase().trim();
     if (!q) return this.chatSvc.conversations();
     return this.chatSvc.conversations().filter(c => c.name.toLowerCase().includes(q));
   });
 
   filteredUsers = computed(() => {
-    const q = this.search.toLowerCase().trim();
+    const q = this.search().toLowerCase().trim();
     const users = this.chatSvc.allUsers();
     if (!q) return users;
     return users.filter(u =>
@@ -939,7 +962,7 @@ export class ChatPanelComponent implements AfterViewChecked {
         };
         this.openConv(placeholder);
         this.view.set('list');
-        this.search = '';
+        this.search.set('');
       },
       error: (err) => {
         this.loadingUserId.set(null);
