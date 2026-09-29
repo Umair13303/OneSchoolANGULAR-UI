@@ -352,7 +352,6 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
       border: 1px solid var(--border);
       border-radius: var(--r-2xl, 20px);
       box-shadow: var(--sh);
-      overflow: hidden;
       margin-bottom: var(--sp-6, 24px);
     }
 
@@ -361,6 +360,7 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
       padding: 16px 22px;
       background: linear-gradient(135deg, var(--accent-s) 0%, var(--surface) 100%);
       border-bottom: 1px solid var(--border);
+      border-radius: var(--r-2xl, 20px) var(--r-2xl, 20px) 0 0;
       gap: 14px;
     }
     .adm-header-left { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
@@ -423,7 +423,7 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
     .tab-connector.done { background: var(--green); }
 
     .adm-body { padding: 0; }
-    .tab-pane { padding: 22px 24px; display: flex; flex-direction: column; gap: 16px; }
+    .tab-pane { padding: 22px 24px 36px; display: flex; flex-direction: column; gap: 16px; min-height: 380px; }
 
     .section-hint {
       display: flex; align-items: center; gap: 9px;

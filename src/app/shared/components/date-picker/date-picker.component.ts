@@ -142,8 +142,9 @@ function fromYMD(s: string): Date | null {
     </div>
   `,
   styles: [`
-    :host { display: block; width: 100%; }
+    :host { display: block; width: 100%; position: relative; }
     .dp-wrap { position: relative; display: block; width: 100%; }
+    .dp-wrap.dp-open { z-index: 600; }
 
     /* ── Trigger ─────────────────────────────────── */
     .dp-input {
@@ -182,12 +183,12 @@ function fromYMD(s: string): Date | null {
 
     /* ── Panel ───────────────────────────────────── */
     .dp-panel {
-      position: absolute; top: calc(100% + 6px); left: 0; z-index: 500;
+      position: absolute; top: calc(100% + 6px); left: 0; z-index: 999;
       width: 288px;
       background: var(--surface);
       border: 1.5px solid var(--border);
-      border-radius: var(--r-xl);
-      box-shadow: var(--sh-lg);
+      border-radius: var(--r-xl, 14px);
+      box-shadow: 0 12px 36px rgba(0,0,0,0.18), 0 3px 10px rgba(0,0,0,0.08);
       padding: 14px 12px 10px;
       animation: dp-in .15s cubic-bezier(.22,1,.36,1);
     }
