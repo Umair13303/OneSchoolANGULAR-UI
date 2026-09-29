@@ -8,6 +8,7 @@ import { AcademicService } from '../../../core/services/academic.service';
 import { UserService } from '../../../core/services/user.service';
 import { UserListDto } from '../../../core/models/user.model';
 import { ClassDto, ClassSubjectDto } from '../../../core/models/academic.model';
+import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 
@@ -17,14 +18,9 @@ const ICONS  = ['menu_book','calculate','science','language','mosque','computer'
 @Component({
   selector: 'app-teacher-assignments',
   standalone: true,
-  imports: [CommonModule, FormsModule, EmptyStateComponent, LoadingComponent],
+  imports: [CommonModule, FormsModule, PageHeaderComponent, EmptyStateComponent, LoadingComponent],
   template: `
-    <div class="page-header">
-      <div>
-        <h2>Teacher Assignments</h2>
-        <p class="sub">Assign classes &amp; subjects to teachers</p>
-      </div>
-    </div>
+    <app-page-header title="Teacher Assignments" subtitle="Assign classes &amp; subjects to teachers" />
 
     <div class="two-col">
 
@@ -210,19 +206,35 @@ const ICONS  = ['menu_book','calculate','science','language','mosque','computer'
     }
   `,
   styles: [`
-    .page-header { display: flex; align-items: flex-start; margin-bottom: 24px; }
-    .page-header h2 { font-size: 22px; font-weight: 800; color: var(--t1); }
-    .page-header .sub { font-size: 13px; color: var(--t4); margin-top: 3px; }
+    :host { display: block; width: 100%; }
 
     .two-col {
       display: grid;
-      grid-template-columns: 300px 1fr;
+      grid-template-columns: minmax(260px, 320px) 1fr;
       gap: 20px;
       align-items: start;
+      width: 100%;
     }
-    @media (max-width: 860px) { .two-col { grid-template-columns: 1fr; } }
+    @media (max-width: 860px) {
+      .two-col {
+        grid-template-columns: 1fr !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 16px !important;
+        width: 100% !important;
+        align-items: stretch !important;
+      }
+      .panel {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+    }
 
-    .panel { overflow: hidden; }
+    .panel {
+      width: 100%;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
     .panel-head {
       display: flex; align-items: center; justify-content: space-between;
       padding: 14px 16px; border-bottom: 1px solid var(--border);

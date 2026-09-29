@@ -700,7 +700,7 @@ import { environment } from '../../../../environments/environment';
       }
       .chat-panel-backdrop {
         display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
-        z-index: 1201; backdrop-filter: blur(2px);
+        z-index: 1201;
       }
       .chat-panel {
         position: fixed; inset: auto 0 0 0;

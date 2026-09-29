@@ -15,7 +15,8 @@ import { CommonModule } from '@angular/common';
     </div>
   `,
   styles: [`
-    .ph { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
+    :host { display: block; width: 100%; }
+    .ph { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; width: 100%; }
     .ph-title { font-size: 21px; font-weight: 800; color: var(--t1); letter-spacing: -0.4px; }
     .ph-sub   { font-size: 13px; color: var(--t4); margin-top: 3px; }
     .ph-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }

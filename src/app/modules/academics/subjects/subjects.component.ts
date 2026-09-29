@@ -9,6 +9,7 @@ import { UserListDto } from '../../../core/models/user.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { InstituteService } from '../../../core/services/institute.service';
 import { InstituteDto } from '../../../core/models/institute.model';
+import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { ConfirmDeleteComponent } from '../../../shared/components/confirm-delete/confirm-delete.component';
@@ -19,14 +20,9 @@ const PERIOD_ICONS = ['menu_book','calculate','science','language','mosque','com
 @Component({
   selector: 'app-subjects',
   standalone: true,
-  imports: [CommonModule, FormsModule, EmptyStateComponent, LoadingComponent, ConfirmDeleteComponent],
+  imports: [CommonModule, FormsModule, PageHeaderComponent, EmptyStateComponent, LoadingComponent, ConfirmDeleteComponent],
   template: `
-    <div class="page-header">
-      <div>
-        <h2>Subjects</h2>
-        <p class="sub">Manage subjects and assign them class-wise</p>
-      </div>
-    </div>
+    <app-page-header title="Subjects" subtitle="Manage subjects and assign them class-wise" />
 
     <div class="two-col">
 
@@ -57,12 +53,14 @@ const PERIOD_ICONS = ['menu_book','calculate','science','language','mosque','com
                 }
               </select>
             }
-            <button class="btn-primary btn-sm" (click)="addSubject()" [disabled]="!newName.trim()">
-              <span class="material-icons-round">check</span>
-            </button>
-            <button class="btn-icon-only" (click)="showAdd.set(false)" title="Cancel">
-              <span class="material-icons-round">close</span>
-            </button>
+            <div class="add-form-actions">
+              <button class="btn-primary btn-sm" (click)="addSubject()" [disabled]="!newName.trim()">
+                <span class="material-icons-round">check</span>
+              </button>
+              <button class="btn-icon-only" (click)="showAdd.set(false)" title="Cancel">
+                <span class="material-icons-round">close</span>
+              </button>
+            </div>
           </div>
         }
 
@@ -242,26 +240,36 @@ const PERIOD_ICONS = ['menu_book','calculate','science','language','mosque','com
     <app-confirm-delete />
   `,
   styles: [`
-    .page-header {
-      display: flex; align-items: flex-start; justify-content: space-between;
-      margin-bottom: 24px;
-    }
-    .page-header h2 { font-size: 22px; font-weight: 800; color: var(--t1); }
-    .page-header .sub { font-size: 13px; color: var(--t4); margin-top: 3px; }
+    :host { display: block; width: 100%; }
 
     .two-col {
       display: grid;
-      grid-template-columns: 340px 1fr;
+      grid-template-columns: minmax(280px, 340px) 1fr;
       gap: 20px;
       align-items: start;
+      width: 100%;
     }
-    @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+    @media (max-width: 900px) {
+      .two-col {
+        grid-template-columns: 1fr !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 16px !important;
+        width: 100% !important;
+        align-items: stretch !important;
+      }
+    }
 
-    .panel { overflow: hidden; }
+    .panel {
+      width: 100%;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
     .panel-head {
       display: flex; align-items: center; justify-content: space-between;
       padding: 16px 18px;
       border-bottom: 1px solid var(--border);
+      gap: 10px;
     }
     .panel-title {
       display: flex; align-items: center; gap: 8px;
@@ -277,7 +285,7 @@ const PERIOD_ICONS = ['menu_book','calculate','science','language','mosque','com
     .subject-row {
       display: flex; align-items: center; justify-content: space-between;
       padding: 10px 16px; border-bottom: 1px solid var(--border);
-      transition: background 0.1s;
+      transition: background 0.1s; gap: 10px;
     }
     .subject-row:last-child { border-bottom: none; }
     .subject-row:hover, .subject-row.editing { background: var(--surface-2); }
@@ -288,16 +296,16 @@ const PERIOD_ICONS = ['menu_book','calculate','science','language','mosque','com
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
     .subject-icon .material-icons-round { font-size: 17px; color: #fff; font-variation-settings: 'FILL' 1; }
-    .subject-name { font-size: 13.5px; font-weight: 600; color: var(--t1); }
+    .subject-name { font-size: 13.5px; font-weight: 600; color: var(--t1); word-break: break-word; }
     .inline-input {
       flex: 1; padding: 5px 9px; border: 1.5px solid var(--accent);
       border-radius: 6px; font-size: 13px; background: var(--surface); color: var(--t1);
       outline: none;
     }
 
-    .subject-actions { display: flex; gap: 4px; }
+    .subject-actions { display: flex; gap: 4px; flex-shrink: 0; }
     .icon-act {
-      width: 28px; height: 28px; border-radius: 7px;
+      width: 30px; height: 30px; border-radius: 7px;
       border: none; background: transparent; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       color: var(--t4); transition: background 0.15s, color 0.15s;
@@ -307,12 +315,12 @@ const PERIOD_ICONS = ['menu_book','calculate','science','language','mosque','com
     .icon-act .material-icons-round { font-size: 16px; }
 
     .add-form {
-      display: flex; gap: 8px; align-items: center;
-      padding: 10px 14px; border-bottom: 2px solid var(--accent);
+      display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+      padding: 12px 14px; border-bottom: 2px solid var(--accent);
       background: color-mix(in srgb, var(--accent) 5%, var(--surface));
     }
     .add-input {
-      flex: 1; padding: 8px 12px; border: 1.5px solid var(--accent);
+      flex: 1 1 180px; padding: 8px 12px; border: 1.5px solid var(--accent);
       border-radius: 8px; font-size: 13px; font-family: inherit;
       background: var(--surface); color: var(--t1); outline: none;
       box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
@@ -321,12 +329,13 @@ const PERIOD_ICONS = ['menu_book','calculate','science','language','mosque','com
       padding: 8px 10px; border: 1.5px solid var(--border);
       border-radius: 8px; font-size: 12.5px; font-family: inherit;
       background: var(--surface); color: var(--t1); outline: none;
-      max-width: 140px;
+      flex: 1 1 130px;
     }
+    .add-form-actions { display: flex; align-items: center; gap: 6px; }
     .inst-badge {
       font-size: 10.5px; font-weight: 700; color: var(--t4);
       background: var(--surface-3); padding: 2px 7px; border-radius: 99px;
-      margin-left: 6px;
+      margin-left: 6px; white-space: nowrap;
     }
     .btn-icon-only {
       width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border);
@@ -339,12 +348,13 @@ const PERIOD_ICONS = ['menu_book','calculate','science','language','mosque','com
     /* Class selector */
     .class-selector { padding: 14px 18px; border-bottom: 1px solid var(--border); }
     .sel-label { font-size: 11px; font-weight: 700; color: var(--t4); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; display: block; }
-    .class-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+    .class-chips { display: flex; flex-wrap: wrap; gap: 8px; }
     .chip {
-      padding: 6px 14px; border-radius: 99px;
+      padding: 7px 15px; border-radius: 99px;
       border: 1.5px solid var(--border); background: var(--surface);
       font-size: 12.5px; font-weight: 600; color: var(--t2);
       cursor: pointer; transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
     }
     .chip:hover { border-color: var(--accent); color: var(--accent); }
     .chip.active { border-color: var(--accent); background: var(--accent-s); color: var(--accent); }
@@ -355,7 +365,7 @@ const PERIOD_ICONS = ['menu_book','calculate','science','language','mosque','com
     .periods-header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 14px 18px; border-bottom: 1px solid var(--border);
-      background: var(--surface-2);
+      background: var(--surface-2); gap: 10px; flex-wrap: wrap;
     }
     .periods-title { font-size: 13px; font-weight: 700; color: var(--t2); }
 
@@ -383,9 +393,9 @@ const PERIOD_ICONS = ['menu_book','calculate','science','language','mosque','com
     .period-teacher .material-icons-round { font-size: 13px; }
     .period-teacher.unassigned { color: var(--t5); font-style: italic; }
 
-    .row-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+    .row-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; }
     .toggle-btn {
-      padding: 4px 10px; border-radius: 99px; font-size: 11.5px; font-weight: 700;
+      padding: 5px 12px; border-radius: 99px; font-size: 11.5px; font-weight: 700;
       border: 1.5px solid var(--border); background: var(--surface); color: var(--t4);
       cursor: pointer; transition: all 0.15s; font-family: inherit;
     }
@@ -441,16 +451,6 @@ const PERIOD_ICONS = ['menu_book','calculate','science','language','mosque','com
       font-size: 16px; color: var(--accent);
     }
 
-    .assign-teacher-field { padding: 0 22px 16px; margin: 0; }
-    .assign-teacher-field label { font-size: 12px; font-weight: 700; color: var(--t3); margin-bottom: 6px; display: block; }
-    .assign-teacher-field select {
-      width: 100%; padding: 8px 10px; border: 1.5px solid var(--border);
-      border-radius: 8px; font-size: 13px; font-family: inherit;
-      background: var(--surface); color: var(--t1); outline: none;
-    }
-    .assign-teacher-field select:focus { border-color: var(--accent); }
-    .optional { font-weight: 400; color: var(--t5); font-size: 11px; }
-
     .assign-empty {
       display: flex; flex-direction: column; align-items: center; gap: 8px;
       padding: 32px 22px; color: var(--t4);
@@ -462,9 +462,16 @@ const PERIOD_ICONS = ['menu_book','calculate','science','language','mosque','com
 
     @media (max-width: 768px) {
       .two-col { display: flex !important; flex-direction: column !important; gap: 16px !important; }
-      .add-form { flex-wrap: wrap; gap: 8px; }
-      .add-input { width: 100%; flex: 1 1 100%; }
-      .add-select { max-width: 100%; width: 100%; flex: 1 1 100%; }
+      .panel-head { padding: 14px 16px; }
+      .class-selector { padding: 12px 14px; }
+      .class-chips { gap: 6px; }
+      .chip { padding: 6px 12px; font-size: 12px; }
+      .periods-header { padding: 12px 14px; }
+      .assigned-row { padding: 10px 14px; gap: 10px; }
+      .add-form { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 12px; }
+      .add-input { width: 100%; flex: 1 1 auto; }
+      .add-select { max-width: 100%; width: 100%; flex: 1 1 auto; }
+      .add-form-actions { justify-content: flex-end; }
       .subject-cards { grid-template-columns: repeat(2, 1fr); padding: 0 14px 14px; }
       .assign-modal {
         max-width: 100vw;

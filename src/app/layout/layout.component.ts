@@ -700,7 +700,6 @@ import { SwalNotificationService } from '../core/services/swal-notification.serv
         display: block;
         position: fixed; inset: 0; z-index: 299;
         background: rgba(0,0,0,0.45);
-        backdrop-filter: blur(2px);
         animation: fadeIn 0.2s;
       }
 
@@ -739,11 +738,11 @@ import { SwalNotificationService } from '../core/services/swal-notification.serv
       .user-pill { padding: 4px; border-radius: 50%; }
 
       /* Page content */
-      .page-content { padding: 16px; }
+      .page-content { padding: 16px; padding-bottom: 80px; }
     }
 
     @media (max-width: 480px) {
-      .page-content { padding: 12px; }
+      .page-content { padding: 12px; padding-bottom: 80px; }
       .topbar { padding: 0 12px; }
     }
   `]

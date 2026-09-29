@@ -206,7 +206,6 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
     .modal-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.45);
       display: flex; align-items: center; justify-content: center; z-index: 1000;
-      backdrop-filter: blur(2px);
     }
     .modal {
       background: var(--surface); border-radius: var(--r-2xl);

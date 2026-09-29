@@ -91,12 +91,11 @@ interface SelectedFee {
     @if (yearsLoaded() && years().length === 0 && !setupWarningDismissed()) {
       <div class="sw-backdrop">
         <div class="sw-modal">
-
           <div class="sw-banner">
             <div class="sw-banner-icon">
               <span class="material-icons-round">build_circle</span>
             </div>
-            <button class="sw-close" type="button" (click)="setupWarningDismissed.set(true)">
+            <button class="sw-close" type="button" (click)="setupWarningDismissed.set(true)" aria-label="Close">
               <span class="material-icons-round">close</span>
             </button>
           </div>
@@ -141,12 +140,11 @@ interface SelectedFee {
               Start Setup <span class="material-icons-round">arrow_forward</span>
             </button>
           </div>
-
         </div>
       </div>
     }
 
-    <!-- Form Card -->
+    <!-- Form Card Container -->
     <div class="admission-card">
 
         <!-- Header -->
@@ -161,14 +159,19 @@ interface SelectedFee {
               [fallbackColor]="previewColor()"
               [fallbackText]="previewInitials()"
               (uploaded)="onPhotoUploaded($event)" />
-            <div>
-              <h2 class="adm-title">{{ editId() ? 'Edit Student' : 'New Admission' }} <span class="adm-name">{{ previewFullName() }}</span></h2>
-              <p class="adm-sub">{{ editId() ? 'Update student information' : 'Fill in all 5 steps to complete the admission' }}</p>
+            <div class="adm-header-titles">
+              <h2 class="adm-title">
+                {{ editId() ? 'Edit Student' : 'New Admission' }}
+                @if (previewFullName()) {
+                  <span class="adm-name">· {{ previewFullName() }}</span>
+                }
+              </h2>
+              <p class="adm-sub">{{ editId() ? 'Update student profile information' : 'Complete student registration and fee configuration' }}</p>
             </div>
           </div>
           <div class="adm-header-right">
-            <span class="adm-step-badge">Step {{ activeTab() + 1 }}/{{ editId() ? 4 : 5 }}</span>
-            <button class="adm-back-btn" (click)="router.navigate(['/students/list'])">
+            <span class="adm-step-badge">Step {{ activeTab() + 1 }} of {{ editId() ? 4 : 5 }}</span>
+            <button class="adm-back-btn" (click)="router.navigate(['/students/list'])" title="Close and return to list">
               <span class="material-icons-round">close</span>
             </button>
           </div>
@@ -176,37 +179,96 @@ interface SelectedFee {
 
         <!-- Progress bar -->
         <div class="progress-bar">
-          <div class="progress-fill" [style.width.%]="(activeTab() + 1) * 20"></div>
+          <div class="progress-fill" [style.width.%]="(activeTab() + 1) * (editId() ? 25 : 20)"></div>
         </div>
 
-        <!-- Tab bar -->
-        <div class="adm-tabs">
-          <button class="adm-tab" [class.active]="activeTab() === 0" [class.done]="activeTab() > 0" (click)="activeTab.set(0)">
-            <span class="tab-dot">@if (activeTab() > 0) { <span class="material-icons-round">check</span> } @else { 1 }</span>
-            <span class="tab-label">Personal</span>
-          </button>
-          <div class="tab-connector" [class.done]="activeTab() > 0"></div>
-          <button class="adm-tab" [class.active]="activeTab() === 1" [class.done]="activeTab() > 1" (click)="activeTab.set(1)">
-            <span class="tab-dot">@if (activeTab() > 1) { <span class="material-icons-round">check</span> } @else { 2 }</span>
-            <span class="tab-label">Contact</span>
-          </button>
-          <div class="tab-connector" [class.done]="activeTab() > 1"></div>
-          <button class="adm-tab" [class.active]="activeTab() === 2" [class.done]="activeTab() > 2" (click)="activeTab.set(2)">
-            <span class="tab-dot">@if (activeTab() > 2) { <span class="material-icons-round">check</span> } @else { 3 }</span>
-            <span class="tab-label">Admission</span>
-          </button>
-          <div class="tab-connector" [class.done]="activeTab() > 2"></div>
-          <button class="adm-tab" [class.active]="activeTab() === 3" [class.done]="activeTab() > 3" (click)="activeTab.set(3)">
-            <span class="tab-dot">@if (activeTab() > 3) { <span class="material-icons-round">check</span> } @else { 4 }</span>
-            <span class="tab-label">Guardian</span>
-          </button>
-          @if (!editId()) {
-            <div class="tab-connector" [class.done]="activeTab() > 3"></div>
-            <button class="adm-tab" [class.active]="activeTab() === 4" (click)="activeTab.set(4); loadFeeStructures()">
-              <span class="tab-dot">5</span>
-              <span class="tab-label">Fees</span>
+        <!-- Stepper: Desktop & Mobile responsive -->
+        <div class="adm-stepper-wrap">
+          <!-- Mobile compact indicator -->
+          <div class="adm-stepper-mobile">
+            <div class="asm-info">
+              <span class="asm-step-tag">Step {{ activeTab() + 1 }}/{{ editId() ? 4 : 5 }}</span>
+              <span class="asm-step-name">
+                @switch (activeTab()) {
+                  @case (0) { Personal Details }
+                  @case (1) { Contact Information }
+                  @case (2) { Admission Details }
+                  @case (3) { Guardian Information }
+                  @case (4) { Fees & Discounts }
+                }
+              </span>
+            </div>
+            <div class="asm-dots">
+              <span class="asm-dot" [class.active]="activeTab() === 0" [class.done]="activeTab() > 0" (click)="activeTab.set(0)">1</span>
+              <span class="asm-dot" [class.active]="activeTab() === 1" [class.done]="activeTab() > 1" (click)="activeTab.set(1)">2</span>
+              <span class="asm-dot" [class.active]="activeTab() === 2" [class.done]="activeTab() > 2" (click)="activeTab.set(2)">3</span>
+              <span class="asm-dot" [class.active]="activeTab() === 3" [class.done]="activeTab() > 3" (click)="activeTab.set(3)">4</span>
+              @if (!editId()) {
+                <span class="asm-dot" [class.active]="activeTab() === 4" (click)="activeTab.set(4); loadFeeStructures()">5</span>
+              }
+            </div>
+          </div>
+
+          <!-- Desktop full stepper -->
+          <div class="adm-tabs">
+            <button type="button" class="adm-tab" [class.active]="activeTab() === 0" [class.done]="activeTab() > 0" (click)="activeTab.set(0)">
+              <span class="tab-dot">
+                @if (activeTab() > 0) { <span class="material-icons-round">check</span> } @else { 1 }
+              </span>
+              <div class="tab-text">
+                <span class="tab-number">STEP 1</span>
+                <span class="tab-label">Personal</span>
+              </div>
             </button>
-          }
+
+            <div class="tab-connector" [class.done]="activeTab() > 0"></div>
+
+            <button type="button" class="adm-tab" [class.active]="activeTab() === 1" [class.done]="activeTab() > 1" (click)="activeTab.set(1)">
+              <span class="tab-dot">
+                @if (activeTab() > 1) { <span class="material-icons-round">check</span> } @else { 2 }
+              </span>
+              <div class="tab-text">
+                <span class="tab-number">STEP 2</span>
+                <span class="tab-label">Contact</span>
+              </div>
+            </button>
+
+            <div class="tab-connector" [class.done]="activeTab() > 1"></div>
+
+            <button type="button" class="adm-tab" [class.active]="activeTab() === 2" [class.done]="activeTab() > 2" (click)="activeTab.set(2)">
+              <span class="tab-dot">
+                @if (activeTab() > 2) { <span class="material-icons-round">check</span> } @else { 3 }
+              </span>
+              <div class="tab-text">
+                <span class="tab-number">STEP 3</span>
+                <span class="tab-label">Admission</span>
+              </div>
+            </button>
+
+            <div class="tab-connector" [class.done]="activeTab() > 2"></div>
+
+            <button type="button" class="adm-tab" [class.active]="activeTab() === 3" [class.done]="activeTab() > 3" (click)="activeTab.set(3)">
+              <span class="tab-dot">
+                @if (activeTab() > 3) { <span class="material-icons-round">check</span> } @else { 4 }
+              </span>
+              <div class="tab-text">
+                <span class="tab-number">STEP 4</span>
+                <span class="tab-label">Guardian</span>
+              </div>
+            </button>
+
+            @if (!editId()) {
+              <div class="tab-connector" [class.done]="activeTab() > 3"></div>
+
+              <button type="button" class="adm-tab" [class.active]="activeTab() === 4" (click)="activeTab.set(4); loadFeeStructures()">
+                <span class="tab-dot">5</span>
+                <div class="tab-text">
+                  <span class="tab-number">STEP 5</span>
+                  <span class="tab-label">Fees</span>
+                </div>
+              </button>
+            }
+          </div>
         </div>
 
         <!-- Form body -->
@@ -217,77 +279,84 @@ interface SelectedFee {
             @if (activeTab() === 0) {
               <div class="tab-pane">
                 <div class="section-hint">
-                  <span class="material-icons-round">info</span>
-                  Enter the student's personal and demographic information.
+                  <span class="material-icons-round">badge</span>
+                  <span>Enter the student's legal name, birth date, and demographic profile.</span>
                 </div>
 
-                <div class="fg two">
-                  <div class="fi">
-                    <div class="fi-icon"><span class="material-icons-round">badge</span></div>
-                    <div class="fi-content">
-                      <label>First Name <span class="req">*</span></label>
-                      <input formControlName="firstName" placeholder="e.g. Muhammad" />
-                      @if (f['firstName'].invalid && f['firstName'].touched) {
-                        <span class="ferr">First name is required</span>
-                      }
+                <div class="form-grid-2">
+                  <div class="form-field" [class.has-error]="f['firstName'].invalid && f['firstName'].touched">
+                    <label>First Name <span class="req">*</span></label>
+                    <div class="input-wrap">
+                      <span class="material-icons-round field-icon">badge</span>
+                      <input formControlName="firstName" placeholder="e.g. Muhammad" autocomplete="given-name" />
                     </div>
+                    @if (f['firstName'].invalid && f['firstName'].touched) {
+                      <span class="ferr">
+                        <span class="material-icons-round">error</span> First name is required
+                      </span>
+                    }
                   </div>
-                  <div class="fi">
-                    <div class="fi-icon"><span class="material-icons-round">badge</span></div>
-                    <div class="fi-content">
-                      <label>Last Name <span class="req">*</span></label>
-                      <input formControlName="lastName" placeholder="e.g. Ali" />
-                      @if (f['lastName'].invalid && f['lastName'].touched) {
-                        <span class="ferr">Last name is required</span>
-                      }
+
+                  <div class="form-field" [class.has-error]="f['lastName'].invalid && f['lastName'].touched">
+                    <label>Last Name <span class="req">*</span></label>
+                    <div class="input-wrap">
+                      <span class="material-icons-round field-icon">badge</span>
+                      <input formControlName="lastName" placeholder="e.g. Ali" autocomplete="family-name" />
                     </div>
+                    @if (f['lastName'].invalid && f['lastName'].touched) {
+                      <span class="ferr">
+                        <span class="material-icons-round">error</span> Last name is required
+                      </span>
+                    }
                   </div>
                 </div>
 
-                <div class="fg three">
-                  <div class="fi">
-                    <div class="fi-icon"><span class="material-icons-round">cake</span></div>
-                    <div class="fi-content">
-                      <label>Date of Birth</label>
+                <div class="form-grid-3">
+                  <div class="form-field">
+                    <label>Date of Birth</label>
+                    <div class="input-wrap date-wrap">
                       <app-date-picker formControlName="dateOfBirth" />
                     </div>
                   </div>
-                  <div class="fi">
-                    <div class="fi-icon"><span class="material-icons-round">wc</span></div>
-                    <div class="fi-content">
-                      <label>Gender</label>
+
+                  <div class="form-field">
+                    <label>Gender</label>
+                    <div class="input-wrap select-wrap">
+                      <span class="material-icons-round field-icon">wc</span>
                       <select formControlName="gender">
-                        <option value="">Select</option>
+                        <option value="">Select Gender</option>
                         <option>Male</option>
                         <option>Female</option>
                         <option>Other</option>
                       </select>
                     </div>
                   </div>
-                  <div class="fi">
-                    <div class="fi-icon"><span class="material-icons-round">bloodtype</span></div>
-                    <div class="fi-content">
-                      <label>Blood Group</label>
+
+                  <div class="form-field">
+                    <label>Blood Group</label>
+                    <div class="input-wrap select-wrap">
+                      <span class="material-icons-round field-icon">bloodtype</span>
                       <select formControlName="bloodGroup">
-                        <option value="">Select</option>
+                        <option value="">Select Blood Group</option>
                         @for (bg of bloodGroups; track bg) { <option>{{ bg }}</option> }
                       </select>
                     </div>
                   </div>
                 </div>
 
-                <div class="fg two">
-                  <div class="fi">
-                    <div class="fi-icon"><span class="material-icons-round">mosque</span></div>
-                    <div class="fi-content">
-                      <label>Religion</label>
+                <div class="form-grid-2">
+                  <div class="form-field">
+                    <label>Religion</label>
+                    <div class="input-wrap">
+                      <span class="material-icons-round field-icon">mosque</span>
                       <input formControlName="religion" placeholder="e.g. Islam" />
                     </div>
                   </div>
-                  <div class="fi">
-                    <div class="fi-icon"><span class="material-icons-round">flag</span></div>
-                    <div class="fi-content">
-                      <label>Nationality</label>
+
+                  <div class="form-field">
+                    <label>Nationality</label>
+                    <div class="input-wrap">
+                      <span class="material-icons-round field-icon">flag</span>
                       <input formControlName="nationality" placeholder="e.g. Pakistani" />
                     </div>
                   </div>
@@ -295,8 +364,8 @@ interface SelectedFee {
 
                 <div class="tab-nav">
                   <span></span>
-                  <button type="button" class="btn-primary" (click)="next()">
-                    Next <span class="material-icons-round">arrow_forward</span>
+                  <button type="button" class="btn-primary btn-next" (click)="next()">
+                    Next Step <span class="material-icons-round">arrow_forward</span>
                   </button>
                 </div>
               </div>
@@ -306,34 +375,40 @@ interface SelectedFee {
             @if (activeTab() === 1) {
               <div class="tab-pane">
                 <div class="section-hint">
-                  <span class="material-icons-round">info</span>
-                  Provide the student's contact and address information.
+                  <span class="material-icons-round">contact_mail</span>
+                  <span>Provide the student's residential address and contact information.</span>
                 </div>
 
-                <div class="fg">
-                  <div class="fi full">
-                    <div class="fi-icon"><span class="material-icons-round">home</span></div>
-                    <div class="fi-content">
-                      <label>Home Address</label>
-                      <textarea formControlName="address" rows="2" placeholder="Street, City, Province"></textarea>
+                <div class="form-grid-1">
+                  <div class="form-field">
+                    <label>Home Address</label>
+                    <div class="input-wrap textarea-wrap">
+                      <span class="material-icons-round field-icon text-icon">home</span>
+                      <textarea formControlName="address" rows="3" placeholder="House/Street #, Sector, City, Province"></textarea>
                     </div>
                   </div>
                 </div>
 
-                <div class="fg two">
-                  <div class="fi">
-                    <div class="fi-icon"><span class="material-icons-round">call</span></div>
-                    <div class="fi-content">
-                      <label>Phone Number</label>
-                      <input formControlName="phone" placeholder="0300-1234567" />
+                <div class="form-grid-2">
+                  <div class="form-field">
+                    <label>Student Phone Number</label>
+                    <div class="input-wrap">
+                      <span class="material-icons-round field-icon">call</span>
+                      <input formControlName="phone" placeholder="0300-1234567" type="tel" />
                     </div>
                   </div>
-                  <div class="fi">
-                    <div class="fi-icon"><span class="material-icons-round">email</span></div>
-                    <div class="fi-content">
-                      <label>Email Address</label>
-                      <input type="email" formControlName="email" placeholder="student@email.com" />
+
+                  <div class="form-field" [class.has-error]="f['email'].invalid && f['email'].touched">
+                    <label>Student Email Address</label>
+                    <div class="input-wrap">
+                      <span class="material-icons-round field-icon">email</span>
+                      <input type="email" formControlName="email" placeholder="student@email.com" autocomplete="email" />
                     </div>
+                    @if (f['email'].invalid && f['email'].touched) {
+                      <span class="ferr">
+                        <span class="material-icons-round">error</span> Enter a valid email address
+                      </span>
+                    }
                   </div>
                 </div>
 
@@ -341,8 +416,8 @@ interface SelectedFee {
                   <button type="button" class="btn-secondary" (click)="activeTab.set(0)">
                     <span class="material-icons-round">arrow_back</span> Back
                   </button>
-                  <button type="button" class="btn-primary" (click)="next()">
-                    Next <span class="material-icons-round">arrow_forward</span>
+                  <button type="button" class="btn-primary btn-next" (click)="next()">
+                    Next Step <span class="material-icons-round">arrow_forward</span>
                   </button>
                 </div>
               </div>
@@ -352,10 +427,10 @@ interface SelectedFee {
             @if (activeTab() === 2) {
               <div class="tab-pane">
                 <div class="section-hint">
-                  <span class="material-icons-round">info</span>
-                  Select the academic year and class for this student.
+                  <span class="material-icons-round">school</span>
+                  <span>Select the admission date, academic session, and target class.</span>
                   @if (!editId() && nextAdmissionNo()) {
-                    <span class="next-adm">Admission No. will be <strong>{{ nextAdmissionNo() }}</strong></span>
+                    <span class="next-adm">Next Roll/Adm No: <strong>{{ nextAdmissionNo() }}</strong></span>
                   }
                 </div>
 
@@ -363,10 +438,10 @@ interface SelectedFee {
                   <div class="setup-alert">
                     <span class="material-icons-round">warning</span>
                     <div class="sa-content">
-                      <strong>No Academic Years found.</strong>
+                      <strong>No Academic Years configured.</strong>
                       You must set up at least one Academic Year before you can admit a student.
                       <button type="button" class="sa-link" (click)="router.navigate(['/academics/years'])">
-                        Go to Academic Years <span class="material-icons-round">arrow_forward</span>
+                        Configure Academic Years <span class="material-icons-round">arrow_forward</span>
                       </button>
                     </div>
                   </div>
@@ -376,71 +451,78 @@ interface SelectedFee {
                   <div class="setup-alert">
                     <span class="material-icons-round">warning</span>
                     <div class="sa-content">
-                      <strong>No Classes found for this Academic Year.</strong>
-                      Add classes to the selected year before admitting a student.
+                      <strong>No Classes found for the selected Academic Year.</strong>
+                      Add classes to this academic year before admitting a student.
                       <button type="button" class="sa-link" (click)="router.navigate(['/academics/classes'])">
-                        Go to Classes <span class="material-icons-round">arrow_forward</span>
+                        Add Classes <span class="material-icons-round">arrow_forward</span>
                       </button>
                     </div>
                   </div>
                 }
 
-                <div class="fg three">
-                  <div class="fi">
-                    <div class="fi-icon"><span class="material-icons-round">event</span></div>
-                    <div class="fi-content">
-                      <label>Admission Date <span class="req">*</span></label>
+                <div class="form-grid-3">
+                  <div class="form-field" [class.has-error]="f['admissionDate'].invalid && f['admissionDate'].touched">
+                    <label>Admission Date <span class="req">*</span></label>
+                    <div class="input-wrap date-wrap">
                       <app-date-picker formControlName="admissionDate" />
-                      @if (f['admissionDate'].invalid && f['admissionDate'].touched) {
-                        <span class="ferr">Required</span>
-                      }
                     </div>
+                    @if (f['admissionDate'].invalid && f['admissionDate'].touched) {
+                      <span class="ferr">
+                        <span class="material-icons-round">error</span> Admission date is required
+                      </span>
+                    }
                   </div>
-                  <div class="fi">
-                    <div class="fi-icon"><span class="material-icons-round">calendar_month</span></div>
-                    <div class="fi-content">
-                      <label>Academic Year <span class="req">*</span></label>
+
+                  <div class="form-field" [class.has-error]="f['academicYearId'].invalid && f['academicYearId'].touched">
+                    <label>Academic Year <span class="req">*</span></label>
+                    <div class="input-wrap select-wrap">
+                      <span class="material-icons-round field-icon">calendar_month</span>
                       <select formControlName="academicYearId" (change)="onYearChange()">
-                        <option [ngValue]="null">Select year</option>
+                        <option [ngValue]="null">Select Academic Year</option>
                         @for (y of years(); track y.academicYearId) {
                           <option [ngValue]="y.academicYearId">{{ y.yearLabel }}</option>
                         }
                       </select>
-                      @if (f['academicYearId'].invalid && f['academicYearId'].touched) {
-                        <span class="ferr">Required</span>
-                      }
                     </div>
+                    @if (f['academicYearId'].invalid && f['academicYearId'].touched) {
+                      <span class="ferr">
+                        <span class="material-icons-round">error</span> Academic year is required
+                      </span>
+                    }
                   </div>
-                  <div class="fi">
-                    <div class="fi-icon"><span class="material-icons-round">class</span></div>
-                    <div class="fi-content">
-                      <label>Class <span class="req">*</span></label>
+
+                  <div class="form-field" [class.has-error]="f['classId'].invalid && f['classId'].touched">
+                    <label>Assigned Class <span class="req">*</span></label>
+                    <div class="input-wrap select-wrap">
+                      <span class="material-icons-round field-icon">class</span>
                       <select formControlName="classId" (change)="onClassChange()">
-                        <option [ngValue]="null">Select class</option>
+                        <option [ngValue]="null">Select Class</option>
                         @for (c of classes(); track c.classId) {
-                          <option [ngValue]="c.classId">{{ c.className }}{{ c.section ? ' ' + c.section : '' }}</option>
+                          <option [ngValue]="c.classId">{{ c.className }}{{ c.section ? ' (' + c.section + ')' : '' }}</option>
                         }
                       </select>
-                      @if (f['classId'].invalid && f['classId'].touched) {
-                        <span class="ferr">Required</span>
-                      }
                     </div>
+                    @if (f['classId'].invalid && f['classId'].touched) {
+                      <span class="ferr">
+                        <span class="material-icons-round">error</span> Class is required
+                      </span>
+                    }
                   </div>
                 </div>
 
                 @if (f['academicYearId'].value && f['classId'].value) {
                   <div class="admission-preview">
-                    <div class="ap-row">
+                    <div class="ap-item">
                       <span class="material-icons-round">person</span>
                       <span>{{ previewFullName() || 'Student' }}</span>
                     </div>
                     <div class="ap-divider"></div>
-                    <div class="ap-row">
+                    <div class="ap-item">
                       <span class="material-icons-round">calendar_month</span>
                       <span>{{ selectedYearLabel() }}</span>
                     </div>
                     <div class="ap-divider"></div>
-                    <div class="ap-row">
+                    <div class="ap-item">
                       <span class="material-icons-round">class</span>
                       <span>{{ selectedClassLabel() }}</span>
                     </div>
@@ -451,8 +533,8 @@ interface SelectedFee {
                   <button type="button" class="btn-secondary" (click)="activeTab.set(1)">
                     <span class="material-icons-round">arrow_back</span> Back
                   </button>
-                  <button type="button" class="btn-primary" (click)="next()">
-                    Next <span class="material-icons-round">arrow_forward</span>
+                  <button type="button" class="btn-primary btn-next" (click)="next()">
+                    Next Step <span class="material-icons-round">arrow_forward</span>
                   </button>
                 </div>
               </div>
@@ -463,15 +545,15 @@ interface SelectedFee {
               <div class="tab-pane">
               <ng-container formGroupName="guardian">
                 <div class="section-hint">
-                  <span class="material-icons-round">info</span>
-                  Enter the parent or guardian's contact details.
+                  <span class="material-icons-round">family_restroom</span>
+                  <span>Enter parent/guardian contact details. Sibling check is performed automatically via CNIC.</span>
                 </div>
 
-                <div class="fg two">
-                  <div class="fi">
-                    <div class="fi-icon"><span class="material-icons-round">family_restroom</span></div>
-                    <div class="fi-content">
-                      <label>Relation <span class="req">*</span></label>
+                <div class="form-grid-2">
+                  <div class="form-field">
+                    <label>Relationship <span class="req">*</span></label>
+                    <div class="input-wrap select-wrap">
+                      <span class="material-icons-round field-icon">family_restroom</span>
                       <select formControlName="relation">
                         <option>Father</option>
                         <option>Mother</option>
@@ -479,54 +561,68 @@ interface SelectedFee {
                       </select>
                     </div>
                   </div>
-                  <div class="fi">
-                    <div class="fi-icon"><span class="material-icons-round">person</span></div>
-                    <div class="fi-content">
-                      <label>Full Name <span class="req">*</span></label>
-                      <input formControlName="fullName" placeholder="Guardian's full name" />
-                      @if (gf['fullName'].invalid && gf['fullName'].touched) {
-                        <span class="ferr">Name is required</span>
-                      }
+
+                  <div class="form-field" [class.has-error]="gf['fullName'].invalid && gf['fullName'].touched">
+                    <label>Guardian Full Name <span class="req">*</span></label>
+                    <div class="input-wrap">
+                      <span class="material-icons-round field-icon">person</span>
+                      <input formControlName="fullName" placeholder="Father or guardian's full name" />
                     </div>
+                    @if (gf['fullName'].invalid && gf['fullName'].touched) {
+                      <span class="ferr">
+                        <span class="material-icons-round">error</span> Guardian name is required
+                      </span>
+                    }
                   </div>
                 </div>
 
-                <div class="fg three">
-                  <div class="fi">
-                    <div class="fi-icon"><span class="material-icons-round">call</span></div>
-                    <div class="fi-content">
-                      <label>Phone <span class="req">*</span></label>
-                      <input formControlName="phone" placeholder="0300-1234567" />
-                      @if (gf['phone'].invalid && gf['phone'].touched) {
-                        <span class="ferr">Phone is required</span>
-                      }
+                <div class="form-grid-3">
+                  <div class="form-field" [class.has-error]="gf['phone'].invalid && gf['phone'].touched">
+                    <label>Guardian Phone <span class="req">*</span></label>
+                    <div class="input-wrap">
+                      <span class="material-icons-round field-icon">call</span>
+                      <input formControlName="phone" placeholder="0300-1234567" type="tel" />
                     </div>
+                    @if (gf['phone'].invalid && gf['phone'].touched) {
+                      <span class="ferr">
+                        <span class="material-icons-round">error</span> Phone number is required
+                      </span>
+                    }
                   </div>
-                  <div class="fi">
-                    <div class="fi-icon"><span class="material-icons-round">credit_card</span></div>
-                    <div class="fi-content">
-                      <label>CNIC</label>
+
+                  <div class="form-field">
+                    <label>Guardian CNIC</label>
+                    <div class="input-wrap">
+                      <span class="material-icons-round field-icon">credit_card</span>
                       <input formControlName="cnic" placeholder="12345-1234567-1" (blur)="onCnicBlur()" />
                     </div>
                   </div>
-                  <div class="fi">
-                    <div class="fi-icon"><span class="material-icons-round">work</span></div>
-                    <div class="fi-content">
-                      <label>Occupation</label>
-                      <input formControlName="occupation" placeholder="e.g. Business" />
+
+                  <div class="form-field">
+                    <label>Guardian Occupation</label>
+                    <div class="input-wrap">
+                      <span class="material-icons-round field-icon">work</span>
+                      <input formControlName="occupation" placeholder="e.g. Business / Service" />
                     </div>
                   </div>
                 </div>
 
                 <!-- Sibling Detection Banner -->
                 @if (siblingCheckDone() && siblingCount() > 0) {
-                  <div class="sibling-banner">
-                    <span class="material-icons-round">people</span>
+                  <div class="sibling-banner found">
+                    <span class="material-icons-round">family_restroom</span>
                     <div class="sb-content">
-                      <strong>{{ siblingCount() }} sibling(s) found</strong> — This will be child #{{ siblingOrder() }} for this guardian.
+                      <div class="sb-title">
+                        <strong>{{ siblingCount() }} sibling(s) already registered</strong>
+                        <span class="sb-order-tag">Child #{{ siblingOrder() }}</span>
+                      </div>
+                      <p class="sb-desc">Linked siblings under this guardian's CNIC:</p>
                       <div class="sb-names">
                         @for (s of siblings(); track s.studentId) {
-                          <span class="sb-chip">{{ s.name }} ({{ s.admissionNo }})</span>
+                          <span class="sb-chip">
+                            <span class="material-icons-round">person</span>
+                            {{ s.name }} ({{ s.admissionNo }})
+                          </span>
                         }
                       </div>
                     </div>
@@ -535,7 +631,9 @@ interface SelectedFee {
                 @if (siblingCheckDone() && siblingCount() === 0) {
                   <div class="sibling-banner new">
                     <span class="material-icons-round">person_add</span>
-                    <div class="sb-content">No existing siblings found for this CNIC.</div>
+                    <div class="sb-content">
+                      <strong>First admission under this CNIC.</strong> No existing siblings detected.
+                    </div>
                   </div>
                 }
 
@@ -543,11 +641,11 @@ interface SelectedFee {
                   <button type="button" class="btn-secondary" (click)="activeTab.set(2)">
                     <span class="material-icons-round">arrow_back</span> Back
                   </button>
-                  <button type="button" class="btn-primary" (click)="next()" [disabled]="saving()">
+                  <button type="button" class="btn-primary btn-next" (click)="next()" [disabled]="saving()">
                     @if (editId()) {
                       <span class="material-icons-round">save</span> {{ saving() ? 'Saving...' : 'Save Changes' }}
                     } @else {
-                      Next <span class="material-icons-round">arrow_forward</span>
+                      Next Step <span class="material-icons-round">arrow_forward</span>
                     }
                   </button>
                 </div>
@@ -559,9 +657,8 @@ interface SelectedFee {
             @if (activeTab() === 4) {
               <div class="tab-pane">
                 <div class="section-hint">
-                  <span class="material-icons-round">info</span>
-                  Assign fees for this admission. Admission/one-time fees are shown first.
-                  You can skip this step — fees can be assigned later.
+                  <span class="material-icons-round">payments</span>
+                  <span>Select applicable fees for this student. You may also apply discounts or mark initial payments directly.</span>
                 </div>
 
                 @if (feeLoadError()) {
@@ -573,8 +670,10 @@ interface SelectedFee {
                 @if (feeStructures().length === 0 && !loadingFees() && !feeLoadError()) {
                   <div class="no-fees-hint">
                     <span class="material-icons-round">info</span>
-                    No fee structures found for <strong>{{ selectedClassLabel() }}</strong> / <strong>{{ selectedYearLabel() }}</strong>.
-                    Go to <em>Fees → Fee Structures</em> to set them up, or skip and assign later.
+                    <div>
+                      <strong>No fee structures defined</strong> for {{ selectedClassLabel() }} ({{ selectedYearLabel() }}).
+                      <span>You can proceed with admission now and assign fees later under <em>Fees Management</em>.</span>
+                    </div>
                   </div>
                 }
 
@@ -587,48 +686,57 @@ interface SelectedFee {
                 @if (feeStructures().length > 0) {
                   <div class="fee-list">
                     @for (fs of feeStructures(); track fs.feeStructureId) {
-                      <div class="fee-row" [class.selected]="isFeeSelected(fs.feeStructureId)">
-                        <div class="fee-row-top">
-                          <input type="checkbox" class="fee-checkbox"
-                            [id]="'fee_' + fs.feeStructureId"
-                            [checked]="isFeeSelected(fs.feeStructureId)"
-                            (change)="toggleFee(fs, $event)" />
-                          <label [for]="'fee_' + fs.feeStructureId" style="display:flex;align-items:center;gap:8px;flex:1;cursor:pointer;margin:0;">
-                            <div class="fee-name">
-                              {{ fs.feeTypeName }}
+                      <div class="fee-card" [class.selected]="isFeeSelected(fs.feeStructureId)">
+                        <div class="fee-header">
+                          <label class="fee-checkbox-label" [for]="'fee_' + fs.feeStructureId">
+                            <input type="checkbox" class="fee-checkbox"
+                              [id]="'fee_' + fs.feeStructureId"
+                              [checked]="isFeeSelected(fs.feeStructureId)"
+                              (change)="toggleFee(fs, $event)" />
+                            <div class="fee-info">
+                              <span class="fee-title">{{ fs.feeTypeName }}</span>
                               @if (fs.dueDay === 'Once') {
-                                <span class="fee-badge once">Admission Fee</span>
+                                <span class="fee-badge once">Admission / One-time</span>
                               } @else {
-                                <span class="fee-badge monthly">{{ fs.dueDay }}</span>
+                                <span class="fee-badge recurring">{{ fs.dueDay }}</span>
                               }
                             </div>
-                            <div class="fee-amount">PKR {{ fs.amount | number:'1.0-0' }}</div>
                           </label>
+                          <div class="fee-price-tag">
+                            <span class="fee-curr">PKR</span>
+                            <span class="fee-val">{{ fs.amount | number:'1.0-0' }}</span>
+                          </div>
                         </div>
 
                         @if (isFeeSelected(fs.feeStructureId)) {
-                          <div class="fee-extra">
-                            <div class="fee-extra-row">
+                          <div class="fee-body">
+                            <div class="fee-controls-grid">
                               <div class="fee-field">
                                 <label>Discount (PKR)</label>
                                 <input type="number" min="0"
                                   [value]="getFeeDiscount(fs.feeStructureId)"
-                                  (input)="setFeeDiscount(fs.feeStructureId, $event)" />
+                                  (input)="setFeeDiscount(fs.feeStructureId, $event)"
+                                  placeholder="0" />
                               </div>
+
                               <div class="fee-field">
                                 <label>Due Date</label>
-                                <app-date-picker
-                                  [ngModel]="getFeeDueDate(fs.feeStructureId)"
-                                  (dateChange)="setFeeDueDate(fs.feeStructureId, $event)"
-                                  [ngModelOptions]="{standalone:true}" />
+                                <div class="fee-date-wrap">
+                                  <app-date-picker
+                                    [ngModel]="getFeeDueDate(fs.feeStructureId)"
+                                    (dateChange)="setFeeDueDate(fs.feeStructureId, $event)"
+                                    [ngModelOptions]="{standalone:true}" />
+                                </div>
                               </div>
+
                               <div class="fee-field">
-                                <label>Status</label>
+                                <label>Payment Status</label>
                                 <select (change)="setFeePaid(fs.feeStructureId, $event)">
-                                  <option value="unpaid">Unpaid</option>
-                                  <option value="paid">Paid</option>
+                                  <option value="unpaid">Unpaid (Issue Challan)</option>
+                                  <option value="paid">Paid (Cash / Direct)</option>
                                 </select>
                               </div>
+
                               @if (getFeeIsPaid(fs.feeStructureId)) {
                                 <div class="fee-field">
                                   <label>Amount Paid (PKR)</label>
@@ -638,8 +746,10 @@ interface SelectedFee {
                                 </div>
                               }
                             </div>
-                            <div class="fee-net">
-                              Net Payable: <strong>PKR {{ (fs.amount - getFeeDiscount(fs.feeStructureId)) | number:'1.0-0' }}</strong>
+
+                            <div class="fee-footer-calc">
+                              <span class="fee-net-label">Net Payable Amount:</span>
+                              <span class="fee-net-val">PKR {{ (fs.amount - getFeeDiscount(fs.feeStructureId)) | number:'1.0-0' }}</span>
                             </div>
                           </div>
                         }
@@ -649,8 +759,14 @@ interface SelectedFee {
 
                   @if (selectedFees().length > 0) {
                     <div class="fee-total-bar">
-                      <span>{{ selectedFees().length }} fee(s) selected</span>
-                      <span>Total: <strong>PKR {{ feeTotal() | number:'1.0-0' }}</strong></span>
+                      <div class="ftb-left">
+                        <span class="material-icons-round">receipt_long</span>
+                        <span>{{ selectedFees().length }} fee item(s) selected</span>
+                      </div>
+                      <div class="ftb-right">
+                        <span class="ftb-lbl">Total Net Payable:</span>
+                        <span class="ftb-amt">PKR {{ feeTotal() | number:'1.0-0' }}</span>
+                      </div>
                     </div>
                   }
                 }
@@ -665,11 +781,11 @@ interface SelectedFee {
                   <button type="button" class="btn-secondary" (click)="activeTab.set(3)">
                     <span class="material-icons-round">arrow_back</span> Back
                   </button>
-                  <button type="submit" class="btn-primary" [disabled]="saving()">
+                  <button type="submit" class="btn-primary btn-submit" [disabled]="saving()">
                     @if (saving()) {
-                      <span class="material-icons-round spin">refresh</span> Submitting…
+                      <span class="material-icons-round spin">refresh</span> Processing Admission…
                     } @else {
-                      <span class="material-icons-round">how_to_reg</span> Submit Admission
+                      <span class="material-icons-round">how_to_reg</span> Complete & Submit Admission
                     }
                   </button>
                 </div>
@@ -684,373 +800,1003 @@ interface SelectedFee {
     } <!-- end else -->
   `,
   styles: [`
+    /* ── Host & Container ── */
+    :host {
+      display: block;
+      width: 100%;
+    }
+
     /* ── Success screen ── */
     .success-screen {
-      display: flex; align-items: center; justify-content: center;
-      min-height: 50vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 55vh;
+      padding: var(--sp-4, 16px);
     }
     .success-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 20px; padding: 40px 36px;
-      text-align: center; max-width: 440px; width: 100%;
-      box-shadow: var(--sh-xl); animation: slideUp 0.3s cubic-bezier(.22,1,.36,1);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-2xl, 20px);
+      padding: 36px 28px;
+      text-align: center;
+      max-width: 480px;
+      width: 100%;
+      box-shadow: var(--sh-xl);
+      animation: slideUp 0.3s cubic-bezier(.22,1,.36,1);
     }
     .success-icon {
-      width: 60px; height: 60px; border-radius: 16px;
-      background: var(--green-s); border: 1px solid var(--green-b);
-      display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 16px;
-      .material-icons-round { font-size: 30px; color: var(--green); font-variation-settings: 'FILL' 1; }
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
+      background: var(--green-s);
+      border: 1.5px solid var(--green-b);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 18px;
+      .material-icons-round { font-size: 34px; color: var(--green); font-variation-settings: 'FILL' 1; }
     }
-    .success-card h2 { font-size: 20px; font-weight: 800; color: var(--t1); margin-bottom: 6px; }
-    .success-sub { font-size: 13px; color: var(--t4); margin-bottom: 20px; }
+    .success-card h2 { font-size: 21px; font-weight: 800; color: var(--t1); margin-bottom: 6px; }
+    .success-sub { font-size: 13.5px; color: var(--t4); margin-bottom: 20px; line-height: 1.5; }
     .admission-no {
-      display: inline-flex; flex-direction: column; align-items: center;
-      padding: 12px 24px; border-radius: 10px;
-      background: var(--accent-s); border: 1px solid var(--accent-g); margin-bottom: 16px;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 28px;
+      border-radius: var(--r-lg, 12px);
+      background: var(--accent-s);
+      border: 1.5px solid var(--accent-g);
+      margin-bottom: 18px;
     }
-    .an-label { font-size: 10px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; }
-    .an-value { font-size: 22px; font-weight: 800; color: var(--accent); }
+    .an-label { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; }
+    .an-value { font-size: 24px; font-weight: 800; color: var(--accent); margin-top: 2px; }
 
     .fee-summary-mini {
-      background: var(--surface-2); border: 1px solid var(--border);
-      border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; text-align: left;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg, 12px);
+      padding: 12px 16px;
+      margin-bottom: 18px;
+      text-align: left;
     }
-    .fsm-title { font-size: 11px; font-weight: 700; color: var(--t3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-    .fsm-row { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; padding: 3px 0; color: var(--t2); }
-    .fsm-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 99px; }
+    .fsm-title { font-size: 11px; font-weight: 700; color: var(--t3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .fsm-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 4px 0; color: var(--t2); }
+    .fsm-badge { font-size: 10.5px; font-weight: 700; padding: 2px 9px; border-radius: 99px; }
     .fsm-badge.paid { background: var(--green-s); color: var(--green); border: 1px solid var(--green-b); }
     .fsm-badge.unpaid { background: var(--red-s); color: var(--red); border: 1px solid var(--red-b); }
 
-    .success-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
-      button { display: inline-flex; align-items: center; gap: 6px;
-        .material-icons-round { font-size: 15px; } }
+    .success-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      button {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: var(--btn-h, 42px);
+        padding: 0 16px;
+        border-radius: var(--r-md, 8px);
+        font-size: 13.5px;
+        font-weight: 600;
+        cursor: pointer;
+        .material-icons-round { font-size: 18px; }
+      }
     }
     .btn-warning {
-      padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 600;
-      background: #fef3c7; color: #b45309; border: 1px solid #fde68a;
+      background: #fef3c7; color: #b45309; border: 1.5px solid #fde68a;
     }
+    .btn-warning:hover { background: #fde68a; }
     .btn-success {
-      padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 600;
-      background: var(--green-s); color: var(--green); border: 1px solid var(--green-b);
+      background: var(--green-s); color: var(--green); border: 1.5px solid var(--green-b);
     }
+    .btn-success:hover { background: var(--green-b); }
 
-    /* ── Admission card ── */
+    /* ── Admission Card ── */
     .admission-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 16px; box-shadow: var(--sh);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-2xl, 20px);
+      box-shadow: var(--sh);
+      overflow: hidden;
+      margin-bottom: var(--sp-6, 24px);
     }
 
     /* ── Header ── */
     .adm-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 22px;
       background: linear-gradient(135deg, var(--accent-s) 0%, var(--surface) 100%);
       border-bottom: 1px solid var(--border);
-      border-radius: 16px 16px 0 0;
-      gap: 12px;
+      gap: 14px;
     }
-    .adm-header-left { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
-    .adm-header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .adm-header-left { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
+    .adm-header-titles { min-width: 0; }
+    .adm-header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 
     .adm-title {
-      font-size: 14px; font-weight: 700; color: var(--t1);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--t1);
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .adm-name { color: var(--accent); margin-left: 4px; }
-    .adm-sub { font-size: 11.5px; color: var(--t4); margin-top: 1px; }
+    .adm-name { color: var(--accent); font-weight: 700; }
+    .adm-sub { font-size: 12px; color: var(--t4); margin-top: 2px; }
 
     .adm-step-badge {
-      padding: 4px 12px; border-radius: 99px;
-      background: var(--accent); color: #fff;
-      font-size: 11.5px; font-weight: 700; white-space: nowrap;
+      padding: 5px 13px;
+      border-radius: 99px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      letter-spacing: 0.3px;
+      box-shadow: 0 2px 8px var(--accent-g);
     }
     .adm-back-btn {
-      width: 30px; height: 30px; border-radius: 8px;
-      border: 1px solid var(--border-2); background: var(--surface);
-      color: var(--t3); cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: all 0.15s;
-      .material-icons-round { font-size: 16px; }
+      width: 34px;
+      height: 34px;
+      border-radius: var(--r-md, 8px);
+      border: 1px solid var(--border-2);
+      background: var(--surface);
+      color: var(--t3);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      .material-icons-round { font-size: 18px; }
     }
-    .adm-back-btn:hover { background: var(--red-s); border-color: var(--red); color: var(--red); }
+    .adm-back-btn:hover {
+      background: var(--red-s);
+      border-color: var(--red);
+      color: var(--red);
+    }
 
     /* ── Progress bar ── */
-    .progress-bar { height: 3px; background: var(--border); }
-    .progress-fill { height: 100%; background: var(--accent); transition: width 0.4s cubic-bezier(.22,1,.36,1); }
+    .progress-bar {
+      height: 3px;
+      background: var(--border);
+      width: 100%;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.35s cubic-bezier(.22,1,.36,1);
+    }
 
-    /* ── Tab stepper ── */
-    .adm-tabs {
-      display: flex; align-items: center;
-      padding: 10px 20px;
+    /* ── Stepper ── */
+    .adm-stepper-wrap {
       background: var(--surface-2);
       border-bottom: 1px solid var(--border);
-      overflow-x: auto;
+    }
+
+    /* Mobile compact stepper */
+    .adm-stepper-mobile {
+      display: none;
+      padding: 10px 16px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .asm-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+    .asm-step-tag {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-s);
+      border: 1px solid var(--accent-g);
+      padding: 2px 8px;
+      border-radius: 99px;
+      white-space: nowrap;
+    }
+    .asm-step-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--t1);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .asm-dots {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .asm-dot {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1.5px solid var(--border-2);
+      color: var(--t4);
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .asm-dot.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 0 3px var(--accent-g);
+    }
+    .asm-dot.done {
+      background: var(--green);
+      border-color: var(--green);
+      color: #fff;
+    }
+
+    /* Desktop horizontal stepper */
+    .adm-tabs {
+      display: flex;
+      align-items: center;
+      padding: 12px 24px;
+      gap: 4px;
     }
     .adm-tab {
-      display: flex; align-items: center; gap: 6px;
-      background: none; border: none; cursor: pointer; padding: 0; white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: var(--r-lg, 12px);
+      white-space: nowrap;
+      transition: background 0.15s ease;
+    }
+    .adm-tab:hover {
+      background: rgba(0,0,0,0.03);
     }
     .tab-dot {
-      width: 24px; height: 24px; border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
       border: 2px solid var(--border-2);
-      background: var(--surface); color: var(--t4);
-      font-size: 11px; font-weight: 700;
-      display: flex; align-items: center; justify-content: center;
-      transition: all 0.2s; flex-shrink: 0;
-      .material-icons-round { font-size: 12px; }
+      background: var(--surface);
+      color: var(--t4);
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+      .material-icons-round { font-size: 15px; }
     }
-    .tab-label { font-size: 12.5px; font-weight: 600; color: var(--t4); transition: color 0.2s; }
-    .adm-tab.active .tab-dot { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 0 0 3px var(--accent-g); }
-    .adm-tab.active .tab-label { color: var(--accent); }
-    .adm-tab.done .tab-dot { background: var(--green); border-color: var(--green); color: #fff; }
-    .adm-tab.done .tab-label { color: var(--green); }
-    .tab-connector { flex: 1; height: 2px; background: var(--border); min-width: 16px; margin: 0 5px; border-radius: 2px; transition: background 0.3s; }
+    .tab-text {
+      display: flex;
+      flex-direction: column;
+      text-align: left;
+    }
+    .tab-number {
+      font-size: 9.5px;
+      font-weight: 800;
+      color: var(--t5);
+      letter-spacing: 0.6px;
+      line-height: 1;
+    }
+    .tab-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--t4);
+      margin-top: 2px;
+      transition: color 0.2s ease;
+    }
+
+    .adm-tab.active .tab-dot {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 0 4px var(--accent-g);
+    }
+    .adm-tab.active .tab-number { color: var(--accent); }
+    .adm-tab.active .tab-label { color: var(--accent); font-weight: 700; }
+
+    .adm-tab.done .tab-dot {
+      background: var(--green);
+      border-color: var(--green);
+      color: #fff;
+    }
+    .adm-tab.done .tab-number { color: var(--green); }
+    .adm-tab.done .tab-label { color: var(--t2); }
+
+    .tab-connector {
+      flex: 1;
+      height: 2px;
+      background: var(--border);
+      min-width: 14px;
+      margin: 0 6px;
+      border-radius: 2px;
+      transition: background 0.3s ease;
+    }
     .tab-connector.done { background: var(--green); }
 
-    /* ── Body ── */
+    /* ── Body & Panes ── */
     .adm-body { padding: 0; }
-    .tab-pane { padding: 16px 20px; display: flex; flex-direction: column; }
+    .tab-pane {
+      padding: 22px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
 
     .section-hint {
-      display: flex; align-items: center; gap: 7px;
-      padding: 8px 12px; border-radius: 8px;
-      background: var(--surface-2); border: 1px solid var(--border);
-      font-size: 12px; color: var(--t3); font-weight: 500;
-      margin-bottom: 14px;
-      .material-icons-round { font-size: 14px; color: var(--accent); flex-shrink: 0; }
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 10px 14px;
+      border-radius: var(--r-md, 8px);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      font-size: 12.5px;
+      color: var(--t3);
+      font-weight: 500;
+      .material-icons-round { font-size: 16px; color: var(--accent); flex-shrink: 0; }
     }
     .next-adm {
-      margin-left: auto; font-family: monospace;
-      strong { color: var(--accent); }
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--t3);
+      strong { color: var(--accent); font-weight: 700; }
     }
 
-    /* ── Field groups ── */
-    .fg { display: flex; gap: 10px; margin-bottom: 10px; }
-    .fg.two .fi, .fg.three .fi { flex: 1; min-width: 0; }
-
-    .fi { display: flex; align-items: flex-start; gap: 8px; flex: 1; }
-    .fi.full { width: 100%; }
-
-    .fi-icon {
-      width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0; margin-top: 20px;
-      background: var(--accent-s);
-      display: flex; align-items: center; justify-content: center;
-      .material-icons-round { font-size: 14px; color: var(--accent); font-variation-settings: 'FILL' 1; }
+    /* ── Inputs & Form Controls ── */
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
-    .fi-content { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+    .form-field label {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--t3);
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+    .req { color: var(--red); font-weight: 800; }
 
-    label { font-size: 10.5px; font-weight: 700; color: var(--t3); letter-spacing: 0.4px; text-transform: uppercase; }
-    .req { color: var(--red); }
+    .input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+    .field-icon {
+      position: absolute;
+      left: 12px;
+      font-size: 17px;
+      color: var(--t4);
+      pointer-events: none;
+      transition: color 0.15s ease;
+      z-index: 1;
+    }
+    .field-icon.text-icon {
+      top: 12px;
+    }
 
-    input, select, textarea {
-      width: 100%; padding: 8px 11px;
-      border: 1.5px solid var(--border); border-radius: 8px;
-      font-size: 13px; font-family: inherit;
-      background: var(--surface); color: var(--t1);
+    input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+      width: 100%;
+      height: var(--input-h, 42px);
+      padding: 0 12px 0 38px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--r-md, 8px);
+      font-size: 13.5px;
+      font-family: inherit;
+      background: var(--surface);
+      color: var(--t1);
       transition: border-color 0.15s, box-shadow 0.15s;
     }
+    select {
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 14px;
+      padding-right: 34px;
+    }
+    textarea {
+      height: auto;
+      min-height: 80px;
+      padding: 10px 12px 10px 38px;
+      resize: vertical;
+      line-height: 1.45;
+    }
+    .date-wrap app-date-picker {
+      width: 100%;
+    }
+
     input:focus, select:focus, textarea:focus {
-      outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-g);
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: var(--input-shadow-focus);
     }
-    input::placeholder, textarea::placeholder { color: var(--t5); }
-    textarea { resize: none; }
-    .ferr { font-size: 10.5px; color: var(--red); font-weight: 600; }
+    .input-wrap:focus-within .field-icon {
+      color: var(--accent);
+    }
 
-    /* ── Admission preview ── */
+    .form-field.has-error input,
+    .form-field.has-error select,
+    .form-field.has-error textarea {
+      border-color: var(--red);
+      box-shadow: var(--input-shadow-error);
+    }
+    .form-field.has-error .field-icon {
+      color: var(--red);
+    }
+
+    .ferr {
+      font-size: 11.5px;
+      color: var(--red);
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 2px;
+      .material-icons-round { font-size: 13px; }
+    }
+
+    /* ── Admission Preview Chip ── */
     .admission-preview {
-      display: flex; align-items: center; flex-wrap: wrap; gap: 0;
-      padding: 10px 14px; border-radius: 10px;
-      background: var(--green-s); border: 1px solid var(--green-b);
-      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 12px 18px;
+      border-radius: var(--r-lg, 12px);
+      background: var(--green-s);
+      border: 1.5px solid var(--green-b);
+      margin-top: 4px;
     }
-    .ap-row {
-      display: flex; align-items: center; gap: 5px;
-      font-size: 12.5px; font-weight: 600; color: var(--green);
-      .material-icons-round { font-size: 14px; }
+    .ap-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--green);
+      .material-icons-round { font-size: 16px; }
     }
-    .ap-divider { width: 1px; height: 16px; background: var(--green-b); margin: 0 12px; }
+    .ap-divider {
+      width: 1px;
+      height: 18px;
+      background: var(--green-b);
+    }
 
-    /* ── Sibling banner ── */
+    /* ── Sibling Banner ── */
     .sibling-banner {
-      display: flex; align-items: flex-start; gap: 10px;
-      padding: 10px 14px; border-radius: 10px; margin-bottom: 10px;
-      background: #fef3c7; border: 1px solid #fde68a; color: #92400e;
-      .material-icons-round { font-size: 18px; margin-top: 1px; flex-shrink: 0; }
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 18px;
+      border-radius: var(--r-lg, 12px);
+      margin-top: 4px;
     }
-    .sibling-banner.new { background: var(--surface-2); border-color: var(--border); color: var(--t3); }
-    .sb-content { font-size: 12.5px; font-weight: 500; }
+    .sibling-banner.found {
+      background: #fef3c7;
+      border: 1.5px solid #fde68a;
+      color: #92400e;
+      .material-icons-round { font-size: 22px; color: #b45309; flex-shrink: 0; }
+    }
+    .sibling-banner.new {
+      background: var(--surface-2);
+      border: 1.5px solid var(--border);
+      color: var(--t3);
+      .material-icons-round { font-size: 20px; color: var(--accent); flex-shrink: 0; }
+    }
+    .sb-content { flex: 1; font-size: 13px; }
+    .sb-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .sb-order-tag {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 99px;
+      background: #b45309;
+      color: #fff;
+    }
+    .sb-desc { font-size: 12px; color: #78350f; margin-top: 4px; }
     .sb-names { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
     .sb-chip {
-      font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px;
-      background: rgba(0,0,0,0.08); color: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 6px;
+      background: rgba(0,0,0,0.07);
+      color: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      .material-icons-round { font-size: 13px; }
     }
 
-    /* ── Fee list ── */
+    /* ── Fee List & Cards ── */
     .no-fees-hint {
-      display: flex; align-items: center; gap: 8px;
-      padding: 14px 16px; border-radius: 10px; margin-bottom: 12px;
-      background: var(--surface-2); border: 1px solid var(--border);
-      font-size: 12.5px; color: var(--t3);
-      .material-icons-round { font-size: 16px; color: var(--accent); }
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 16px 18px;
+      border-radius: var(--r-lg, 12px);
+      background: var(--surface-2);
+      border: 1.5px solid var(--border);
+      font-size: 13px;
+      color: var(--t3);
+      line-height: 1.5;
+      .material-icons-round { font-size: 20px; color: var(--accent); flex-shrink: 0; margin-top: 1px; }
+      strong { color: var(--t1); display: block; margin-bottom: 2px; }
     }
-    .fee-loading { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--t3); padding: 10px 0; }
-
-    .fee-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
-
-    .fee-row {
-      display: flex; flex-direction: column;
-      border: 1.5px solid var(--border); border-radius: 10px; overflow: hidden;
-      transition: border-color 0.15s;
+    .fee-loading {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--t3);
+      padding: 12px 0;
     }
-    .fee-row.selected { border-color: var(--accent); }
 
-    .fee-row-top { display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
-    .fee-checkbox { width: 16px; height: 16px; cursor: pointer; flex-shrink: 0; }
+    .fee-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .fee-card {
+      border: 1.5px solid var(--border);
+      border-radius: var(--r-lg, 12px);
+      background: var(--surface);
+      overflow: hidden;
+      transition: all 0.2s ease;
+    }
+    .fee-card.selected {
+      border-color: var(--accent);
+      box-shadow: 0 2px 10px var(--accent-s);
+    }
 
-    .fee-name { font-size: 13px; font-weight: 600; color: var(--t1); display: flex; align-items: center; gap: 7px; flex: 1; }
+    .fee-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      gap: 12px;
+    }
+    .fee-checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      cursor: pointer;
+      margin: 0;
+    }
+    .fee-checkbox {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      cursor: pointer;
+      flex-shrink: 0;
+      accent-color: var(--accent);
+    }
+    .fee-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .fee-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--t1);
+    }
     .fee-badge {
-      font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 5px;
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
     }
-    .fee-badge.once { background: var(--accent-s); color: var(--accent); border: 1px solid var(--accent-g); }
-    .fee-badge.monthly { background: var(--surface-2); color: var(--t3); border: 1px solid var(--border); }
-    .fee-amount { font-size: 13px; font-weight: 700; color: var(--t2); white-space: nowrap; }
+    .fee-badge.once {
+      background: var(--accent-s);
+      color: var(--accent);
+      border: 1px solid var(--accent-g);
+    }
+    .fee-badge.recurring {
+      background: var(--surface-2);
+      color: var(--t3);
+      border: 1px solid var(--border);
+    }
 
-    .fee-extra {
-      padding: 10px 14px 12px;
+    .fee-price-tag {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .fee-curr {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--t4);
+    }
+    .fee-val {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--t1);
+    }
+
+    .fee-body {
+      padding: 14px 16px;
       border-top: 1px solid var(--border);
       background: var(--surface-2);
     }
-    .fee-extra-row { display: flex; gap: 10px; flex-wrap: wrap; }
-    .fee-field { display: flex; flex-direction: column; gap: 4px; min-width: 130px; flex: 1; }
-    .fee-field label { font-size: 10px; font-weight: 700; color: var(--t3); text-transform: uppercase; letter-spacing: 0.4px; }
-    .fee-field input, .fee-field select { font-size: 12px; padding: 6px 9px; }
-    .fee-net { margin-top: 8px; font-size: 12px; color: var(--t3); }
-    .fee-net strong { color: var(--accent); }
+    .fee-controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+    }
+    .fee-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .fee-field label {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--t3);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .fee-field input, .fee-field select {
+      font-size: 13px;
+      height: 38px;
+      padding: 0 10px;
+    }
+    .fee-date-wrap app-date-picker {
+      width: 100%;
+    }
 
+    .fee-footer-calc {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .fee-net-label {
+      font-size: 12.5px;
+      color: var(--t3);
+      font-weight: 500;
+    }
+    .fee-net-val {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    /* ── Fee Total Bar ── */
     .fee-total-bar {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 10px 14px; border-radius: 10px;
-      background: var(--accent-s); border: 1px solid var(--accent-g);
-      font-size: 13px; color: var(--accent); font-weight: 600;
-      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 18px;
+      border-radius: var(--r-lg, 12px);
+      background: var(--accent-s);
+      border: 1.5px solid var(--accent-g);
+      font-size: 13.5px;
+      color: var(--accent);
+      margin-top: 6px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .ftb-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      .material-icons-round { font-size: 18px; }
+    }
+    .ftb-right {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+    .ftb-lbl {
+      font-size: 12px;
+      color: var(--t3);
+      font-weight: 600;
+    }
+    .ftb-amt {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--accent);
     }
 
-    /* ── Tab nav ── */
+    /* ── Tab Navigation Bar ── */
     .tab-nav {
-      display: flex; justify-content: space-between; align-items: center;
-      padding-top: 14px; margin-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 16px;
+      margin-top: 8px;
       border-top: 1px solid var(--border);
+      gap: 12px;
     }
-    .tab-nav .btn-primary, .tab-nav .btn-secondary {
-      display: inline-flex; align-items: center; gap: 6px;
-      .material-icons-round { font-size: 15px; }
+    .tab-nav button {
+      height: var(--btn-h, 42px);
+      padding: 0 20px;
+      border-radius: var(--r-md, 8px);
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      .material-icons-round { font-size: 17px; }
+    }
+    .btn-next, .btn-submit {
+      margin-left: auto;
     }
 
     .tm-alert {
-      display: flex; align-items: center; gap: 8px;
-      padding: 10px 14px; border-radius: 8px;
-      font-size: 12.5px; font-weight: 500; margin-bottom: 10px;
-      .material-icons-round { font-size: 16px; flex-shrink: 0; }
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: var(--r-md, 8px);
+      font-size: 13px;
+      font-weight: 500;
+      .material-icons-round { font-size: 18px; flex-shrink: 0; }
     }
-    .tm-alert.error { background: var(--red-s); color: var(--red); border: 1px solid var(--red-b); }
+    .tm-alert.error {
+      background: var(--red-s);
+      color: var(--red);
+      border: 1.5px solid var(--red-b);
+    }
 
-    /* ── Setup warning modal ── */
+    /* ── Setup Warning Modal ── */
     .sw-backdrop {
-      position: fixed; inset: 0; z-index: 1000;
-      background: rgba(0,0,0,0.4);
-      display: flex; align-items: center; justify-content: center;
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(0,0,0,0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
       padding: 16px;
       animation: fadeIn 0.18s ease;
     }
     .sw-modal {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 20px; width: 100%; max-width: 420px;
-      box-shadow: var(--sh-xl); overflow: hidden;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-2xl, 20px);
+      width: 100%;
+      max-width: 440px;
+      box-shadow: var(--sh-xl);
+      overflow: hidden;
       animation: slideUp 0.25s cubic-bezier(.22,1,.36,1);
     }
     .sw-banner {
       background: linear-gradient(135deg, var(--amber-s) 0%, #fde68a55 100%);
       border-bottom: 1px solid var(--amber-b);
       padding: 24px 20px 20px;
-      display: flex; align-items: flex-start; justify-content: space-between;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
     }
     .sw-banner-icon {
-      width: 52px; height: 52px; border-radius: 14px;
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
       background: var(--amber);
-      display: flex; align-items: center; justify-content: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       box-shadow: 0 4px 14px rgba(217,119,6,0.35);
       .material-icons-round { font-size: 26px; color: #fff; font-variation-settings: 'FILL' 1; }
     }
     .sw-close {
-      width: 28px; height: 28px; border-radius: 8px; border: none;
-      background: rgba(0,0,0,0.07); color: #92400e;
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: var(--r-md, 8px);
+      border: none;
+      background: rgba(0,0,0,0.07);
+      color: #92400e;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       transition: background 0.15s;
-      .material-icons-round { font-size: 16px; }
+      .material-icons-round { font-size: 18px; }
     }
     .sw-close:hover { background: rgba(0,0,0,0.14); }
-    .sw-body { padding: 20px 20px 16px; }
+    .sw-body { padding: 22px 20px 18px; }
     .sw-tag {
-      font-size: 10.5px; font-weight: 700; color: var(--amber);
-      text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--amber);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
     }
-    .sw-title { font-size: 17px; font-weight: 800; color: var(--t1); margin-bottom: 8px; line-height: 1.3; }
+    .sw-title { font-size: 18px; font-weight: 800; color: var(--t1); margin-bottom: 8px; line-height: 1.3; }
     .sw-desc {
-      font-size: 13px; color: var(--t3); line-height: 1.65; margin-bottom: 16px;
-      strong { color: var(--t2); font-weight: 600; }
+      font-size: 13.5px;
+      color: var(--t3);
+      line-height: 1.6;
+      margin-bottom: 18px;
+      strong { color: var(--t1); font-weight: 600; }
     }
-    .sw-checklist { display: flex; flex-direction: column; gap: 8px; }
+    .sw-checklist { display: flex; flex-direction: column; gap: 10px; }
     .sw-item {
-      display: flex; align-items: center; gap: 12px;
-      padding: 12px 14px; border-radius: 10px;
-      background: var(--surface-2); border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: var(--r-lg, 12px);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
     }
     .sw-item-icon {
-      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
-      background: var(--amber-s); border: 1px solid var(--amber-b);
-      display: flex; align-items: center; justify-content: center;
-      .material-icons-round { font-size: 17px; color: var(--amber); font-variation-settings: 'FILL' 1; }
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      flex-shrink: 0;
+      background: var(--amber-s);
+      border: 1px solid var(--amber-b);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      .material-icons-round { font-size: 19px; color: var(--amber); font-variation-settings: 'FILL' 1; }
     }
     .sw-item-text { flex: 1; min-width: 0; }
-    .sw-item-title { font-size: 13px; font-weight: 700; color: var(--t1); }
-    .sw-item-sub   { font-size: 11.5px; color: var(--t4); margin-top: 1px; }
+    .sw-item-title { font-size: 13.5px; font-weight: 700; color: var(--t1); }
+    .sw-item-sub   { font-size: 12px; color: var(--t4); margin-top: 2px; }
     .sw-badge {
-      flex-shrink: 0; font-size: 10.5px; font-weight: 700;
-      padding: 3px 9px; border-radius: 99px;
-      background: var(--amber-s); color: var(--amber); border: 1px solid var(--amber-b);
+      flex-shrink: 0;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 99px;
+      background: var(--amber-s);
+      color: var(--amber);
+      border: 1px solid var(--amber-b);
     }
     .sw-footer {
-      display: flex; justify-content: flex-end; gap: 8px;
-      padding: 14px 20px; border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
       background: var(--surface-2);
-      .btn-primary .material-icons-round, .btn-secondary .material-icons-round { font-size: 15px; }
+      button {
+        height: var(--btn-h, 42px);
+        padding: 0 16px;
+        font-size: 13.5px;
+        font-weight: 600;
+        border-radius: var(--r-md, 8px);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        .material-icons-round { font-size: 16px; }
+      }
     }
 
-    /* ── Setup alert (missing academic year / classes) ── */
+    /* ── Setup Alert ── */
     .setup-alert {
-      display: flex; align-items: flex-start; gap: 10px;
-      padding: 12px 16px; border-radius: 10px; margin-bottom: 12px;
-      background: #fef3c7; border: 1px solid #fde68a; color: #92400e;
-      .material-icons-round { font-size: 20px; margin-top: 1px; flex-shrink: 0; }
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 18px;
+      border-radius: var(--r-lg, 12px);
+      background: #fef3c7;
+      border: 1.5px solid #fde68a;
+      color: #92400e;
+      .material-icons-round { font-size: 22px; margin-top: 1px; flex-shrink: 0; }
     }
     .sa-content {
-      font-size: 13px; font-weight: 500; line-height: 1.5;
-      display: flex; flex-direction: column; gap: 6px;
+      font-size: 13.5px;
+      font-weight: 500;
+      line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
       strong { font-weight: 700; }
     }
     .sa-link {
-      display: inline-flex; align-items: center; gap: 4px;
-      background: none; border: none; padding: 0;
-      color: #92400e; font-size: 12.5px; font-weight: 700;
-      cursor: pointer; text-decoration: underline;
-      .material-icons-round { font-size: 13px; }
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: none;
+      border: none;
+      padding: 0;
+      color: #92400e;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: underline;
+      .material-icons-round { font-size: 14px; }
     }
     .sa-link:hover { color: #78350f; }
 
     @keyframes spin { to { transform: rotate(360deg); } }
     .spin { animation: spin 0.8s linear infinite; display: inline-block; }
-    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* ── Responsive Queries (Mobile / Tablet) ── */
+    @media (max-width: 768px) {
+      .adm-header {
+        padding: 14px 16px;
+      }
+      .adm-title {
+        font-size: 14.5px;
+      }
+      .tab-pane {
+        padding: 16px 16px;
+      }
+      .adm-tabs {
+        display: none;
+      }
+      .adm-stepper-mobile {
+        display: flex;
+      }
+      .form-grid-2, .form-grid-3, .form-grid-4 {
+        grid-template-columns: 1fr;
+      }
+      .admission-preview {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        .ap-divider { display: none; }
+      }
+      .tab-nav {
+        flex-direction: column-reverse;
+        gap: 10px;
+        button {
+          width: 100%;
+          justify-content: center;
+        }
+        .btn-next, .btn-submit {
+          margin-left: 0;
+        }
+      }
+      .fee-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .fee-price-tag {
+        align-self: flex-end;
+      }
+      .fee-controls-grid {
+        grid-template-columns: 1fr;
+      }
+      .fee-total-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+      }
+    }
   `]
 })
 export class StudentFormComponent implements OnInit {

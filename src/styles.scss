@@ -55,6 +55,29 @@
   --sh-md:   0 4px 16px rgba(0,0,0,0.07), 0 2px 6px rgba(0,0,0,0.04);
   --sh-lg:   0 12px 40px rgba(0,0,0,0.10), 0 4px 14px rgba(0,0,0,0.06);
   --sh-xl:   0 24px 64px rgba(0,0,0,0.12), 0 8px 24px rgba(0,0,0,0.08);
+  /* Form Control Dimensions */
+  --input-h:           42px;
+  --input-h-mobile:    44px;
+  --btn-h:             42px;
+  --btn-h-sm:          36px;
+  --btn-h-lg:          48px;
+
+  /* Form Layout Spacing */
+  --form-gap-x:        16px;
+  --form-gap-y:        14px;
+  --form-section-gap:  20px;
+  --form-pad:          22px;
+  --form-pad-mobile:   16px;
+  --form-actions-gap:  12px;
+
+  /* Form Elements Radius */
+  --r-input:           8px;
+  --r-card:            16px;
+  --r-modal:           20px;
+
+  /* Form Focus & State Shadows */
+  --input-shadow-focus: 0 0 0 3.5px var(--accent-g);
+  --input-shadow-error: 0 0 0 3.5px var(--red-s);
 }
 
 /* ═══════════════════════════════════════════════════
@@ -99,6 +122,30 @@
   --sh-md:   0 4px 16px rgba(0,0,0,0.5), 0 2px 6px rgba(0,0,0,0.35);
   --sh-lg:   0 12px 40px rgba(0,0,0,0.6), 0 4px 14px rgba(0,0,0,0.4);
   --sh-xl:   0 24px 64px rgba(0,0,0,0.7), 0 8px 24px rgba(0,0,0,0.5);
+
+  /* Form Control Dimensions */
+  --input-h:           42px;
+  --input-h-mobile:    44px;
+  --btn-h:             42px;
+  --btn-h-sm:          36px;
+  --btn-h-lg:          48px;
+
+  /* Form Layout Spacing */
+  --form-gap-x:        16px;
+  --form-gap-y:        14px;
+  --form-section-gap:  20px;
+  --form-pad:          22px;
+  --form-pad-mobile:   16px;
+  --form-actions-gap:  12px;
+
+  /* Form Elements Radius */
+  --r-input:           8px;
+  --r-card:            16px;
+  --r-modal:           20px;
+
+  /* Form Focus & State Shadows */
+  --input-shadow-focus: 0 0 0 3.5px var(--accent-g);
+  --input-shadow-error: 0 0 0 3.5px var(--red-s);
 }
 
 /* ═══════════════════════════════════════════════════
@@ -126,17 +173,97 @@ a { text-decoration: none; color: inherit; }
 ::-webkit-scrollbar-thumb:hover { background: var(--t4); }
 
 /* ═══════════════════════════════════════════════════
-   CARD
+   CARD & SECTION CONTAINERS
 ═══════════════════════════════════════════════════ */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--r-lg);
+  border-radius: var(--r-card, 16px);
   box-shadow: var(--sh);
 }
 
+/* Standard Form Section Container */
+.form-section, .card.form-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card, 16px);
+  box-shadow: var(--sh-xs);
+  padding: var(--form-pad, 22px);
+  margin-bottom: var(--form-section-gap, 20px);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.form-section-header, .sec-head, .section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.section-title, .form-section-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--t1);
+  letter-spacing: -0.2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-title .material-icons-round,
+.sec-icon {
+  font-size: 20px;
+  color: var(--accent);
+}
+
+.section-sub, .form-section-sub {
+  font-size: 12.5px;
+  color: var(--t3);
+  margin-top: 2px;
+}
+
 /* ═══════════════════════════════════════════════════
-   TABLE
+   RESPONSIVE FORM GRIDS
+═══════════════════════════════════════════════════ */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--form-gap-y, 14px) var(--form-gap-x, 16px);
+  width: 100%;
+}
+
+.form-grid-2, .grid-2, .two-col, .fg.two, .row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--form-gap-y, 14px) var(--form-gap-x, 16px);
+  width: 100%;
+}
+
+.form-grid-3, .grid-3, .three-col, .fg.three, .grid3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--form-gap-y, 14px) var(--form-gap-x, 16px);
+  width: 100%;
+}
+
+.form-grid-4, .grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--form-gap-y, 14px) var(--form-gap-x, 16px);
+  width: 100%;
+}
+
+/* Grid Column Spans */
+.span-2 { grid-column: span 2; }
+.span-3 { grid-column: span 3; }
+.span-full, .full, .field.full { grid-column: 1 / -1; width: 100%; }
+
+/* ═══════════════════════════════════════════════════
+   TABLES
 ═══════════════════════════════════════════════════ */
 .table { width: 100%; border-collapse: collapse; }
 .table th {
@@ -167,10 +294,11 @@ a { text-decoration: none; color: inherit; }
    BUTTONS
 ═══════════════════════════════════════════════════ */
 .btn-primary {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 9px 18px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: var(--btn-h, 42px);
+  padding: 0 18px;
   background: var(--accent); color: #fff;
-  border: none; border-radius: var(--r);
+  border: none; border-radius: var(--r-input, 8px);
   font-size: 13px; font-weight: 600; font-family: inherit;
   cursor: pointer; letter-spacing: 0.1px;
   transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
@@ -185,29 +313,130 @@ a { text-decoration: none; color: inherit; }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
 
 .btn-secondary {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 9px 18px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: var(--btn-h, 42px);
+  padding: 0 18px;
   background: var(--surface); color: var(--t2);
-  border: 1px solid var(--border-2); border-radius: var(--r);
+  border: 1px solid var(--border-2); border-radius: var(--r-input, 8px);
   font-size: 13px; font-weight: 600; font-family: inherit;
   cursor: pointer; transition: all 0.15s;
 }
 .btn-secondary:hover { background: var(--surface-2); border-color: var(--t4); color: var(--t1); }
 
+.btn-sm {
+  height: var(--btn-h-sm, 36px);
+  padding: 0 12px;
+  font-size: 12px;
+}
+
 /* ═══════════════════════════════════════════════════
-   FORM FIELDS
+   STANDARD FORM FIELDS & CONTROLS
 ═══════════════════════════════════════════════════ */
-.field { display: flex; flex-direction: column; gap: 5px; }
-.field label {
-  font-size: 11.5px; font-weight: 600; color: var(--t3); letter-spacing: 0.2px;
+.form-field, .field, .fi {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  position: relative;
 }
-.field input, .field select, .field textarea {
-  padding: 9px 12px;
-  background: var(--surface); border: 1.5px solid var(--border);
-  border-radius: var(--r); font-size: 13.5px; font-family: inherit;
-  color: var(--t1); transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+
+.form-label, .field label, .fi-content label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--t2);
+  letter-spacing: 0.2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
-.field input::placeholder, .field textarea::placeholder { color: var(--t5); }
+
+.req, span.req, .required {
+  color: var(--red);
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+.opt, span.opt, .optional {
+  color: var(--t4);
+  font-weight: 500;
+  font-size: 11px;
+  margin-left: 4px;
+}
+
+/* Universal Inputs, Selects & Textareas */
+.form-control,
+.field input:not([type="checkbox"]):not([type="radio"]),
+.field select,
+.field textarea,
+.fi-content input:not([type="checkbox"]):not([type="radio"]),
+.fi-content select,
+.fi-content textarea,
+.form-select,
+.search-input {
+  width: 100%;
+  height: var(--input-h, 42px);
+  padding: 0 14px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-input, 8px);
+  font-size: 13.5px;
+  font-family: inherit;
+  color: var(--t1);
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.field select, .fi-content select, .form-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 36px;
+  cursor: pointer;
+}
+
+.field textarea, .fi-content textarea, textarea.form-control {
+  height: auto;
+  min-height: 84px;
+  padding: 10px 14px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.field input::placeholder,
+.field textarea::placeholder,
+.form-control::placeholder {
+  color: var(--t5);
+}
+
+/* Focus States */
+.field input:focus,
+.field select:focus,
+.field textarea:focus,
+.fi-content input:focus,
+.fi-content select:focus,
+.fi-content textarea:focus,
+.form-control:focus,
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface);
+  box-shadow: var(--input-shadow-focus);
+}
+
+/* Disabled State */
+.field input:disabled,
+.field select:disabled,
+.field textarea:disabled,
+.form-control:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--surface-3);
+}
+
+/* Date & Time Picker Indicator Styling */
 input[type="date"], input[type="time"] {
   cursor: pointer;
   color-scheme: light dark;
@@ -227,40 +456,171 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   background: var(--accent-s);
   filter: none;
 }
-.field input:focus, .field select:focus, .field textarea:focus {
-  outline: none; border-color: var(--accent);
-  background: var(--surface);
-  box-shadow: 0 0 0 3px var(--accent-g);
+
+/* Checkboxes & Radios */
+.field.check, .form-check {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
 }
-.field.check { flex-direction: row; align-items: center; gap: 8px; }
-.field.check label { font-size: 13.5px; font-weight: 500; color: var(--t2); }
+.field.check label, .form-check label {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--t2);
+  cursor: pointer;
+}
+
+/* Toggle Switches */
+.switch, .toggle-switch-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+.switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+.switch .slider, .sw-track {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  background: var(--surface-3);
+  border: 1.5px solid var(--border);
+  border-radius: 99px;
+  transition: all 0.2s ease;
+}
+.switch .slider::before, .sw-thumb {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 2px;
+  bottom: 2px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.switch input:checked + .slider,
+.switch input:checked + .sw-track {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.switch input:checked + .slider::before,
+.switch input:checked + .sw-track .sw-thumb {
+  transform: translateX(18px);
+}
+.sw-label { font-size: 12.5px; font-weight: 600; color: var(--t2); }
 
 /* ═══════════════════════════════════════════════════
-   MODAL
+   VALIDATION & ERROR PRESENTATION
+═══════════════════════════════════════════════════ */
+.form-hint, .hint, .field-hint {
+  font-size: 11.5px;
+  color: var(--t4);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.ferr, .err, .err-msg, .error-msg, .form-error, .invalid-feedback {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--red);
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 3px;
+  animation: fadeIn 0.15s ease;
+}
+
+/* Invalid / Error Input State */
+.field.invalid input,
+.field.invalid select,
+.field.invalid textarea,
+.inp-err,
+.input-error,
+input.ng-invalid.ng-touched:not([type="checkbox"]):not([type="radio"]),
+select.ng-invalid.ng-touched,
+textarea.ng-invalid.ng-touched {
+  border-color: var(--red) !important;
+}
+
+.field.invalid input:focus,
+.field.invalid select:focus,
+.field.invalid textarea:focus,
+.inp-err:focus,
+input.ng-invalid.ng-touched:focus {
+  box-shadow: var(--input-shadow-error) !important;
+}
+
+/* ═══════════════════════════════════════════════════
+   FORM ACTIONS & STICKY FOOTER
+═══════════════════════════════════════════════════ */
+.form-actions, .tab-nav, .modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--form-actions-gap, 12px);
+  padding-top: 16px;
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  width: 100%;
+}
+
+.form-actions-sticky, .save-footer {
+  position: sticky;
+  bottom: 20px;
+  z-index: 100;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card, 16px);
+  box-shadow: var(--sh-lg);
+  padding: 14px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/* ═══════════════════════════════════════════════════
+   MODAL FOUNDATION
 ═══════════════════════════════════════════════════ */
 .modal-overlay {
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.45);
-  backdrop-filter: blur(6px);
   display: flex; align-items: center; justify-content: center;
   z-index: 1000; animation: fadeIn 0.15s;
 }
 .modal {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--r-2xl);
-  padding: 28px 28px 24px;
+  border-radius: var(--r-modal, 20px);
+  padding: 24px 28px;
   width: 480px; max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
   box-shadow: var(--sh-xl);
   display: flex; flex-direction: column; gap: 16px;
   animation: slideUp 0.22s cubic-bezier(.22,1,.36,1);
 }
-.modal h3 { font-size: 17px; font-weight: 700; color: var(--t1); }
-.modal .field input, .modal .field select { width: 100%; }
-.modal-actions {
-  display: flex; justify-content: flex-end; gap: 8px;
-  padding-top: 12px; border-top: 1px solid var(--border); margin-top: 4px;
+.modal-sm { width: 380px; }
+.modal-md { width: 540px; }
+.modal-lg { width: 720px; }
+.modal-xl { width: 900px; }
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 2px;
 }
+.modal-icon { font-size: 22px; color: var(--accent); }
+.modal h3, .modal-title { font-size: 17px; font-weight: 800; color: var(--t1); margin: 0; }
+.modal .field input, .modal .field select { width: 100%; }
 
 /* ═══════════════════════════════════════════════════
    BADGES
@@ -518,13 +878,29 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 
   /* Page headers stack */
   .page-header {
+    display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
+    gap: 12px;
     margin-bottom: 16px;
   }
-  .page-header > *:last-child {
+  .page-header > div:first-child,
+  .page-header > div:only-child,
+  .page-header .header-left,
+  .page-header .title-wrap {
     display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    width: 100%;
+  }
+  .page-header > .actions,
+  .page-header > .header-actions,
+  .page-header > .ph-actions,
+  .page-header > div:not(:first-child) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
     width: 100%;
   }
   .page-header .btn-primary, .page-header .btn-secondary {
@@ -603,9 +979,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 /* ═══════════════════════════════════════════════════
    SWEETALERT2 — APP THEME
 ═══════════════════════════════════════════════════ */
-/* Blur only on full modal dialogs, NOT on toasts */
 .swal2-container:not(.swal2-top-end):not(.swal2-top-right) {
-  backdrop-filter: blur(6px) !important;
   background: rgba(0,0,0,0.4) !important;
 }
 /* Toasts: no backdrop, no blur */
