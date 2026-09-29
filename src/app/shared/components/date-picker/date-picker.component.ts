@@ -142,18 +142,22 @@ function fromYMD(s: string): Date | null {
     </div>
   `,
   styles: [`
-    .dp-wrap { position: relative; display: block; }
+    :host { display: block; width: 100%; }
+    .dp-wrap { position: relative; display: block; width: 100%; }
 
     /* ── Trigger ─────────────────────────────────── */
     .dp-input {
       display: flex; align-items: center; gap: 8px;
-      padding: 9px 12px;
+      padding: 0 12px;
+      width: 100%;
+      box-sizing: border-box;
       background: var(--surface);
       border: 1.5px solid var(--border);
-      border-radius: var(--r);
+      border-radius: var(--r, 8px);
       cursor: pointer;
       transition: border-color .15s, box-shadow .15s;
-      user-select: none; min-height: 40px;
+      user-select: none;
+      height: var(--input-h, 42px);
     }
     .dp-input:hover { border-color: var(--border-2); }
     .dp-focus  { border-color: var(--accent) !important; box-shadow: 0 0 0 3px var(--accent-g); }

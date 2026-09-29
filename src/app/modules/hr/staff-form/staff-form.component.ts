@@ -103,24 +103,24 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
             <div class="tab-pane">
               <div class="section-hint">
                 <span class="material-icons-round">info</span>
-                Enter the staff member's personal and demographic information.
+                <span>Enter the staff member's personal and demographic information.</span>
               </div>
 
-              <div class="fg two">
-                <div class="fi">
-                  <div class="fi-icon"><span class="material-icons-round">badge</span></div>
-                  <div class="fi-content">
-                    <label>Full Name <span class="req">*</span></label>
+              <div class="form-grid-2">
+                <div class="form-field" [class.has-error]="f['fullName'].invalid && f['fullName'].touched">
+                  <label>Full Name <span class="req">*</span></label>
+                  <div class="input-wrap">
+                    <span class="material-icons-round field-icon">badge</span>
                     <input formControlName="fullName" placeholder="e.g. Muhammad Ahmed Khan" />
-                    @if (f['fullName'].invalid && f['fullName'].touched) {
-                      <span class="ferr">Full name is required</span>
-                    }
                   </div>
+                  @if (f['fullName'].invalid && f['fullName'].touched) {
+                    <span class="ferr">Full name is required</span>
+                  }
                 </div>
-                <div class="fi">
-                  <div class="fi-icon"><span class="material-icons-round">wc</span></div>
-                  <div class="fi-content">
-                    <label>Gender</label>
+                <div class="form-field">
+                  <label>Gender</label>
+                  <div class="input-wrap select-wrap">
+                    <span class="material-icons-round field-icon">wc</span>
                     <select formControlName="gender">
                       <option value="">Select gender</option>
                       <option>Male</option>
@@ -131,35 +131,34 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
                 </div>
               </div>
 
-              <div class="fg two">
-                <div class="fi">
-                  <div class="fi-icon"><span class="material-icons-round">cake</span></div>
-                  <div class="fi-content">
-                    <label>Date of Birth</label>
+              <div class="form-grid-2">
+                <div class="form-field">
+                  <label>Date of Birth</label>
+                  <div class="input-wrap date-wrap">
                     <app-date-picker formControlName="dateOfBirth" />
                   </div>
                 </div>
-                <div class="fi">
-                  <div class="fi-icon"><span class="material-icons-round">call</span></div>
-                  <div class="fi-content">
-                    <label>Phone Number</label>
+                <div class="form-field">
+                  <label>Phone Number</label>
+                  <div class="input-wrap">
+                    <span class="material-icons-round field-icon">call</span>
                     <input formControlName="phone" placeholder="0300-1234567" />
                   </div>
                 </div>
               </div>
 
-              <div class="fg two">
-                <div class="fi">
-                  <div class="fi-icon"><span class="material-icons-round">credit_card</span></div>
-                  <div class="fi-content">
-                    <label>CNIC</label>
+              <div class="form-grid-2">
+                <div class="form-field">
+                  <label>CNIC</label>
+                  <div class="input-wrap">
+                    <span class="material-icons-round field-icon">credit_card</span>
                     <input formControlName="cnic" placeholder="12345-1234567-1" />
                   </div>
                 </div>
-                <div class="fi">
-                  <div class="fi-icon"><span class="material-icons-round">home</span></div>
-                  <div class="fi-content">
-                    <label>Home Address</label>
+                <div class="form-field">
+                  <label>Home Address</label>
+                  <div class="input-wrap">
+                    <span class="material-icons-round field-icon">home</span>
                     <input formControlName="address" placeholder="Street, City, Province" />
                   </div>
                 </div>
@@ -179,21 +178,21 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
             <div class="tab-pane">
               <div class="section-hint">
                 <span class="material-icons-round">info</span>
-                Provide a reliable emergency contact such as a family member or close friend.
+                <span>Provide a reliable emergency contact such as a family member or close friend.</span>
               </div>
 
-              <div class="fg two">
-                <div class="fi">
-                  <div class="fi-icon"><span class="material-icons-round">person_add</span></div>
-                  <div class="fi-content">
-                    <label>Contact Name</label>
+              <div class="form-grid-2">
+                <div class="form-field">
+                  <label>Contact Name</label>
+                  <div class="input-wrap">
+                    <span class="material-icons-round field-icon">person_add</span>
                     <input formControlName="emergencyContactName" placeholder="Relative or friend name" />
                   </div>
                 </div>
-                <div class="fi">
-                  <div class="fi-icon"><span class="material-icons-round">phone_in_talk</span></div>
-                  <div class="fi-content">
-                    <label>Contact Phone</label>
+                <div class="form-field">
+                  <label>Contact Phone</label>
+                  <div class="input-wrap">
+                    <span class="material-icons-round field-icon">phone_in_talk</span>
                     <input formControlName="emergencyContactPhone" placeholder="0300-1234567" />
                   </div>
                 </div>
@@ -233,24 +232,24 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
             <div class="tab-pane">
               <div class="section-hint">
                 <span class="material-icons-round">info</span>
-                Enter the staff member's position, department and employment details.
+                <span>Enter the staff member's position, department and employment details.</span>
               </div>
 
-              <div class="fg two">
-                <div class="fi">
-                  <div class="fi-icon"><span class="material-icons-round">military_tech</span></div>
-                  <div class="fi-content">
-                    <label>Designation <span class="req">*</span></label>
+              <div class="form-grid-2">
+                <div class="form-field" [class.has-error]="f['designation'].invalid && f['designation'].touched">
+                  <label>Designation <span class="req">*</span></label>
+                  <div class="input-wrap">
+                    <span class="material-icons-round field-icon">military_tech</span>
                     <input formControlName="designation" placeholder="e.g. Lab Attendant, Peon, Driver" />
-                    @if (f['designation'].invalid && f['designation'].touched) {
-                      <span class="ferr">Designation is required</span>
-                    }
                   </div>
+                  @if (f['designation'].invalid && f['designation'].touched) {
+                    <span class="ferr">Designation is required</span>
+                  }
                 </div>
-                <div class="fi">
-                  <div class="fi-icon"><span class="material-icons-round">corporate_fare</span></div>
-                  <div class="fi-content">
-                    <label>Department</label>
+                <div class="form-field">
+                  <label>Department</label>
+                  <div class="input-wrap select-wrap">
+                    <span class="material-icons-round field-icon">corporate_fare</span>
                     <select formControlName="department">
                       <option value="">Select department</option>
                       @for (d of departments; track d) { <option [value]="d">{{ d }}</option> }
@@ -259,18 +258,17 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
                 </div>
               </div>
 
-              <div class="fg two">
-                <div class="fi">
-                  <div class="fi-icon"><span class="material-icons-round">event_available</span></div>
-                  <div class="fi-content">
-                    <label>Joining Date</label>
+              <div class="form-grid-2">
+                <div class="form-field">
+                  <label>Joining Date</label>
+                  <div class="input-wrap date-wrap">
                     <app-date-picker formControlName="joiningDate" />
                   </div>
                 </div>
-                <div class="fi">
-                  <div class="fi-icon"><span class="material-icons-round">contract</span></div>
-                  <div class="fi-content">
-                    <label>Employment Type</label>
+                <div class="form-field">
+                  <label>Employment Type</label>
+                  <div class="input-wrap select-wrap">
+                    <span class="material-icons-round field-icon">contract</span>
                     <select formControlName="employmentType">
                       @for (e of employmentTypes; track e) { <option [value]="e">{{ e }}</option> }
                     </select>
@@ -278,11 +276,11 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
                 </div>
               </div>
 
-              <div class="fg two">
-                <div class="fi">
-                  <div class="fi-icon"><span class="material-icons-round">toggle_on</span></div>
-                  <div class="fi-content">
-                    <label>Status</label>
+              <div class="form-grid-2">
+                <div class="form-field">
+                  <label>Status</label>
+                  <div class="input-wrap select-wrap">
+                    <span class="material-icons-round field-icon">toggle_on</span>
                     <select formControlName="status">
                       @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }
                     </select>
@@ -347,199 +345,256 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
     }
   `,
   styles: [`
-    .success-screen {
-      display: flex; align-items: center; justify-content: center;
-      min-height: 50vh;
-    }
-    .success-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 20px; padding: 40px 36px;
-      text-align: center; max-width: 400px; width: 100%;
-      box-shadow: var(--sh-xl); animation: slideUp 0.3s cubic-bezier(.22,1,.36,1);
-    }
-    .success-icon {
-      width: 60px; height: 60px; border-radius: 16px;
-      background: var(--green-s); border: 1px solid var(--green-b);
-      display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 16px;
-      .material-icons-round { font-size: 30px; color: var(--green); font-variation-settings: 'FILL' 1; }
-    }
-    .success-card h2 { font-size: 20px; font-weight: 800; color: var(--t1); margin-bottom: 6px; }
-    .success-sub { font-size: 13px; color: var(--t4); margin-bottom: 24px; }
-    .success-actions { display: flex; gap: 8px; justify-content: center;
-      .btn-secondary, .btn-primary { display: inline-flex; align-items: center; gap: 6px;
-        .material-icons-round { font-size: 15px; } }
-    }
+    :host { display: block; width: 100%; }
 
     .admission-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 16px; box-shadow: var(--sh);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-2xl, 20px);
+      box-shadow: var(--sh);
       overflow: hidden;
+      margin-bottom: var(--sp-6, 24px);
     }
 
     .adm-header {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 20px;
+      padding: 16px 22px;
       background: linear-gradient(135deg, var(--accent-s) 0%, var(--surface) 100%);
       border-bottom: 1px solid var(--border);
-      gap: 12px;
+      gap: 14px;
     }
     .adm-header-left { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
-    .adm-header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .adm-header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 
-    .adm-title { font-size: 14px; font-weight: 700; color: var(--t1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .adm-title { font-size: 15px; font-weight: 700; color: var(--t1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; }
     .adm-name { color: var(--accent); margin-left: 4px; }
-    .adm-sub { font-size: 11.5px; color: var(--t4); margin-top: 1px; }
+    .adm-sub { font-size: 12px; color: var(--t4); margin: 2px 0 0; }
 
     .adm-step-badge {
-      padding: 4px 12px; border-radius: 99px;
+      padding: 5px 13px; border-radius: 99px;
       background: var(--accent); color: #fff;
-      font-size: 11.5px; font-weight: 700; white-space: nowrap;
+      font-size: 12px; font-weight: 700; white-space: nowrap;
+      box-shadow: 0 2px 8px var(--accent-g);
     }
     .adm-back-btn {
-      width: 30px; height: 30px; border-radius: 8px;
+      width: 34px; height: 34px; border-radius: var(--r-md, 8px);
       border: 1px solid var(--border-2); background: var(--surface);
       color: var(--t3); cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      transition: all 0.15s;
-      .material-icons-round { font-size: 16px; }
+      transition: all 0.15s ease;
+      .material-icons-round { font-size: 18px; }
     }
     .adm-back-btn:hover { background: var(--red-s); border-color: var(--red); color: var(--red); }
 
-    .progress-bar { height: 3px; background: var(--border); }
-    .progress-fill { height: 100%; background: var(--accent); transition: width 0.4s cubic-bezier(.22,1,.36,1); }
+    .progress-bar { height: 3px; background: var(--border); width: 100%; }
+    .progress-fill { height: 100%; background: var(--accent); transition: width 0.35s cubic-bezier(.22,1,.36,1); }
 
     .adm-tabs {
       display: flex; align-items: center;
-      padding: 10px 20px;
+      padding: 12px 24px;
       background: var(--surface-2);
       border-bottom: 1px solid var(--border);
+      gap: 4px;
       overflow-x: auto;
     }
     .adm-tab {
-      display: flex; align-items: center; gap: 6px;
-      background: none; border: none; cursor: pointer; padding: 0; white-space: nowrap;
+      display: flex; align-items: center; gap: 8px;
+      background: none; border: none; cursor: pointer; padding: 6px 12px;
+      border-radius: var(--r-lg, 12px);
+      white-space: nowrap;
+      transition: background 0.15s ease;
     }
+    .adm-tab:hover { background: rgba(0,0,0,0.03); }
     .tab-dot {
-      width: 24px; height: 24px; border-radius: 50%;
+      width: 26px; height: 26px; border-radius: 50%;
       border: 2px solid var(--border-2);
       background: var(--surface); color: var(--t4);
-      font-size: 11px; font-weight: 700;
+      font-size: 11.5px; font-weight: 700;
       display: flex; align-items: center; justify-content: center;
-      transition: all 0.2s; flex-shrink: 0;
-      .material-icons-round { font-size: 12px; }
+      transition: all 0.2s ease; flex-shrink: 0;
+      .material-icons-round { font-size: 14px; }
     }
-    .tab-label { font-size: 12.5px; font-weight: 600; color: var(--t4); transition: color 0.2s; }
+    .tab-label { font-size: 13px; font-weight: 600; color: var(--t4); transition: color 0.2s ease; }
     .adm-tab.active .tab-dot { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 0 0 3px var(--accent-g); }
-    .adm-tab.active .tab-label { color: var(--accent); }
+    .adm-tab.active .tab-label { color: var(--accent); font-weight: 700; }
     .adm-tab.done .tab-dot { background: var(--green); border-color: var(--green); color: #fff; }
-    .adm-tab.done .tab-label { color: var(--green); }
-    .tab-connector { flex: 1; height: 2px; background: var(--border); min-width: 16px; margin: 0 5px; border-radius: 2px; transition: background 0.3s; }
+    .adm-tab.done .tab-label { color: var(--t2); }
+    .tab-connector { flex: 1; height: 2px; background: var(--border); min-width: 14px; margin: 0 6px; border-radius: 2px; transition: background 0.3s ease; }
     .tab-connector.done { background: var(--green); }
 
     .adm-body { padding: 0; }
-    .tab-pane { padding: 16px 20px; display: flex; flex-direction: column; }
+    .tab-pane { padding: 22px 24px; display: flex; flex-direction: column; gap: 16px; }
 
     .section-hint {
-      display: flex; align-items: center; gap: 7px;
-      padding: 8px 12px; border-radius: 8px;
+      display: flex; align-items: center; gap: 9px;
+      padding: 10px 14px; border-radius: var(--r-md, 8px);
       background: var(--surface-2); border: 1px solid var(--border);
-      font-size: 12px; color: var(--t3); font-weight: 500;
-      margin-bottom: 14px;
-      .material-icons-round { font-size: 14px; color: var(--accent); flex-shrink: 0; }
+      font-size: 12.5px; color: var(--t3); font-weight: 500;
+      .material-icons-round { font-size: 16px; color: var(--accent); flex-shrink: 0; }
     }
 
-    .fg { display: flex; gap: 10px; margin-bottom: 10px; }
-    .fg.two .fi { flex: 1; min-width: 0; }
-
-    .fi { display: flex; align-items: flex-start; gap: 8px; flex: 1; }
-    .fi.full { width: 100%; }
-
-    .fi-icon {
-      width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0; margin-top: 20px;
-      background: var(--accent-s);
-      display: flex; align-items: center; justify-content: center;
-      .material-icons-round { font-size: 14px; color: var(--accent); font-variation-settings: 'FILL' 1; }
+    .form-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      width: 100%;
+      box-sizing: border-box;
     }
-    .fi-content { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
-
-    label { font-size: 10.5px; font-weight: 700; color: var(--t3); letter-spacing: 0.4px; text-transform: uppercase; }
-    .req { color: var(--red); }
-
-    input, select, textarea {
-      width: 100%; padding: 8px 11px;
-      border: 1.5px solid var(--border); border-radius: 8px;
-      font-size: 13px; font-family: inherit;
-      background: var(--surface); color: var(--t1);
-      transition: border-color 0.15s, box-shadow 0.15s;
+    @media (max-width: 640px) {
+      .form-grid-2 { grid-template-columns: 1fr; }
     }
+
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .form-field label {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--t3);
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+    .req { color: var(--red); font-weight: 800; margin-left: 2px; }
+
+    .input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .field-icon {
+      position: absolute;
+      left: 12px;
+      font-size: 17px;
+      color: var(--t4);
+      pointer-events: none;
+      transition: color 0.15s ease;
+      z-index: 1;
+    }
+
+    input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+      width: 100%;
+      height: var(--input-h, 42px);
+      padding: 0 12px 0 38px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--r-md, 8px);
+      font-size: 13.5px;
+      font-family: inherit;
+      background: var(--surface);
+      color: var(--t1);
+      box-sizing: border-box;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    select {
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 14px;
+      padding-right: 34px;
+    }
+    .date-wrap app-date-picker {
+      width: 100%;
+    }
+
     input:focus, select:focus, textarea:focus {
-      outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-g);
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: var(--input-shadow-focus);
     }
-    input::placeholder, textarea::placeholder { color: var(--t5); }
-    .ferr { font-size: 10.5px; color: var(--red); font-weight: 600; }
+    .input-wrap:focus-within .field-icon {
+      color: var(--accent);
+    }
+
+    .form-field.has-error input,
+    .form-field.has-error select {
+      border-color: var(--red);
+      box-shadow: var(--input-shadow-error);
+    }
+    .form-field.has-error .field-icon {
+      color: var(--red);
+    }
+
+    .ferr {
+      font-size: 11px;
+      color: var(--red);
+      font-weight: 600;
+      margin-top: 2px;
+    }
 
     .admission-preview {
       display: flex; align-items: center; flex-wrap: wrap; gap: 0;
-      padding: 10px 14px; border-radius: 10px;
-      background: var(--accent-s); border: 1px solid var(--accent-g);
-      margin-bottom: 4px;
+      padding: 12px 16px; border-radius: var(--r-lg, 12px);
+      background: var(--accent-s); border: 1.5px solid var(--accent-g);
     }
     .ap-row {
-      display: flex; align-items: center; gap: 5px;
-      font-size: 12.5px; font-weight: 600; color: var(--accent);
-      .material-icons-round { font-size: 14px; }
+      display: flex; align-items: center; gap: 6px;
+      font-size: 13px; font-weight: 600; color: var(--accent);
+      .material-icons-round { font-size: 16px; }
     }
-    .ap-divider { width: 1px; height: 16px; background: var(--accent-g); margin: 0 12px; }
+    .ap-divider { width: 1px; height: 18px; background: var(--accent-g); margin: 0 14px; }
 
     .tab-nav {
       display: flex; justify-content: space-between; align-items: center;
-      padding-top: 14px; margin-top: 6px;
+      padding-top: 16px; margin-top: 8px;
       border-top: 1px solid var(--border);
     }
     .tab-nav .btn-primary, .tab-nav .btn-secondary {
+      height: var(--btn-h, 42px);
+      padding: 0 20px;
+      border-radius: var(--r-md, 8px);
+      font-size: 13.5px;
+      font-weight: 600;
       display: inline-flex; align-items: center; gap: 6px;
-      .material-icons-round { font-size: 15px; }
+      cursor: pointer;
+      .material-icons-round { font-size: 16px; }
     }
 
     .tm-alert {
       display: flex; align-items: center; gap: 8px;
-      padding: 10px 14px; border-radius: 8px;
-      font-size: 12.5px; font-weight: 500; margin-bottom: 10px;
-      .material-icons-round { font-size: 16px; flex-shrink: 0; }
+      padding: 12px 16px; border-radius: var(--r-md, 8px);
+      font-size: 13px; font-weight: 500;
+      .material-icons-round { font-size: 18px; flex-shrink: 0; }
     }
-    .tm-alert.error { background: var(--red-s); color: var(--red); border: 1px solid var(--red-b); }
+    .tm-alert.error { background: var(--red-s); color: var(--red); border: 1.5px solid var(--red-b); }
 
     @keyframes spin { to { transform: rotate(360deg); } }
     .spin { animation: spin 0.8s linear infinite; display: inline-block; }
 
-    .docs-section { margin-bottom: 14px; }
-    .docs-section > label { display: block; margin-bottom: 8px; }
-    .opt { font-weight: 400; color: var(--t5); text-transform: none; letter-spacing: 0; }
+    .docs-section { margin-top: 8px; }
+    .docs-section > label { display: block; margin-bottom: 8px; font-size: 11.5px; font-weight: 700; color: var(--t3); text-transform: uppercase; }
+    .opt { font-weight: 400; color: var(--t5); text-transform: none; }
     .docs-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
     .doc-row {
       display: flex; align-items: center; gap: 8px;
-      padding: 7px 10px; border-radius: 8px;
+      padding: 8px 12px; border-radius: var(--r-md, 8px);
       background: var(--surface-2); border: 1px solid var(--border);
     }
-    .doc-icon { font-size: 15px; color: var(--accent); }
-    .doc-label { font-size: 12.5px; font-weight: 600; color: var(--t1); text-decoration: none; flex: 1; }
+    .doc-icon { font-size: 16px; color: var(--accent); }
+    .doc-label { font-size: 13px; font-weight: 600; color: var(--t1); text-decoration: none; flex: 1; }
     .doc-label:hover { text-decoration: underline; }
     .doc-remove {
-      width: 22px; height: 22px; border-radius: 6px; border: none;
+      width: 24px; height: 24px; border-radius: 6px; border: none;
       background: transparent; color: var(--t4); cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      .material-icons-round { font-size: 14px; }
+      .material-icons-round { font-size: 16px; }
     }
     .doc-remove:hover { background: var(--red-s); color: var(--red); }
     .doc-add { display: flex; gap: 8px; }
-    .doc-add input[type="text"], .doc-add input:not([type]) { flex: 1; }
+    .doc-add input { flex: 1; padding: 0 12px; }
     .doc-upload-btn {
       display: inline-flex; align-items: center; gap: 6px;
-      padding: 8px 14px; border-radius: 8px;
+      padding: 0 16px; border-radius: var(--r-md, 8px);
       background: var(--accent); color: #fff;
-      font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap;
-      .material-icons-round { font-size: 15px; }
+      font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;
+      height: var(--btn-h, 42px);
+      .material-icons-round { font-size: 16px; }
     }
     .doc-upload-btn.disabled { opacity: 0.5; cursor: not-allowed; }
     .doc-upload-btn input[type="file"] { display: none; }
