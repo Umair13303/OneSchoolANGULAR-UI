@@ -967,6 +967,8 @@ export class ChatPanelComponent implements AfterViewChecked {
       error: (err) => {
         this.loadingUserId.set(null);
         console.error('Error starting conversation', err);
+        const errorMsg = err?.error?.message || err?.error || err?.statusText || 'Unable to open conversation. Please check backend server status.';
+        this.swalSvc.error(typeof errorMsg === 'string' ? errorMsg : 'Failed to start chat conversation with user.');
       }
     });
   }
