@@ -1,6 +1,6 @@
 import {
   Component, Input, Output, EventEmitter, OnInit, OnDestroy,
-  signal, computed, HostListener, ElementRef, forwardRef, ChangeDetectionStrategy
+  signal, computed, ElementRef, inject, forwardRef, ChangeDetectionStrategy
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
@@ -50,7 +50,7 @@ function fromYMD(s: string): Date | null {
 
       <!-- Dropdown panel -->
       @if (open()) {
-        <div class="dp-panel" (click)="$event.stopPropagation()">
+        <div class="dp-panel" [class.dp-drop-up]="dropUp()" (click)="$event.stopPropagation()">
 
           <!-- Header: prev / month+year / next -->
           <div class="dp-header">
@@ -142,23 +142,23 @@ function fromYMD(s: string): Date | null {
     </div>
   `,
   styles: [`
-    :host { display: block; width: 100%; position: relative; }
+    :host { display: block; width: 100%; position: relative; z-index: 0; }
     .dp-wrap { position: relative; display: block; width: 100%; }
-    .dp-wrap.dp-open { z-index: 600; }
+    .dp-wrap.dp-open { z-index: 1200; }
 
     /* ── Trigger ─────────────────────────────────── */
     .dp-input {
       display: flex; align-items: center; gap: 8px;
-      padding: 0 12px;
+      padding: 0 10px;
       width: 100%;
       box-sizing: border-box;
       background: var(--surface);
-      border: 1.5px solid var(--border);
-      border-radius: var(--r, 8px);
+      border: 1px solid var(--border);
+      border-radius: 10px;
       cursor: pointer;
       transition: border-color .15s, box-shadow .15s;
       user-select: none;
-      height: var(--input-h, 42px);
+      height: var(--input-h, 34px);
     }
     .dp-input:hover { border-color: var(--border-2); }
     .dp-focus  { border-color: var(--accent) !important; box-shadow: 0 0 0 3px var(--accent-g); }
@@ -167,10 +167,10 @@ function fromYMD(s: string): Date | null {
 
     .dp-cal-icon { font-size: 17px; color: var(--accent); flex-shrink: 0;
       font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 20; }
-    .dp-val { flex: 1; font-size: 13.5px; color: var(--t1); font-family: inherit; }
-    .dp-placeholder { color: var(--t5); }
+    .dp-val { flex: 1; font-size: 13px; font-weight: 500; color: var(--t1); font-family: inherit; }
+    .dp-placeholder { color: var(--t4); font-weight: 500; }
     .dp-chev { font-size: 18px; color: var(--t4); transition: transform .2s; }
-    .dp-open .dp-chev { transform: rotate(180deg); }
+    .dp-open .dp-chev { transform: rotate(180deg); color: var(--accent); }
 
     .dp-clear {
       display: flex; align-items: center; justify-content: center;
@@ -183,16 +183,22 @@ function fromYMD(s: string): Date | null {
 
     /* ── Panel ───────────────────────────────────── */
     .dp-panel {
-      position: absolute; top: calc(100% + 6px); left: 0; z-index: 999;
+      position: absolute; top: calc(100% + 6px); left: 0; z-index: 1300;
       width: 288px;
       background: var(--surface);
-      border: 1.5px solid var(--border);
-      border-radius: var(--r-xl, 14px);
-      box-shadow: 0 12px 36px rgba(0,0,0,0.18), 0 3px 10px rgba(0,0,0,0.08);
-      padding: 14px 12px 10px;
-      animation: dp-in .15s cubic-bezier(.22,1,.36,1);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.06);
+      padding: 12px 10px 8px;
+      animation: dp-in .14s ease-out;
     }
-    @keyframes dp-in { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:none; } }
+    .dp-panel.dp-drop-up {
+      top: auto;
+      bottom: calc(100% + 6px);
+      animation: dp-in-up .14s ease-out;
+    }
+    @keyframes dp-in { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+    @keyframes dp-in-up { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
 
     /* ── Header ──────────────────────────────────── */
     .dp-header {
@@ -296,6 +302,8 @@ function fromYMD(s: string): Date | null {
   `]
 })
 export class DatePickerComponent implements OnInit, OnDestroy, ControlValueAccessor {
+  private host = inject(ElementRef<HTMLElement>);
+
   @Input() placeholder = 'Select date';
   @Input() min?: string;
   @Input() max?: string;
@@ -311,6 +319,7 @@ export class DatePickerComponent implements OnInit, OnDestroy, ControlValueAcces
 
   value   = signal<string | null>(null);
   open    = signal(false);
+  dropUp  = signal(false);
   view    = signal<'days' | 'months' | 'years'>('days');
   cursor  = signal({ year: new Date().getFullYear(), month: new Date().getMonth() });
 
@@ -379,8 +388,20 @@ export class DatePickerComponent implements OnInit, OnDestroy, ControlValueAcces
   // ── Interactions ─────────────────────────────────
   toggle() {
     if (this.disabled) return;
-    this.open.update(o => !o);
-    if (this.open()) this.onTouched();
+    const next = !this.open();
+    if (next) {
+      this.reposition();
+      this.onTouched();
+    }
+    this.open.set(next);
+  }
+
+  private reposition() {
+    const rect = this.host.nativeElement.getBoundingClientRect();
+    const panelH = 340;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    this.dropUp.set(spaceBelow < panelH && spaceAbove > spaceBelow);
   }
 
   selectDay(day: Day) {

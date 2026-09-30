@@ -1,9 +1,14 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ExamService } from '../../../core/services/exam.service';
 import { AcademicService } from '../../../core/services/academic.service';
+import { MenuService } from '../../../core/services/menu.service';
 import { ExamPaperDto, ExamResultDto } from '../../../core/models/exam.model';
+import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
+import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
+import { LoadingComponent } from '../../../shared/components/loading/loading.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 
 interface ResultRow {
   studentId:    number;
@@ -18,50 +23,48 @@ interface ResultRow {
 @Component({
   selector: 'app-exam-results-entry',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PageHeaderComponent, OsSelectComponent, LoadingComponent, EmptyStateComponent],
   template: `
-    <div class="page-header">
-      <div class="ph-left">
-        <div class="ph-icon"><span class="material-icons-round">grading</span></div>
-        <div>
-          <h1>Enter Results</h1>
-          <p>Enter marks for exam papers</p>
+    <div class="os-page compact exam-results-entry-page">
+    <app-page-header [dense]="true" [title]="pageTitle()" />
+
+    <div class="os-toolbar">
+      <div class="os-toolbar-group">
+        <div class="os-field inline grow">
+          <label class="os-field-label">Class</label>
+          <app-os-select
+            icon="school"
+            placeholder="Select class…"
+            [searchable]="classOptions().length > 6"
+            [options]="classOptions()"
+            [value]="selectedClass"
+            (valueChange)="selectedClass = $event ?? ''; onClassChange()" />
+        </div>
+        <div class="os-field inline grow">
+          <label class="os-field-label">Paper</label>
+          <app-os-select
+            placeholder="Select paper…"
+            [searchable]="paperOptions().length > 6"
+            [options]="paperOptions()"
+            [value]="selectedPaper"
+            (valueChange)="selectedPaper = $event ?? ''; onPaperChange()" />
         </div>
       </div>
     </div>
 
-    <!-- Paper selector -->
-    <div class="selector-card">
-      <div class="fg two">
-        <div class="fi">
-          <label>Select Class</label>
-          <select [(ngModel)]="selectedClass" (ngModelChange)="onClassChange()">
-            <option value="">Select class…</option>
-            @for (c of classes(); track c.classId) { <option [value]="c.classId">{{ c.className }}</option> }
-          </select>
-        </div>
-        <div class="fi">
-          <label>Select Exam Paper</label>
-          <select [(ngModel)]="selectedPaper" (ngModelChange)="onPaperChange()">
-            <option value="">Select paper…</option>
-            @for (p of filteredPapers(); track p.examPaperId) { <option [value]="p.examPaperId">{{ p.title }} ({{ p.examType }})</option> }
-          </select>
-        </div>
+    @if (activePaper()) {
+      <div class="paper-summary os-panel">
+        <div class="ps-item"><span class="material-icons-round">school</span>{{ activePaper()!.className }}</div>
+        <div class="ps-item"><span class="material-icons-round">auto_stories</span>{{ activePaper()!.subjectName }}</div>
+        <div class="ps-item"><span class="material-icons-round">star</span>Total: {{ activePaper()!.totalMarks }}</div>
+        <div class="ps-item"><span class="material-icons-round">check_circle</span>Pass: {{ activePaper()!.passMarks }}</div>
       </div>
-      @if (activePaper()) {
-        <div class="paper-summary">
-          <div class="ps-item"><span class="material-icons-round">school</span>{{ activePaper()!.className }}</div>
-          <div class="ps-item"><span class="material-icons-round">auto_stories</span>{{ activePaper()!.subjectName }}</div>
-          <div class="ps-item"><span class="material-icons-round">star</span>Total: {{ activePaper()!.totalMarks }}</div>
-          <div class="ps-item"><span class="material-icons-round">check_circle</span>Pass: {{ activePaper()!.passMarks }}</div>
-        </div>
-      }
-    </div>
+    }
 
     @if (loadingRows()) {
-      <div class="loading-state"><span class="material-icons-round spin">refresh</span> Loading students…</div>
+      <app-loading />
     } @else if (rows().length > 0) {
-      <div class="results-card">
+      <div class="results-card os-panel">
         <div class="results-card-header">
           <span>{{ rows().length }} Students</span>
           <div class="quick-actions">
@@ -119,13 +122,17 @@ interface ResultRow {
         </div>
       </div>
     } @else if (selectedPaper) {
-      <div class="empty-state">
-        <span class="material-icons-round">group</span>
-        <p>No students found for this class.</p>
+      <div class="os-panel">
+        <app-empty-state title="No students" message="No students found for this class." icon="group" />
       </div>
     }
+    </div>
   `,
   styles: [`
+    :host { display:block; min-width:0; margin-top:-16px; }
+    @media (max-width:900px) { :host { margin-top:-6px; } }
+    @media (max-width:640px) { :host { margin-top:-4px; } }
+
     .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
     .ph-left { display:flex; align-items:center; gap:12px; }
     .ph-icon { width:44px; height:44px; border-radius:12px; background:var(--accent-s); display:flex; align-items:center; justify-content:center; }
@@ -142,7 +149,7 @@ interface ResultRow {
     select { padding:8px 11px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; background:var(--surface); color:var(--t1); outline:none; width:100%; }
     select:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-g); }
 
-    .paper-summary { display:flex; flex-wrap:wrap; gap:12px; padding:10px 14px; background:var(--accent-s); border-radius:8px; border:1px solid var(--accent-g); margin-top:8px; }
+    .paper-summary { display:flex; flex-wrap:wrap; gap:12px; padding:10px 14px; }
     .ps-item { display:flex; align-items:center; gap:5px; font-size:12.5px; font-weight:600; color:var(--accent); }
     .ps-item .material-icons-round { font-size:14px; }
 
@@ -186,6 +193,7 @@ interface ResultRow {
 export class ExamResultsEntryComponent implements OnInit {
   private examSvc = inject(ExamService);
   private acSvc   = inject(AcademicService);
+  private menuSvc = inject(MenuService);
 
   classes       = signal<any[]>([]);
   papers        = signal<ExamPaperDto[]>([]);
@@ -199,7 +207,23 @@ export class ExamResultsEntryComponent implements OnInit {
   selectedClass = '';
   selectedPaper = '';
 
+  pageTitle = computed(() =>
+    this.menuSvc.titleForRoute('/exams/results/enter', 'Enter Results')
+  );
+
+  classOptions = computed<OsSelectOption<string>[]>(() =>
+    this.classes().map(c => ({ value: String(c.classId), label: c.className as string }))
+  );
+
+  paperOptions = computed<OsSelectOption<string>[]>(() =>
+    this.filteredPapers().map(p => ({
+      value: String(p.examPaperId),
+      label: `${p.title} (${p.examType})`
+    }))
+  );
+
   ngOnInit() {
+    this.menuSvc.ensureLoaded().subscribe();
     this.acSvc.getClasses().subscribe(c => this.classes.set(c));
     this.examSvc.getPapers().subscribe(p => this.papers.set(p));
   }

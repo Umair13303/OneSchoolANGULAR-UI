@@ -13,6 +13,9 @@ import { ClassDto } from '../../../core/models/academic.model';
 import { PeriodDto } from '../../../core/models/timetable.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
+import { MenuService } from '../../../core/services/menu.service';
 
 export interface Row {
   studentId:   number;
@@ -25,101 +28,71 @@ export interface Row {
 @Component({
   selector: 'app-mark-attendance',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent, LoadingComponent, DatePickerComponent],
+  imports: [CommonModule, FormsModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, DatePickerComponent, OsSelectComponent],
   template: `
-    <app-page-header title="Mark Attendance" subtitle="Select class, period & date, then record student attendance" />
+    <div class="os-page compact mark-att-page">
+    <app-page-header [dense]="true" [title]="pageTitle()" />
 
-    <!-- ── Filter & Search Bar ── -->
-    <div class="filter-card card">
-      <div class="filter-header-bar">
-        <div class="filter-title-wrap">
-          <span class="material-icons-round filter-icon">how_to_reg</span>
-          <span class="filter-card-title">Class Roll Call</span>
+    <div class="os-toolbar">
+      <div class="os-toolbar-group">
+        <div class="os-field inline grow">
+          <label class="os-field-label">Class</label>
+          <app-os-select
+            icon="school"
+            placeholder="Select class…"
+            ariaLabel="Select class"
+            [searchable]="classOptions().length > 6"
+            [options]="classOptions()"
+            [value]="selectedClass"
+            (valueChange)="selectedClass = $event; onClassChange()" />
         </div>
-        <div class="date-quick-info">
-          @if (isToday()) {
-            <span class="day-chip chip-today">Today</span>
-          }
-          @if (isOffDay()) {
-            <span class="day-chip chip-off"><span class="material-icons-round">event_busy</span> Non-working Day</span>
-          } @else {
-            <span class="day-chip chip-work"><span class="material-icons-round">check_circle</span> Working Day</span>
-          }
+        <div class="os-field inline grow">
+          <label class="os-field-label">Period</label>
+          <app-os-select
+            icon="schedule"
+            [placeholder]="selectedClass ? 'Select period…' : 'Choose class first…'"
+            ariaLabel="Select period"
+            [disabled]="!selectedClass"
+            [options]="periodOptions()"
+            [value]="selectedPeriod"
+            (valueChange)="selectedPeriod = $event" />
         </div>
-      </div>
-
-      <div class="filter-grid">
-
-        <!-- 1. Class Field -->
-        <div class="field-wrap">
-          <label class="field-label">
-            <span class="material-icons-round label-icon">school</span> Class & Section
-          </label>
-          <div class="input-box">
-            <select [(ngModel)]="selectedClass" (change)="onClassChange()" class="form-select">
-              <option [ngValue]="null">Select class & section…</option>
-              @for (c of classes(); track c.classId) {
-                <option [ngValue]="c.classId">{{ c.className }}{{ c.section ? ' · Section ' + c.section : '' }}</option>
-              }
-            </select>
-            <span class="material-icons-round select-caret">expand_more</span>
-          </div>
-        </div>
-
-        <!-- 2. Period Field -->
-        <div class="field-wrap">
-          <label class="field-label">
-            <span class="material-icons-round label-icon">schedule</span> Period / Slot
-          </label>
-          <div class="input-box">
-            <select [(ngModel)]="selectedPeriod" class="form-select" [disabled]="!selectedClass">
-              <option [ngValue]="null">{{ selectedClass ? 'Select period…' : 'Choose class first…' }}</option>
-              @for (p of periods(); track p.periodId) {
-                @if (!p.isBreak) {
-                  <option [ngValue]="p.periodId">{{ p.periodName }} ({{ fmt(p.startTime) }} – {{ fmt(p.endTime) }})</option>
-                }
-              }
-            </select>
-            <span class="material-icons-round select-caret">expand_more</span>
-          </div>
-        </div>
-
-        <!-- 3. Date Field -->
-        <div class="field-wrap">
-          <label class="field-label">
-            <span class="material-icons-round label-icon">calendar_today</span> Attendance Date
-          </label>
-          <div class="date-picker-container">
+        <div class="os-field inline">
+          <label class="os-field-label">Date</label>
+          <div class="os-date-wrap">
             <app-date-picker [(ngModel)]="date" (dateChange)="onDateChange()" />
           </div>
         </div>
-
-        <!-- 4. Action Button -->
-        <div class="field-wrap btn-field">
-          <button class="search-btn"
-                  [disabled]="!selectedClass || searching() || isOffDay()"
-                  (click)="search()">
-            @if (searching()) {
-              <span class="spin material-icons-round btn-icon">sync</span>
-              <span>Loading…</span>
-            } @else {
-              <span class="material-icons-round btn-icon">groups</span>
-              <span>Fetch Roster</span>
-            }
-          </button>
-        </div>
-
       </div>
-
-      @if (isOffDay()) {
-        <div class="off-day-banner">
-          <span class="material-icons-round">event_busy</span>
-          <div class="off-day-text">
-            <strong>Off Day Notice:</strong> The selected date is marked as a non-working day in school settings.
-          </div>
-        </div>
-      }
+      <div class="os-toolbar-group end">
+        @if (isToday()) { <span class="os-meta-chip">Today</span> }
+        @if (isOffDay()) {
+          <span class="day-chip chip-off"><span class="material-icons-round">event_busy</span> Off day</span>
+        } @else {
+          <span class="day-chip chip-work"><span class="material-icons-round">check_circle</span> Working</span>
+        }
+        <button class="search-btn btn-primary"
+                [disabled]="!selectedClass || searching() || isOffDay()"
+                (click)="search()">
+          @if (searching()) {
+            <span class="spin material-icons-round btn-icon">sync</span>
+            <span>Loading…</span>
+          } @else {
+            <span class="material-icons-round btn-icon">groups</span>
+            <span>Fetch Roster</span>
+          }
+        </button>
+      </div>
     </div>
+
+    @if (isOffDay()) {
+      <div class="off-day-banner">
+        <span class="material-icons-round">event_busy</span>
+        <div class="off-day-text">
+          <strong>Off Day Notice:</strong> The selected date is marked as a non-working day in school settings.
+        </div>
+      </div>
+    }
 
     <!-- ── State 1: Searching ── -->
     @if (searching()) {
@@ -128,12 +101,11 @@ export interface Row {
 
     <!-- ── State 2: Empty Roster Result ── -->
     @else if (searched() && rows().length === 0) {
-      <div class="splash card">
-        <div class="splash-icon-wrap">
-          <span class="material-icons-round">groups</span>
-        </div>
-        <h3 class="splash-title">No Enrolled Students Found</h3>
-        <p class="splash-sub">No active students are currently enrolled in the selected class and section.</p>
+      <div class="os-panel">
+        <app-empty-state
+          title="No enrolled students"
+          message="No active students are currently enrolled in the selected class and section."
+          icon="groups" />
       </div>
     }
 
@@ -188,7 +160,7 @@ export interface Row {
       </div>
 
       <!-- Live Attendance Progress Bar -->
-      <div class="progress-bar-card card">
+      <div class="progress-bar-card os-panel">
         <div class="pb-header">
           <span class="pb-title">Attendance Ratio</span>
           <span class="pb-rate">{{ calcPercent(presentCount()) }}% Present Rate</span>
@@ -201,7 +173,7 @@ export interface Row {
       </div>
 
       <!-- Roster Controls Bar -->
-      <div class="roster-toolbar card">
+      <div class="roster-toolbar os-panel">
         <!-- Live Search Filter -->
         <div class="roster-search-box">
           <span class="material-icons-round search-lens">search</span>
@@ -248,7 +220,7 @@ export interface Row {
       </div>
 
       <!-- Desktop Table View (>= 768px) -->
-      <div class="roster-card card desktop-view">
+      <div class="roster-card os-panel desktop-view">
         <table class="roster-table">
           <thead>
             <tr>
@@ -430,9 +402,28 @@ export interface Row {
         </div>
       </div>
     }
+    </div>
   `,
   styles: [`
-    /* ═══ FILTER CARD ════════════════════════════════ */
+    :host {
+      display: block;
+      min-width: 0;
+      margin-top: -16px;
+    }
+    .day-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11.5px;
+      font-weight: 700;
+    }
+    .day-chip .material-icons-round { font-size: 15px; }
+    .chip-work { background: var(--green-s); color: var(--green); }
+    .chip-off { background: var(--red-s); color: var(--red); }
+
+    /* ═══ FILTER CARD (legacy unused shell kept minimal) ════════════════════════════════ */
     .filter-card {
       padding: 22px 24px;
       margin-bottom: 20px;
@@ -1211,6 +1202,13 @@ export interface Row {
         justify-content: center;
       }
     }
+
+    @media (max-width: 900px) {
+      :host { margin-top: -6px; }
+    }
+    @media (max-width: 640px) {
+      :host { margin-top: -4px; }
+    }
   `]
 })
 export class MarkAttendanceComponent implements OnInit {
@@ -1220,6 +1218,7 @@ export class MarkAttendanceComponent implements OnInit {
   private studentSvc    = inject(StudentService);
   private settingsSvc   = inject(SettingsService);
   private authSvc       = inject(AuthService);
+  private menuSvc       = inject(MenuService);
 
   classes  = signal<ClassDto[]>([]);
   periods  = signal<PeriodDto[]>([]);
@@ -1249,6 +1248,26 @@ export class MarkAttendanceComponent implements OnInit {
   leaveCount   = computed(() => this.rows().filter(r => r.status === 'Leave').length);
   totalCount   = computed(() => this.rows().length);
 
+  classOptions = computed<OsSelectOption<number>[]>(() =>
+    this.classes().map(c => ({
+      value: c.classId,
+      label: c.section ? `${c.className} · Section ${c.section}` : c.className
+    }))
+  );
+
+  periodOptions = computed<OsSelectOption<number>[]>(() =>
+    this.periods()
+      .filter(p => !p.isBreak)
+      .map(p => ({
+        value: p.periodId,
+        label: `${p.periodName} (${this.fmt(p.startTime)} – ${this.fmt(p.endTime)})`
+      }))
+  );
+
+  pageTitle = computed(() =>
+    this.menuSvc.titleForRoute('/attendance/mark', 'Mark Attendance')
+  );
+
   displayedRows = computed(() => {
     let list = this.rows();
     const query = this.searchFilter.trim().toLowerCase();
@@ -1267,6 +1286,7 @@ export class MarkAttendanceComponent implements OnInit {
   });
 
   ngOnInit() {
+    this.menuSvc.ensureLoaded().subscribe();
     const user = this.authSvc.currentUser();
     this.isTeacher = this.authSvc.hasRole('teacher');
 

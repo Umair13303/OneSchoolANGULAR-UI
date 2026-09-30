@@ -1,50 +1,61 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ExamService } from '../../../core/services/exam.service';
 import { AcademicService } from '../../../core/services/academic.service';
+import { MenuService } from '../../../core/services/menu.service';
 import { ExamScheduleDto, EXAM_STATUSES } from '../../../core/models/exam.model';
 import { ConfirmDeleteComponent } from '../../../shared/components/confirm-delete/confirm-delete.component';
 import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/confirm-delete.service';
 import { DatePickerComponent } from '../../../shared/components/date-picker/date-picker.component';
+import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
+import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
+import { LoadingComponent } from '../../../shared/components/loading/loading.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 
 @Component({
   selector: 'app-exam-schedule',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, ConfirmDeleteComponent, DatePickerComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, ConfirmDeleteComponent, DatePickerComponent, PageHeaderComponent, OsSelectComponent, LoadingComponent, EmptyStateComponent],
   template: `
-    <div class="page-header">
-      <div class="ph-left">
-        <div class="ph-icon"><span class="material-icons-round">calendar_month</span></div>
-        <div>
-          <h1>Exam Schedule</h1>
-          <p>View and manage exam timetable</p>
-        </div>
-      </div>
+    <div class="os-page compact exam-schedule-page">
+    <app-page-header [dense]="true" [title]="pageTitle()">
       <button class="btn-primary" (click)="openForm()">
         <span class="material-icons-round">add</span> Schedule Exam
       </button>
-    </div>
+    </app-page-header>
 
-    <!-- Filters -->
-    <div class="filter-bar">
-      <select [(ngModel)]="filterClass" (ngModelChange)="load()" [ngModelOptions]="{standalone:true}">
-        <option value="">All Classes</option>
-        @for (c of classes(); track c.classId) { <option [value]="c.classId">{{ c.className }}</option> }
-      </select>
-      <app-date-picker [(ngModel)]="filterFrom" (dateChange)="load()" [ngModelOptions]="{standalone:true}" />
-      <app-date-picker [(ngModel)]="filterTo"   (dateChange)="load()" [ngModelOptions]="{standalone:true}" />
+    <div class="os-toolbar">
+      <div class="os-toolbar-group">
+        <div class="os-field inline grow">
+          <label class="os-field-label">Class</label>
+          <app-os-select
+            icon="school"
+            placeholder="All classes"
+            [searchable]="classFilterOptions().length > 6"
+            [options]="classFilterOptions()"
+            [value]="filterClass"
+            (valueChange)="filterClass = $event ?? ''; load()" />
+        </div>
+        <div class="os-field inline">
+          <label class="os-field-label">From</label>
+          <div class="os-date-wrap"><app-date-picker [(ngModel)]="filterFrom" (dateChange)="load()" [ngModelOptions]="{standalone:true}" /></div>
+        </div>
+        <div class="os-field inline">
+          <label class="os-field-label">To</label>
+          <div class="os-date-wrap"><app-date-picker [(ngModel)]="filterTo" (dateChange)="load()" [ngModelOptions]="{standalone:true}" /></div>
+        </div>
+      </div>
     </div>
 
     @if (loading()) {
-      <div class="loading-state"><span class="material-icons-round spin">refresh</span> Loading…</div>
+      <app-loading />
     } @else if (schedules().length === 0) {
-      <div class="empty-state">
-        <span class="material-icons-round">calendar_month</span>
-        <p>No exams scheduled yet.</p>
+      <div class="os-panel">
+        <app-empty-state title="No exams scheduled" message="No exams scheduled yet." icon="calendar_month" />
       </div>
     } @else {
-      <div class="schedule-table-wrap">
+      <div class="schedule-table-wrap os-panel">
         <table class="schedule-table">
           <thead>
             <tr>
@@ -155,8 +166,12 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
     }
 
     <app-confirm-delete />
+    </div>
   `,
   styles: [`
+    :host { display:block; min-width:0; margin-top:-16px; }
+    @media (max-width:900px) { :host { margin-top:-6px; } }
+    @media (max-width:640px) { :host { margin-top:-4px; } }
     .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
     .ph-left { display:flex; align-items:center; gap:12px; }
     .ph-icon { width:44px; height:44px; border-radius:12px; background:var(--accent-s); display:flex; align-items:center; justify-content:center; }
@@ -225,6 +240,7 @@ export class ExamScheduleComponent implements OnInit {
   private confirmDelete = inject(ConfirmDeleteService);
   private acSvc   = inject(AcademicService);
   private fb      = inject(FormBuilder);
+  private menuSvc = inject(MenuService);
 
   schedules    = signal<ExamScheduleDto[]>([]);
   papers       = signal<any[]>([]);
@@ -241,6 +257,15 @@ export class ExamScheduleComponent implements OnInit {
 
   readonly statuses = EXAM_STATUSES;
 
+  pageTitle = computed(() =>
+    this.menuSvc.titleForRoute('/exams/schedule', 'Exam Schedule')
+  );
+
+  classFilterOptions = computed<OsSelectOption<string>[]>(() => [
+    { value: '', label: 'All classes' },
+    ...this.classes().map(c => ({ value: String(c.classId), label: c.className as string }))
+  ]);
+
   form = this.fb.group({
     examPaperId: ['', Validators.required],
     examDate:    ['', Validators.required],
@@ -252,6 +277,7 @@ export class ExamScheduleComponent implements OnInit {
   });
 
   ngOnInit() {
+    this.menuSvc.ensureLoaded().subscribe();
     this.acSvc.getClasses().subscribe(c => this.classes.set(c));
     this.examSvc.getPapers().subscribe(p => this.papers.set(p));
     this.load();

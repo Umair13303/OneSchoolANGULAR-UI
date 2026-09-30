@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormsModule, FormBuilder, FormArray, FormGroup, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -8,6 +8,9 @@ import { AcademicService } from '../../../core/services/academic.service';
 import { ExamPaperDto, EXAM_TYPES, CLASS_GROUPS } from '../../../core/models/exam.model';
 import { ConfirmDeleteComponent } from '../../../shared/components/confirm-delete/confirm-delete.component';
 import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/confirm-delete.service';
+import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
+import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
+import { MenuService } from '../../../core/services/menu.service';
 
 const SECTION_TYPES = [
   { value: 'Objective',   label: 'Objective / MCQs'  },
@@ -22,36 +25,36 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
 @Component({
   selector: 'app-exam-papers',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterModule, ConfirmDeleteComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterModule, ConfirmDeleteComponent, PageHeaderComponent, OsSelectComponent],
   template: `
-    <!-- PAGE HEADER -->
-    <div class="page-header">
-      <div class="ph-left">
-        <div class="ph-icon"><span class="material-icons-round">edit_document</span></div>
-        <div>
-          <h1>Exam Paper Setup</h1>
-          <p>Create and manage exam papers for all classes</p>
-        </div>
-      </div>
+    <div class="os-page compact exam-papers-page">
+    <app-page-header [dense]="true" [title]="pageTitle()">
       <button class="btn-primary" (click)="openForm()">
         <span class="material-icons-round">add</span> New Paper
       </button>
-    </div>
+    </app-page-header>
 
-    <!-- FILTERS -->
-    <div class="filter-bar">
-      <select [(ngModel)]="filterClass" (ngModelChange)="load()" [ngModelOptions]="{standalone:true}">
-        <option value="">All Classes</option>
-        @for (c of classes(); track c.classId) {
-          <option [value]="c.classId">{{ c.className }}</option>
-        }
-      </select>
-      <select [(ngModel)]="filterType" (ngModelChange)="load()" [ngModelOptions]="{standalone:true}">
-        <option value="">All Types</option>
-        @for (t of examTypes; track t.value) {
-          <option [value]="t.value">{{ t.label }}</option>
-        }
-      </select>
+    <div class="os-toolbar">
+      <div class="os-toolbar-group">
+        <div class="os-field inline grow">
+          <label class="os-field-label">Class</label>
+          <app-os-select
+            icon="school"
+            placeholder="All classes"
+            [searchable]="classFilterOptions().length > 6"
+            [options]="classFilterOptions()"
+            [value]="filterClass"
+            (valueChange)="filterClass = $event ?? ''; load()" />
+        </div>
+        <div class="os-field inline grow">
+          <label class="os-field-label">Type</label>
+          <app-os-select
+            placeholder="All types"
+            [options]="typeFilterOptions"
+            [value]="filterType"
+            (valueChange)="filterType = $event ?? ''; load()" />
+        </div>
+      </div>
     </div>
 
     <!-- INLINE FORM PANEL -->
@@ -372,8 +375,12 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
     }
 
     <app-confirm-delete />
+    </div>
   `,
   styles: [`
+    :host { display:block; min-width:0; margin-top:-16px; }
+    @media (max-width:900px) { :host { margin-top:-6px; } }
+    @media (max-width:640px) { :host { margin-top:-4px; } }
     .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
     .ph-left { display:flex; align-items:center; gap:12px; }
     .ph-icon { width:44px; height:44px; border-radius:12px; background:var(--accent-s); display:flex; align-items:center; justify-content:center; }
@@ -509,6 +516,7 @@ export class ExamPapersComponent implements OnInit, OnDestroy {
   private acSvc   = inject(AcademicService);
   private router  = inject(Router);
   private fb      = inject(FormBuilder);
+  private menuSvc = inject(MenuService);
 
   papers    = signal<ExamPaperDto[]>([]);
   classes   = signal<any[]>([]);
@@ -530,6 +538,20 @@ export class ExamPapersComponent implements OnInit, OnDestroy {
   readonly classGroups  = CLASS_GROUPS;
   readonly sectionTypes = SECTION_TYPES;
   readonly SEG_COLORS   = SEG_COLORS;
+
+  pageTitle = computed(() =>
+    this.menuSvc.titleForRoute('/exams/papers', 'Paper Setup')
+  );
+
+  classFilterOptions = computed<OsSelectOption<string>[]>(() => [
+    { value: '', label: 'All classes' },
+    ...this.classes().map(c => ({ value: String(c.classId), label: c.className as string }))
+  ]);
+
+  readonly typeFilterOptions: OsSelectOption<string>[] = [
+    { value: '', label: 'All types' },
+    ...EXAM_TYPES.map(t => ({ value: String(t.value), label: t.label }))
+  ];
 
   form = this.fb.group({
     academicYearId:  ['', Validators.required],
@@ -558,6 +580,7 @@ export class ExamPapersComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    this.menuSvc.ensureLoaded().subscribe();
     this.loadDropdowns();
     this.load();
   }

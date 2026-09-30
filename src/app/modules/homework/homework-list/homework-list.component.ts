@@ -13,62 +13,84 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { ConfirmDeleteComponent } from '../../../shared/components/confirm-delete/confirm-delete.component';
 import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/confirm-delete.service';
+import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
+import { MenuService } from '../../../core/services/menu.service';
 
 type Tab = 'diary' | 'manage';
 
 @Component({
   selector: 'app-homework-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, ConfirmDeleteComponent, DatePickerComponent],
+  imports: [CommonModule, FormsModule, RouterModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, ConfirmDeleteComponent, DatePickerComponent, OsSelectComponent],
   template: `
-    <app-page-header title="Homework / Diary" subtitle="View and manage homework assignments">
+    <div class="os-page compact hw-list-page">
+    <app-page-header [dense]="true" [title]="pageTitle()">
       @if (isTeacher()) {
         <a class="btn-primary" routerLink="/homework/assign">+ Assign Homework</a>
       }
     </app-page-header>
 
-    <!-- Tabs (teacher only sees Manage tab) -->
     @if (isTeacher()) {
-      <div class="tab-bar">
-        <button [class.active]="tab() === 'diary'"  (click)="tab.set('diary')">📖 Diary (Student View)</button>
-        <button [class.active]="tab() === 'manage'" (click)="tab.set('manage')">📋 Manage Assignments</button>
+      <div class="os-toolbar">
+        <div class="os-seg" role="tablist">
+          <button type="button" class="os-seg-btn" [class.active]="tab() === 'diary'" (click)="tab.set('diary')">
+            Diary
+          </button>
+          <button type="button" class="os-seg-btn" [class.active]="tab() === 'manage'" (click)="tab.set('manage')">
+            Manage
+          </button>
+        </div>
       </div>
     }
 
-    <!-- ── FILTERS ─────────────────────────────────────────────────────────── -->
-    <div class="filters card">
-      <div class="filter-row">
-        <select [(ngModel)]="selectedYear" (change)="onYearChange()">
-          <option [ngValue]="null">All Years</option>
-          @for (y of years(); track y.academicYearId) {
-            <option [ngValue]="y.academicYearId">{{ y.yearLabel }}</option>
-          }
-        </select>
-        <select [(ngModel)]="selectedClass" (change)="load()">
-          <option [ngValue]="null">Select Class</option>
-          @for (c of classes(); track c.classId) {
-            <option [ngValue]="c.classId">{{ c.className }} {{ c.section }}</option>
-          }
-        </select>
-        <select [(ngModel)]="selectedSubject" (change)="load()">
-          <option [ngValue]="null">All Subjects</option>
-          @for (s of subjects(); track s.subjectId) {
-            <option [ngValue]="s.subjectId">{{ s.subjectName }}</option>
-          }
-        </select>
-        <app-date-picker [(ngModel)]="fromDate" (dateChange)="load()" />
-        <app-date-picker [(ngModel)]="toDate"   (dateChange)="load()" />
-        <button class="btn-clear" (click)="clearFilters()">Clear</button>
+    <div class="os-toolbar">
+      <div class="os-toolbar-group">
+        <div class="os-field inline grow">
+          <label class="os-field-label">Year</label>
+          <app-os-select
+            placeholder="All years"
+            [options]="yearOptions()"
+            [value]="selectedYear"
+            (valueChange)="selectedYear = $event; onYearChange()" />
+        </div>
+        <div class="os-field inline grow">
+          <label class="os-field-label">Class</label>
+          <app-os-select
+            icon="school"
+            placeholder="Select class"
+            [searchable]="classOptions().length > 6"
+            [options]="classOptions()"
+            [value]="selectedClass"
+            (valueChange)="selectedClass = $event; load()" />
+        </div>
+        <div class="os-field inline grow">
+          <label class="os-field-label">Subject</label>
+          <app-os-select
+            placeholder="All subjects"
+            [options]="subjectOptions()"
+            [value]="selectedSubject"
+            (valueChange)="selectedSubject = $event; load()" />
+        </div>
+        <div class="os-field inline">
+          <label class="os-field-label">From</label>
+          <div class="os-date-wrap"><app-date-picker [(ngModel)]="fromDate" (dateChange)="load()" /></div>
+        </div>
+        <div class="os-field inline">
+          <label class="os-field-label">To</label>
+          <div class="os-date-wrap"><app-date-picker [(ngModel)]="toDate" (dateChange)="load()" /></div>
+        </div>
+      </div>
+      <div class="os-toolbar-group end">
+        <button type="button" class="btn-secondary btn-sm" (click)="clearFilters()">Clear</button>
       </div>
     </div>
 
-    <!-- ── DIARY TAB ──────────────────────────────────────────────────────── -->
     @if (tab() === 'diary') {
       @if (loading()) { <app-loading /> }
       @else if (!selectedClass) {
-        <app-empty-state message="Select a class to view homework." icon="📖" />
+        <div class="os-panel"><app-empty-state message="Select a class to view homework." icon="menu_book" /></div>
       } @else if (homework().length === 0) {
-        <app-empty-state message="No homework found for selected filters." icon="📝" />
+        <div class="os-panel"><app-empty-state message="No homework found for selected filters." icon="edit_note" /></div>
       } @else {
         <!-- Summary strip -->
         <div class="summary-strip">
@@ -114,11 +136,11 @@ type Tab = 'diary' | 'manage';
     @if (tab() === 'manage' && isTeacher()) {
       @if (loading()) { <app-loading /> }
       @else if (!selectedClass) {
-        <app-empty-state message="Select a class to manage homework." icon="📋" />
+        <div class="os-panel"><app-empty-state message="Select a class to manage homework." icon="assignment" /></div>
       } @else if (homework().length === 0) {
-        <app-empty-state message="No homework found. Assign some!" icon="📝" />
+        <div class="os-panel"><app-empty-state message="No homework found. Assign some!" icon="edit_note" /></div>
       } @else {
-        <div class="card">
+        <div class="os-panel">
           <table class="table">
             <thead>
               <tr>
@@ -220,8 +242,13 @@ type Tab = 'diary' | 'manage';
     }
 
     <app-confirm-delete />
+    </div>
   `,
   styles: [`
+    :host { display:block; min-width:0; margin-top:-16px; }
+    @media (max-width:900px) { :host { margin-top:-6px; } }
+    @media (max-width:640px) { :host { margin-top:-4px; } }
+
     .tab-bar { display:flex; gap:0; margin-bottom:20px; border-bottom:2px solid var(--border); }
     .tab-bar button { padding:10px 24px; border:none; background:none; cursor:pointer; font-size:14px; color:var(--t4); font-family:inherit; }
     .tab-bar button.active { color:var(--accent); font-weight:700; border-bottom:2px solid var(--accent); margin-bottom:-2px; }
@@ -311,6 +338,7 @@ export class HomeworkListComponent implements OnInit {
   private academicSvc = inject(AcademicService);
   auth = inject(AuthService);
   private confirmDeleteSvc = inject(ConfirmDeleteService);
+  private menuSvc = inject(MenuService);
 
   years     = signal<AcademicYear[]>([]);
   classes   = signal<ClassDto[]>([]);
@@ -341,7 +369,29 @@ export class HomeworkListComponent implements OnInit {
 
   isTeacher = computed(() => this.auth.hasRole('teacher', 'superadmin', 'admin', 'principal'));
 
+  pageTitle = computed(() =>
+    this.menuSvc.titleForRoute('/homework/list', 'Diary / Homework')
+  );
+
+  yearOptions = computed<OsSelectOption<number | null>[]>(() => [
+    { value: null, label: 'All years' },
+    ...this.years().map(y => ({ value: y.academicYearId as number | null, label: y.yearLabel }))
+  ]);
+
+  classOptions = computed<OsSelectOption<number>[]>(() =>
+    this.classes().map(c => ({
+      value: c.classId,
+      label: `${c.className}${c.section ? ' ' + c.section : ''}`.trim()
+    }))
+  );
+
+  subjectOptions = computed<OsSelectOption<number | null>[]>(() => [
+    { value: null, label: 'All subjects' },
+    ...this.subjects().map(s => ({ value: s.subjectId as number | null, label: s.subjectName }))
+  ]);
+
   ngOnInit() {
+    this.menuSvc.ensureLoaded().subscribe();
     this.academicSvc.getYears().subscribe(y => this.years.set(y));
     this.academicSvc.getSubjects().subscribe(s => this.subjects.set(s));
   }

@@ -1,50 +1,51 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ExamService } from '../../../core/services/exam.service';
 import { AcademicService } from '../../../core/services/academic.service';
+import { MenuService } from '../../../core/services/menu.service';
 import { ExamPaperDto, ExamResultDto } from '../../../core/models/exam.model';
+import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
+import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
+import { LoadingComponent } from '../../../shared/components/loading/loading.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 
 @Component({
   selector: 'app-exam-result-cards',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PageHeaderComponent, OsSelectComponent, LoadingComponent, EmptyStateComponent],
   template: `
-    <div class="page-header">
-      <div class="ph-left">
-        <div class="ph-icon"><span class="material-icons-round">emoji_events</span></div>
-        <div>
-          <h1>Result Cards</h1>
-          <p>View class result summary and student performance</p>
-        </div>
-      </div>
-    </div>
+    <div class="os-page compact exam-result-cards-page">
+    <app-page-header [dense]="true" [title]="pageTitle()" />
 
-    <!-- Selector -->
-    <div class="selector-card">
-      <div class="fg two">
-        <div class="fi">
-          <label>Select Class</label>
-          <select [(ngModel)]="selectedClass" (ngModelChange)="onClassChange()">
-            <option value="">Select class…</option>
-            @for (c of classes(); track c.classId) { <option [value]="c.classId">{{ c.className }}</option> }
-          </select>
+    <div class="os-toolbar">
+      <div class="os-toolbar-group">
+        <div class="os-field inline grow">
+          <label class="os-field-label">Class</label>
+          <app-os-select
+            icon="school"
+            placeholder="Select class…"
+            [searchable]="classOptions().length > 6"
+            [options]="classOptions()"
+            [value]="selectedClass"
+            (valueChange)="selectedClass = $event ?? ''; onClassChange()" />
         </div>
-        <div class="fi">
-          <label>Select Exam Paper</label>
-          <select [(ngModel)]="selectedPaper" (ngModelChange)="loadResults()">
-            <option value="">Select paper…</option>
-            @for (p of filteredPapers(); track p.examPaperId) { <option [value]="p.examPaperId">{{ p.title }} ({{ p.examType }})</option> }
-          </select>
+        <div class="os-field inline grow">
+          <label class="os-field-label">Paper</label>
+          <app-os-select
+            placeholder="Select paper…"
+            [searchable]="paperOptions().length > 6"
+            [options]="paperOptions()"
+            [value]="selectedPaper"
+            (valueChange)="selectedPaper = $event ?? ''; loadResults()" />
         </div>
       </div>
     </div>
 
     @if (loading()) {
-      <div class="loading-state"><span class="material-icons-round spin">refresh</span> Loading results…</div>
+      <app-loading />
     } @else if (results().length > 0) {
 
-      <!-- Summary Stats -->
       <div class="stats-row">
         <div class="stat-card">
           <div class="stat-icon total"><span class="material-icons-round">group</span></div>
@@ -68,8 +69,7 @@ import { ExamPaperDto, ExamResultDto } from '../../../core/models/exam.model';
         </div>
       </div>
 
-      <!-- Result Table -->
-      <div class="results-card">
+      <div class="results-card os-panel">
         <div class="results-card-header">
           <span>Results — {{ activePaper()?.title }}</span>
           <button class="btn-sm btn-outline" (click)="recalcRanks()">
@@ -122,13 +122,17 @@ import { ExamPaperDto, ExamResultDto } from '../../../core/models/exam.model';
         </div>
       </div>
     } @else if (selectedPaper) {
-      <div class="empty-state">
-        <span class="material-icons-round">emoji_events</span>
-        <p>No results entered for this paper yet.</p>
+      <div class="os-panel">
+        <app-empty-state title="No results" message="No results entered for this paper yet." icon="emoji_events" />
       </div>
     }
+    </div>
   `,
   styles: [`
+    :host { display:block; min-width:0; margin-top:-16px; }
+    @media (max-width:900px) { :host { margin-top:-6px; } }
+    @media (max-width:640px) { :host { margin-top:-4px; } }
+
     .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
     .ph-left { display:flex; align-items:center; gap:12px; }
     .ph-icon { width:44px; height:44px; border-radius:12px; background:var(--accent-s); display:flex; align-items:center; justify-content:center; }
@@ -199,6 +203,7 @@ import { ExamPaperDto, ExamResultDto } from '../../../core/models/exam.model';
 export class ExamResultCardsComponent implements OnInit {
   private examSvc = inject(ExamService);
   private acSvc   = inject(AcademicService);
+  private menuSvc = inject(MenuService);
 
   classes       = signal<any[]>([]);
   papers        = signal<ExamPaperDto[]>([]);
@@ -210,7 +215,23 @@ export class ExamResultCardsComponent implements OnInit {
   selectedClass = '';
   selectedPaper = '';
 
+  pageTitle = computed(() =>
+    this.menuSvc.titleForRoute('/exams/results/cards', 'Result Cards')
+  );
+
+  classOptions = computed<OsSelectOption<string>[]>(() =>
+    this.classes().map(c => ({ value: String(c.classId), label: c.className as string }))
+  );
+
+  paperOptions = computed<OsSelectOption<string>[]>(() =>
+    this.filteredPapers().map(p => ({
+      value: String(p.examPaperId),
+      label: `${p.title} (${p.examType})`
+    }))
+  );
+
   ngOnInit() {
+    this.menuSvc.ensureLoaded().subscribe();
     this.acSvc.getClasses().subscribe(c => this.classes.set(c));
     this.examSvc.getPapers().subscribe(p => this.papers.set(p));
   }

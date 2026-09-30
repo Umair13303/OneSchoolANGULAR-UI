@@ -6,7 +6,6 @@ import { MenuService } from '../core/services/menu.service';
 import { ThemeService, ThemeMode } from '../core/services/theme.service';
 import { SettingsService } from '../core/services/settings.service';
 import { SetupNotificationService } from '../core/services/setup-notification.service';
-import { MenuItemTree } from '../core/models/menu.model';
 import { ChatPanelComponent } from '../shared/components/chat-panel/chat-panel.component';
 import { ChatService } from '../core/services/chat.service';
 import { SwalNotificationService } from '../core/services/swal-notification.service';
@@ -757,7 +756,7 @@ export class LayoutComponent implements OnInit {
   private menuSvc      = inject(MenuService);
   private settingsSvc  = inject(SettingsService);
 
-  menuItems  = signal<MenuItemTree[]>([]);
+  menuItems  = this.menuSvc.items;
   open       = signal<Set<number>>(new Set());
   instituteName    = computed(() => this.auth.currentUser()?.instituteName ?? 'OneSkool');
   instituteTagline = computed(() => this.auth.currentUser()?.tagline ?? 'School Management System');
@@ -790,7 +789,7 @@ export class LayoutComponent implements OnInit {
   private closePanels = () => { this.themeOpen.set(false); this.notifOpen.set(false); };
 
   ngOnInit() {
-    this.menuSvc.getMenu().subscribe({ next: m => this.menuItems.set(m), error: () => {} });
+    this.menuSvc.ensureLoaded().subscribe();
     document.addEventListener('click', this.closePanels);
     this.notifSvc.load();
     this.chatSvc.connect();

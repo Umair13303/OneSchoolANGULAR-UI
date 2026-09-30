@@ -10,99 +10,80 @@ import { ClassDto } from '../../../core/models/academic.model';
 import { PeriodDto } from '../../../core/models/timetable.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
+import { MenuService } from '../../../core/services/menu.service';
 
 @Component({
   selector: 'app-view-attendance',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent, LoadingComponent, DatePickerComponent],
+  imports: [CommonModule, FormsModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, DatePickerComponent, OsSelectComponent],
   template: `
-    <app-page-header title="View Attendance" subtitle="Search, review & analyze historical attendance records" />
+    <div class="os-page compact view-att-page">
+    <app-page-header [dense]="true" [title]="pageTitle()" />
 
-    <!-- ── Mode Tabs Bar ── -->
-    <div class="tabs-nav-bar">
-      <div class="tabs-pill-container">
-        <button class="tab-pill" [class.active]="tab() === 'daily'" (click)="switchTab('daily')">
-          <span class="material-icons-round tab-icon">view_list</span>
-          <span>Daily Roll Call</span>
+    <div class="os-toolbar">
+      <div class="os-seg" role="tablist" aria-label="Attendance mode">
+        <button type="button" class="os-seg-btn" [class.active]="tab() === 'daily'" (click)="switchTab('daily')">
+          <span class="material-icons-round">view_list</span>
+          <span class="seg-full">Daily Roll Call</span>
+          <span class="seg-short">Daily</span>
         </button>
-        <button class="tab-pill" [class.active]="tab() === 'summary'" (click)="switchTab('summary')">
-          <span class="material-icons-round tab-icon">analytics</span>
-          <span>Class Summary & Analytics</span>
+        <button type="button" class="os-seg-btn" [class.active]="tab() === 'summary'" (click)="switchTab('summary')">
+          <span class="material-icons-round">analytics</span>
+          <span class="seg-full">Class Summary</span>
+          <span class="seg-short">Summary</span>
         </button>
       </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════
-         1. DAILY ROLL CALL TAB
-    ═══════════════════════════════════════════════════ -->
     @if (tab() === 'daily') {
-      <div class="filter-card card">
-        <div class="filter-grid daily-grid">
-
-          <div class="field-wrap">
-            <label class="field-label">Class & Section</label>
-            <div class="input-box">
-              <span class="material-icons-round input-icon">school</span>
-              <select [(ngModel)]="selectedClass" class="form-select">
-                <option [ngValue]="null">Select class…</option>
-                @for (c of classes(); track c.classId) {
-                  <option [ngValue]="c.classId">{{ c.className }}{{ c.section ? ' · ' + c.section : '' }}</option>
-                }
-              </select>
-              <span class="material-icons-round select-caret">expand_more</span>
-            </div>
+      <div class="os-toolbar">
+        <div class="os-toolbar-group">
+          <div class="os-field inline grow">
+            <label class="os-field-label">Class</label>
+            <app-os-select
+              icon="school"
+              placeholder="Select class…"
+              [searchable]="classOptions().length > 6"
+              [options]="classOptions()"
+              [value]="selectedClass"
+              (valueChange)="selectedClass = $event" />
           </div>
-
-          <div class="field-wrap">
-            <label class="field-label">Period (Optional)</label>
-            <div class="input-box">
-              <span class="material-icons-round input-icon">schedule</span>
-              <select [(ngModel)]="selectedPeriod" class="form-select">
-                <option [ngValue]="null">All Periods</option>
-                @for (p of periods(); track p.periodId) {
-                  @if (!p.isBreak) {
-                    <option [ngValue]="p.periodId">{{ p.periodName }} ({{ fmt(p.startTime) }}–{{ fmt(p.endTime) }})</option>
-                  }
-                }
-              </select>
-              <span class="material-icons-round select-caret">expand_more</span>
-            </div>
+          <div class="os-field inline grow">
+            <label class="os-field-label">Period</label>
+            <app-os-select
+              icon="schedule"
+              placeholder="All periods"
+              [options]="periodOptions()"
+              [value]="selectedPeriod"
+              (valueChange)="selectedPeriod = $event" />
           </div>
-
-          <div class="field-wrap">
-            <label class="field-label">Date</label>
-            <div class="date-picker-container">
-              <app-date-picker [(ngModel)]="date" />
-            </div>
+          <div class="os-field inline">
+            <label class="os-field-label">Date</label>
+            <div class="os-date-wrap"><app-date-picker [(ngModel)]="date" /></div>
           </div>
-
-          <div class="field-wrap btn-field">
-            <button class="search-btn" [disabled]="!selectedClass || !date || loading()" (click)="loadDaily()">
-              @if (loading()) {
-                <span class="spin material-icons-round">sync</span>
-                <span>Loading…</span>
-              } @else {
-                <span class="material-icons-round">search</span>
-                <span>Search</span>
-              }
-            </button>
-          </div>
-
+        </div>
+        <div class="os-toolbar-group end">
+          <button class="search-btn btn-primary" [disabled]="!selectedClass || !date || loading()" (click)="loadDaily()">
+            @if (loading()) {
+              <span class="spin material-icons-round">sync</span><span>Loading…</span>
+            } @else {
+              <span class="material-icons-round">search</span><span>Search</span>
+            }
+          </button>
         </div>
       </div>
 
       @if (loading()) {
         <app-loading />
       } @else if (searched() && records().length === 0) {
-        <div class="splash card">
-          <div class="splash-icon-wrap"><span class="material-icons-round">event_available</span></div>
-          <h3 class="splash-title">No Records Found</h3>
-          <p class="splash-sub">No attendance records match the selected class, period, and date.</p>
+        <div class="os-panel">
+          <app-empty-state title="No records found" message="No attendance records match the selected class, period, and date." icon="event_available" />
         </div>
       } @else if (records().length > 0) {
 
-        <!-- Stats Bar -->
-        <div class="action-card card">
+        <div class="action-card os-panel">
           <div class="stats-group">
             @for (s of dailyStats(); track s.label) {
               <div class="stat-pill" [style.background]="s.bg" [style.color]="s.color">
@@ -115,8 +96,7 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
           </div>
         </div>
 
-        <!-- Table -->
-        <div class="roster-card card">
+        <div class="roster-card os-panel">
           <table class="roster-table">
             <thead>
               <tr>
@@ -159,66 +139,47 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
       }
     }
 
-    <!-- ═══════════════════════════════════════════════════
-         2. CLASS SUMMARY & ANALYTICS TAB
-    ═══════════════════════════════════════════════════ -->
     @if (tab() === 'summary') {
-      <div class="filter-card card">
-        <div class="filter-grid summary-grid">
-
-          <div class="field-wrap">
-            <label class="field-label">Class & Section</label>
-            <div class="input-box">
-              <span class="material-icons-round input-icon">school</span>
-              <select [(ngModel)]="selectedClass" class="form-select">
-                <option [ngValue]="null">Select class…</option>
-                @for (c of classes(); track c.classId) {
-                  <option [ngValue]="c.classId">{{ c.className }}{{ c.section ? ' · ' + c.section : '' }}</option>
-                }
-              </select>
-              <span class="material-icons-round select-caret">expand_more</span>
-            </div>
+      <div class="os-toolbar">
+        <div class="os-toolbar-group">
+          <div class="os-field inline grow">
+            <label class="os-field-label">Class</label>
+            <app-os-select
+              icon="school"
+              placeholder="Select class…"
+              [searchable]="classOptions().length > 6"
+              [options]="classOptions()"
+              [value]="selectedClass"
+              (valueChange)="selectedClass = $event" />
           </div>
-
-          <div class="field-wrap">
-            <label class="field-label">From Date</label>
-            <div class="date-picker-container">
-              <app-date-picker [(ngModel)]="fromDate" />
-            </div>
+          <div class="os-field inline">
+            <label class="os-field-label">From</label>
+            <div class="os-date-wrap"><app-date-picker [(ngModel)]="fromDate" /></div>
           </div>
-
-          <div class="field-wrap">
-            <label class="field-label">To Date</label>
-            <div class="date-picker-container">
-              <app-date-picker [(ngModel)]="toDate" />
-            </div>
+          <div class="os-field inline">
+            <label class="os-field-label">To</label>
+            <div class="os-date-wrap"><app-date-picker [(ngModel)]="toDate" /></div>
           </div>
-
-          <div class="field-wrap btn-field">
-            <button class="search-btn" [disabled]="!selectedClass || !fromDate || !toDate || loading()" (click)="loadSummary()">
-              @if (loading()) {
-                <span class="spin material-icons-round">sync</span>
-                <span>Generating…</span>
-              } @else {
-                <span class="material-icons-round">analytics</span>
-                <span>Generate</span>
-              }
-            </button>
-          </div>
-
+        </div>
+        <div class="os-toolbar-group end">
+          <button class="search-btn btn-primary" [disabled]="!selectedClass || !fromDate || !toDate || loading()" (click)="loadSummary()">
+            @if (loading()) {
+              <span class="spin material-icons-round">sync</span><span>Generating…</span>
+            } @else {
+              <span class="material-icons-round">analytics</span><span>Generate</span>
+            }
+          </button>
         </div>
       </div>
 
       @if (loading()) {
         <app-loading />
       } @else if (searched() && summaries().length === 0) {
-        <div class="splash card">
-          <div class="splash-icon-wrap"><span class="material-icons-round">bar_chart</span></div>
-          <h3 class="splash-title">No Summary Data</h3>
-          <p class="splash-sub">No attendance records found for this class within the specified date range.</p>
+        <div class="os-panel">
+          <app-empty-state title="No summary data" message="No attendance records found for this class within the specified date range." icon="bar_chart" />
         </div>
       } @else if (summaries().length > 0) {
-        <div class="roster-card card">
+        <div class="roster-card os-panel">
           <table class="roster-table">
             <thead>
               <tr>
@@ -273,8 +234,24 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
         </div>
       }
     }
+    </div>
   `,
   styles: [`
+    :host {
+      display: block;
+      min-width: 0;
+      margin-top: -16px;
+    }
+    .seg-short { display: none; }
+    @media (max-width: 900px) {
+      :host { margin-top: -6px; }
+      .seg-full { display: none; }
+      .seg-short { display: inline; }
+    }
+    @media (max-width: 640px) {
+      :host { margin-top: -4px; }
+    }
+
     /* ═══ TABS NAV BAR ═══════════════════════════════ */
     .tabs-nav-bar {
       margin-bottom: 18px;
@@ -602,6 +579,7 @@ export class ViewAttendanceComponent implements OnInit {
   private attendanceSvc = inject(AttendanceService);
   private academicSvc   = inject(AcademicService);
   private ttSvc         = inject(TimetableService);
+  private menuSvc       = inject(MenuService);
 
   tab       = signal<'daily' | 'summary'>('daily');
   classes   = signal<ClassDto[]>([]);
@@ -619,7 +597,29 @@ export class ViewAttendanceComponent implements OnInit {
 
   private avatarColors = ['#6366f1', '#8b5cf6', '#0ea5e9', '#10b981', '#f59e0b', '#ec4899', '#3b82f6'];
 
+  pageTitle = computed(() =>
+    this.menuSvc.titleForRoute('/attendance/view', 'View Attendance')
+  );
+
+  classOptions = computed<OsSelectOption<number>[]>(() =>
+    this.classes().map(c => ({
+      value: c.classId,
+      label: c.section ? `${c.className} · ${c.section}` : c.className
+    }))
+  );
+
+  periodOptions = computed<OsSelectOption<number | null>[]>(() => [
+    { value: null, label: 'All periods' },
+    ...this.periods()
+      .filter(p => !p.isBreak)
+      .map(p => ({
+        value: p.periodId as number | null,
+        label: `${p.periodName} (${this.fmt(p.startTime)}–${this.fmt(p.endTime)})`
+      }))
+  ]);
+
   ngOnInit() {
+    this.menuSvc.ensureLoaded().subscribe();
     this.academicSvc.getClasses().subscribe(c => this.classes.set(c));
     this.ttSvc.getPeriods().subscribe(p =>
       this.periods.set(p.sort((a, b) => a.startTime.localeCompare(b.startTime)))

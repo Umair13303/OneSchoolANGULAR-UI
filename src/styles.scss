@@ -348,6 +348,11 @@ a { text-decoration: none; color: inherit; }
   min-width: 0;
 }
 
+/** Dense ERP pages — match /timetable/view vertical rhythm */
+.os-page.compact {
+  gap: 6px;
+}
+
 .os-toolbar {
   display: flex;
   align-items: center;
@@ -542,6 +547,41 @@ a { text-decoration: none; color: inherit; }
   overflow: hidden;
 }
 
+.os-toolbar app-os-select {
+  min-width: 160px;
+  width: 200px;
+  max-width: 100%;
+}
+
+.os-toolbar .os-field {
+  flex: 0 1 auto;
+}
+
+.os-toolbar .os-field.grow {
+  flex: 1 1 160px;
+}
+
+.os-toolbar .os-field.grow app-os-select,
+.os-toolbar .os-field.grow .os-select-wrap,
+.os-toolbar .os-field.grow app-date-picker {
+  width: 100%;
+  min-width: 0;
+}
+
+.os-date-wrap {
+  min-width: 150px;
+}
+
+.os-toolbar .btn-primary,
+.os-toolbar .btn-secondary,
+.os-toolbar .search-btn {
+  height: 34px;
+  min-height: 34px;
+  padding: 0 14px;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
 @media (max-width: 900px) {
   .os-toolbar {
     align-items: stretch;
@@ -551,8 +591,10 @@ a { text-decoration: none; color: inherit; }
     width: 100%;
     margin-left: 0;
   }
-  .os-select-wrap {
+  .os-select-wrap,
+  .os-toolbar app-os-select {
     min-width: 0;
+    width: 100%;
     flex: 1;
   }
   .os-seg {

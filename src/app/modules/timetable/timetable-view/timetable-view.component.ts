@@ -1,24 +1,25 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { TimetableService } from '../../../core/services/timetable.service';
 import { AcademicService } from '../../../core/services/academic.service';
 import { SettingsService } from '../../../core/services/settings.service';
+import { MenuService } from '../../../core/services/menu.service';
 import { TimetableEntryDto, PeriodDto, DAY_NAMES } from '../../../core/models/timetable.model';
 import { ClassDto } from '../../../core/models/academic.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
 
 @Component({
   selector: 'app-timetable-view',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent],
+  imports: [CommonModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, OsSelectComponent],
   template: `
     <div class="os-page tt-page">
       <app-page-header
         [dense]="true"
-        title="Class Timetable">
+        [title]="pageTitle()">
         @if (entries().length > 0) {
           <button type="button" class="btn-secondary btn-sm no-print" (click)="printTimetable()">
             <span class="material-icons-round" style="font-size:16px">print</span>
@@ -31,29 +32,25 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
         <div class="os-toolbar-group">
           <div class="os-field inline">
             <label class="os-field-label" for="tt-class-select">Class</label>
-            <div class="os-select-wrap">
-              <select id="tt-class-select" class="os-select"
-                      [(ngModel)]="selectedClass" (change)="onClassChange()"
-                      aria-label="Select class">
-                <option [ngValue]="null">Select class…</option>
-                @for (c of classes(); track c.classId) {
-                  <option [ngValue]="c.classId">
-                    {{ c.className }}{{ c.section ? ' – ' + c.section : '' }}
-                  </option>
-                }
-              </select>
-              <span class="material-icons-round os-select-caret">expand_more</span>
-            </div>
+            <app-os-select
+              id="tt-class-select"
+              icon="school"
+              placeholder="Select class…"
+              ariaLabel="Select class"
+              [searchable]="classOptions().length > 6"
+              [options]="classOptions()"
+              [value]="selectedClass()"
+              (valueChange)="onClassSelect($event)" />
           </div>
 
-          @if (selectedClass && entries().length > 0) {
+          @if (selectedClass() && entries().length > 0) {
             <span class="os-meta-chip" title="Scheduled teaching periods this week">
               {{ totalPeriodsCount() }} / wk
             </span>
           }
         </div>
 
-        @if (selectedClass) {
+        @if (selectedClass()) {
           <div class="os-toolbar-group end">
             <div class="os-seg" role="tablist" aria-label="Day filter">
               <button type="button" class="os-seg-btn"
@@ -97,7 +94,7 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
 
       @if (loading()) {
         <app-loading />
-      } @else if (!selectedClass) {
+      } @else if (!selectedClass()) {
         <div class="skeleton-wrap os-panel">
           <div class="skeleton-grid" aria-hidden="true">
             <table class="tt-table">
@@ -139,57 +136,43 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
       } @else {
 
         @if (viewMode() === 'timeline' && selectedDay() !== 0) {
-          <div class="timeline-wrap">
-            <div class="timeline-meta">
-              <span>
-                <strong>{{ dayNames[selectedDay()] }}</strong>
-                · {{ activeDayStats().classes }} subjects
-                · {{ activeDayStats().breaks }} break
-                · {{ activeDayStats().free }} free
-              </span>
-              @if (isToday(selectedDay())) {
-                <span class="today-badge">Today</span>
-              }
-            </div>
+          <div class="timeline-list os-panel">
+            @for (slot of periodSlots(); track slot.periodNo; let last = $last) {
+              @let entry = getEntry(slot.periodNo, selectedDay(), slot.isBreak);
+              @let meta = entry ? getSubjectMeta(entry.subjectName) : null;
 
-            <div class="timeline-list os-panel">
-              @for (slot of periodSlots(); track slot.periodNo; let last = $last) {
-                @let entry = getEntry(slot.periodNo, selectedDay(), slot.isBreak);
-                @let meta = entry ? getSubjectMeta(entry.subjectName) : null;
-
-                <div class="tl-row"
-                     [class.is-break]="slot.isBreak"
-                     [class.is-free]="!slot.isBreak && !entry"
-                     [class.is-subject]="!!entry"
-                     [class.is-last]="last">
-                  <div class="tl-time">
-                    <span class="tl-start">{{ fmt(slot.startTime) }}</span>
-                    <span class="tl-end">{{ fmt(slot.endTime) }}</span>
-                  </div>
-
-                  @if (slot.isBreak) {
-                    <div class="tl-main">
-                      <span class="material-icons-round tl-ico break-ico">coffee</span>
-                      <span class="tl-title">Break</span>
-                      <span class="tl-sub">{{ calcDuration(slot.startTime, slot.endTime) }} min</span>
-                    </div>
-                    <span class="tl-tag break-tag">Interval</span>
-                  } @else if (entry) {
-                    <div class="tl-main">
-                      <span class="material-icons-round tl-ico" [style.color]="meta?.color">{{ meta?.icon }}</span>
-                      <span class="tl-title">{{ entry.subjectName }}</span>
-                      <span class="tl-sub">{{ entry.teacherName }} · {{ calcDuration(slot.startTime, slot.endTime) }} min</span>
-                    </div>
-                    <span class="tl-tag">P{{ slot.periodNo }}</span>
-                  } @else {
-                    <div class="tl-main">
-                      <span class="tl-title free-title">Free</span>
-                    </div>
-                    <span class="tl-tag free-tag">P{{ slot.periodNo }}</span>
-                  }
+              <div class="tl-row"
+                   [class.is-break]="slot.isBreak"
+                   [class.is-free]="!slot.isBreak && !entry"
+                   [class.is-subject]="!!entry"
+                   [class.is-last]="last">
+                <div class="tl-time">
+                  <span class="tl-start">{{ fmt(slot.startTime) }}</span>
+                  <span class="tl-end">{{ fmt(slot.endTime) }}</span>
                 </div>
-              }
-            </div>
+
+                @if (slot.isBreak) {
+                  <div class="tl-main">
+                    <span class="material-icons-round tl-ico break-ico">coffee</span>
+                    <span class="tl-title">Break</span>
+                    <span class="tl-sub">{{ calcDuration(slot.startTime, slot.endTime) }} min</span>
+                  </div>
+                  <span class="tl-tag break-tag">Interval</span>
+                } @else if (entry) {
+                  <div class="tl-main">
+                    <span class="material-icons-round tl-ico" [style.color]="meta?.color">{{ meta?.icon }}</span>
+                    <span class="tl-title">{{ entry.subjectName }}</span>
+                    <span class="tl-sub">{{ entry.teacherName }} · {{ calcDuration(slot.startTime, slot.endTime) }} min</span>
+                  </div>
+                  <span class="tl-tag">P{{ slot.periodNo }}</span>
+                } @else {
+                  <div class="tl-main">
+                    <span class="tl-title free-title">Free</span>
+                  </div>
+                  <span class="tl-tag free-tag">P{{ slot.periodNo }}</span>
+                }
+              </div>
+            }
           </div>
         }
 
@@ -276,7 +259,12 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
     }
 
     .tt-page {
-      gap: 8px;
+      gap: 6px;
+    }
+
+    .os-field.inline app-os-select {
+      width: 220px;
+      min-width: 180px;
     }
 
     .seg-short { display: none; }
@@ -322,54 +310,34 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
     .skeleton-sub { margin: 0; font-size: 12.5px; color: var(--t3); }
 
     /* Timeline */
-    .timeline-wrap { display: flex; flex-direction: column; gap: 8px; }
-    .timeline-meta {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 0 2px;
-      font-size: 12.5px;
-      color: var(--t3);
-    }
-    .timeline-meta strong { color: var(--t1); font-weight: 700; }
-    .today-badge {
-      background: var(--green-s);
-      color: var(--green);
-      border: 1px solid var(--green-b);
-      font-size: 10.5px;
-      font-weight: 700;
-      padding: 2px 8px;
-      border-radius: 999px;
-    }
     .timeline-list { padding: 0; }
     .tl-row {
       display: grid;
-      grid-template-columns: 78px minmax(0, 1fr) auto;
+      grid-template-columns: 70px minmax(0, 1fr) auto;
       align-items: center;
-      gap: 10px;
-      min-height: 40px;
-      padding: 7px 12px;
+      gap: 8px;
+      min-height: 32px;
+      padding: 4px 10px;
       border-bottom: 1px solid var(--border);
     }
     .tl-row.is-last { border-bottom: none; }
     .tl-row.is-break { background: #fffbeb; }
-    .tl-row.is-free { background: var(--surface-2); min-height: 34px; }
+    .tl-row.is-free { background: var(--surface-2); min-height: 28px; }
     .tl-row.is-subject:hover { background: var(--surface-2); }
-    .tl-time { display: flex; flex-direction: column; line-height: 1.15; font-variant-numeric: tabular-nums; }
-    .tl-start { font-size: 12.5px; font-weight: 700; color: var(--t1); }
-    .tl-end { font-size: 11px; color: var(--t4); font-weight: 500; }
-    .tl-main { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; }
-    .tl-ico { font-size: 18px; color: var(--accent); }
+    .tl-time { display: flex; flex-direction: column; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .tl-start { font-size: 12px; font-weight: 700; color: var(--t1); }
+    .tl-end { font-size: 10.5px; color: var(--t4); font-weight: 500; }
+    .tl-main { display: flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
+    .tl-ico { font-size: 16px; color: var(--accent); }
     .break-ico { color: #b45309; }
-    .tl-title { font-size: 13px; font-weight: 700; color: var(--t1); white-space: nowrap; }
+    .tl-title { font-size: 12.5px; font-weight: 700; color: var(--t1); white-space: nowrap; }
     .tl-title.free-title { color: var(--t4); font-weight: 600; }
     .tl-sub {
-      font-size: 12px; color: var(--t3); white-space: nowrap;
+      font-size: 11.5px; color: var(--t3); white-space: nowrap;
       overflow: hidden; text-overflow: ellipsis;
     }
     .tl-tag {
-      font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+      font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px;
       background: var(--accent-s); color: var(--accent); flex-shrink: 0;
     }
     .tl-tag.break-tag { background: #fde68a; color: #78350f; }
@@ -456,13 +424,13 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
       border-bottom: 1px solid var(--border);
       vertical-align: middle;
       background: var(--surface);
-      height: 44px;
+      height: 38px;
     }
     tr:last-child td { border-bottom: none; }
     tr:not(.break-row):hover td { background: rgba(var(--accent-rgb), 0.02); }
     .today-col { background: rgba(var(--accent-rgb), 0.03); }
 
-    .break-row td { background: #fffbeb; height: 34px; }
+    .break-row td { background: #fffbeb; height: 30px; }
     .break-row .sticky-col-period,
     .break-row .sticky-col-time { background: #fffbeb; }
 
@@ -517,7 +485,7 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
 
     @media (max-width: 900px) {
       :host { margin-top: -6px; }
-      .tt-page { gap: 8px; }
+      .tt-page { gap: 6px; }
       .seg-full { display: none; }
       .seg-short { display: inline; }
       .scroll-hint { display: flex; }
@@ -526,13 +494,13 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
 
     @media (max-width: 640px) {
       :host { margin-top: -4px; }
-      .tt-page { gap: 8px; }
+      .tt-page { gap: 6px; }
     }
 
     @media print {
       .no-print { display: none !important; }
       .grid-card { display: block !important; box-shadow: none; }
-      .timeline-wrap { display: none !important; }
+      .timeline-list { display: none !important; }
       .sticky-col-period, .sticky-col-time { position: static !important; box-shadow: none !important; }
     }
   `]
@@ -541,21 +509,35 @@ export class TimetableViewComponent implements OnInit {
   private ttSvc       = inject(TimetableService);
   private academicSvc = inject(AcademicService);
   private settingsSvc = inject(SettingsService);
+  private menuSvc     = inject(MenuService);
 
   private static readonly LAST_CLASS_KEY = 'tt_last_class_id';
+  private static readonly ROUTE = '/timetable/view';
 
   readonly dayNames = DAY_NAMES;
   readonly skeletonRows = [1, 2, 3, 4, 5, 6];
   days       = signal<number[]>([1, 2, 3, 4, 5]);
+
+  /** Leaf menu title from DB (e.g. View Timetable); fallback until menu loads. */
+  pageTitle = computed(() =>
+    this.menuSvc.titleForRoute(TimetableViewComponent.ROUTE, 'View Timetable')
+  );
 
   classes    = signal<ClassDto[]>([]);
   entries    = signal<TimetableEntryDto[]>([]);
   allPeriods = signal<PeriodDto[]>([]);
   loading    = signal(false);
 
-  selectedClass: number | null = null;
+  selectedClass = signal<number | null>(null);
   selectedDay = signal<number>(0);
   viewMode = signal<'timeline' | 'table'>('table');
+
+  classOptions = computed<OsSelectOption<number>[]>(() =>
+    this.classes().map(c => ({
+      value: c.classId,
+      label: c.section ? `${c.className} – ${c.section}` : c.className
+    }))
+  );
 
   displayedDays = computed(() => {
     const day = this.selectedDay();
@@ -564,7 +546,8 @@ export class TimetableViewComponent implements OnInit {
   });
 
   selectedClassName = computed(() => {
-    const c = this.classes().find(x => x.classId === this.selectedClass);
+    const id = this.selectedClass();
+    const c = this.classes().find(x => x.classId === id);
     return c ? `${c.className}${c.section ? ' – ' + c.section : ''}` : '';
   });
 
@@ -572,16 +555,8 @@ export class TimetableViewComponent implements OnInit {
     return this.entries().filter(e => !e.isBreak).length;
   });
 
-  activeDayStats = computed(() => {
-    const day = this.selectedDay();
-    const dayEntries = this.entries().filter(e => e.dayOfWeek === day);
-    const breaks = this.periodSlots().filter(p => p.isBreak).length;
-    const classes = dayEntries.filter(e => !e.isBreak).length;
-    const free = Math.max(0, this.periodSlots().filter(p => !p.isBreak).length - classes);
-    return { classes, breaks, free };
-  });
-
   ngOnInit() {
+    this.menuSvc.ensureLoaded().subscribe();
     this.loading.set(true);
     this.ttSvc.getPeriods().subscribe(p => this.allPeriods.set(
       p.sort((a, b) => a.startTime.localeCompare(b.startTime))
@@ -613,18 +588,19 @@ export class TimetableViewComponent implements OnInit {
   }
 
   private autoSelectClass(classes: ClassDto[]) {
-    if (!classes.length || this.selectedClass != null) return;
+    if (!classes.length || this.selectedClass() != null) return;
     const saved = typeof localStorage !== 'undefined'
       ? Number(localStorage.getItem(TimetableViewComponent.LAST_CLASS_KEY))
       : NaN;
     const match = Number.isFinite(saved) ? classes.find(c => c.classId === saved) : null;
-    this.selectedClass = match?.classId ?? classes[0].classId;
+    this.selectedClass.set(match?.classId ?? classes[0].classId);
     this.load();
   }
 
-  onClassChange() {
-    if (this.selectedClass != null && typeof localStorage !== 'undefined') {
-      localStorage.setItem(TimetableViewComponent.LAST_CLASS_KEY, String(this.selectedClass));
+  onClassSelect(classId: number | null) {
+    this.selectedClass.set(classId);
+    if (classId != null && typeof localStorage !== 'undefined') {
+      localStorage.setItem(TimetableViewComponent.LAST_CLASS_KEY, String(classId));
     }
     this.load();
   }
@@ -639,9 +615,10 @@ export class TimetableViewComponent implements OnInit {
   }
 
   load() {
-    if (!this.selectedClass) { this.entries.set([]); return; }
+    const classId = this.selectedClass();
+    if (!classId) { this.entries.set([]); return; }
     this.loading.set(true);
-    this.ttSvc.getForClass(this.selectedClass).subscribe({
+    this.ttSvc.getForClass(classId).subscribe({
       next: e => { this.entries.set(e); this.loading.set(false); },
       error: () => this.loading.set(false)
     });
