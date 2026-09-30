@@ -78,10 +78,16 @@ export class ChatService {
   connect() {
     if (this.hub && this.hub.state !== signalR.HubConnectionState.Disconnected) return;
 
-    const token = this.auth.getToken();
+    const hubUrl = `${environment.apiUrl.replace('/api', '')}/hubs/chat`;
     this.hub = new signalR.HubConnectionBuilder()
-      .withUrl(`${environment.apiUrl.replace('/api', '')}/hubs/chat?access_token=${token}`)
-      .withAutomaticReconnect()
+      .withUrl(hubUrl, {
+        accessTokenFactory: () => this.auth.getToken() ?? '',
+        transport: signalR.HttpTransportType.WebSockets |
+                   signalR.HttpTransportType.ServerSentEvents |
+                   signalR.HttpTransportType.LongPolling
+      })
+      .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+      .configureLogging(signalR.LogLevel.Warning)
       .build();
 
     this.hub.on('ReceiveMessage', (msg: ChatMessage) => {
@@ -122,7 +128,10 @@ export class ChatService {
 
     this.hub.start()
       .then(() => this.connected.set(true))
-      .catch(() => this.connected.set(false));
+      .catch((err) => {
+        console.warn('SignalR connection failed:', err);
+        this.connected.set(false);
+      });
   }
 
   disconnect() { this.hub?.stop(); this.connected.set(false); }
@@ -146,10 +155,26 @@ export class ChatService {
   }
 
   sendMessage(convId: number, content: string): Promise<void> {
-    if (this.hub?.state === signalR.HubConnectionState.Connected)
-      return this.hub.invoke('SendMessage', convId, content);
-    return Promise.reject('Not connected');
+    if (this.hub?.state === signalR.HubConnectionState.Connected) {
+      return this.hub.invoke('SendMessage', convId, content).catch(err => {
+        console.warn('SignalR SendMessage failed, falling back to REST', err);
+        return new Promise<void>((resolve, reject) => {
+          this.sendMessageWithAttachment(convId, content, null).subscribe({
+            next: () => resolve(),
+            error: (e) => reject(e)
+          });
+        });
+      });
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      this.sendMessageWithAttachment(convId, content, null).subscribe({
+        next: () => resolve(),
+        error: (e) => reject(e)
+      });
+    });
   }
+
 
   /** Find or create a DM with a user, then return conversationId */
   startDm(targetUserId: number) {
