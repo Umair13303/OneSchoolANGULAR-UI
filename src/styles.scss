@@ -338,6 +338,231 @@ a { text-decoration: none; color: inherit; }
 }
 
 /* ═══════════════════════════════════════════════════
+   ONE SCHOOL PAGE PATTERNS (master reference)
+   Introduced with /timetable/view — reuse on later screens.
+═══════════════════════════════════════════════════ */
+.os-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.os-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg, 12px);
+  box-shadow: var(--sh-xs);
+}
+
+.os-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.os-toolbar-group.end {
+  margin-left: auto;
+}
+
+.os-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.os-field.inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.os-field-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--t3);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.os-field.inline .os-field-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--t2);
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.os-select-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 180px;
+  max-width: 100%;
+}
+
+.os-select-wrap .os-select-icon {
+  position: absolute;
+  left: 10px;
+  font-size: 17px;
+  color: var(--accent);
+  pointer-events: none;
+}
+
+.os-select-wrap .os-select-caret {
+  position: absolute;
+  right: 6px;
+  font-size: 18px;
+  color: var(--t4);
+  pointer-events: none;
+}
+
+.os-select {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 32px;
+  padding: 0 28px 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-input, 8px);
+  background: var(--surface);
+  color: var(--t1);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.os-select-wrap:has(.os-select-icon) .os-select {
+  padding-left: 34px;
+}
+
+.os-select:hover {
+  border-color: var(--border-2);
+  background: var(--surface);
+}
+
+.os-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px var(--accent-g);
+}
+
+.os-meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--t2);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.os-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+
+.os-seg.square {
+  border-radius: var(--r-input, 8px);
+}
+
+.os-seg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--t3);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.os-seg.square .os-seg-btn {
+  border-radius: 6px;
+}
+
+.os-seg-btn:hover {
+  color: var(--t1);
+  background: var(--surface);
+}
+
+.os-seg-btn.active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(var(--accent-rgb), 0.28);
+}
+
+.os-seg.square .os-seg-btn.active {
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: var(--sh-xs);
+}
+
+.os-seg-btn .material-icons-round {
+  font-size: 16px;
+}
+
+.os-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg, 12px);
+  box-shadow: var(--sh-xs);
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .os-toolbar {
+    align-items: stretch;
+  }
+  .os-toolbar-group,
+  .os-toolbar-group.end {
+    width: 100%;
+    margin-left: 0;
+  }
+  .os-select-wrap {
+    min-width: 0;
+    flex: 1;
+  }
+  .os-seg {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════
    STANDARD FORM FIELDS & CONTROLS
 ═══════════════════════════════════════════════════ */
 .form-field, .field, .fi {
