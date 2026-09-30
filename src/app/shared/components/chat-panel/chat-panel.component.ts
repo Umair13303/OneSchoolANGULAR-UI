@@ -48,6 +48,8 @@ import { environment } from '../../../../environments/environment';
                     <span>{{ activeConv()!.members.length }} members</span>
                   } @else if (activeConv()!.isOnline) {
                     <span class="live-status"><span class="live-dot"></span> Online</span>
+                  } @else if (!chatSvc.connected()) {
+                    <span class="offline-status">Connecting…</span>
                   } @else {
                     <span class="offline-status">Offline</span>
                   }
@@ -132,7 +134,7 @@ import { environment } from '../../../../environments/environment';
             </button>
             <input #fileInput type="file" hidden accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
                    (change)="onFileSelected($event)" />
-            <input #inputEl [(ngModel)]="draft" [placeholder]="'Type your message to ' + activeConv()!.name + '…'"
+            <input #inputEl [(ngModel)]="draft" [placeholder]="'Type your message to ' + activeConv()!.name + '...'"
                    (keydown.enter)="send()" class="msg-input" autocomplete="off" />
             <button class="send-btn" (click)="send()" [disabled]="!draft.trim() && !pendingFile()" [class.uploading]="uploading()" type="button" title="Send message">
               @if (uploading()) {
@@ -837,6 +839,17 @@ export class ChatPanelComponent implements AfterViewChecked {
       const conv = this.chatSvc.conversations().find(c => c.conversationId === cid);
       if (conv) { this.openConv(conv); this.panelOpen.set(true); }
     });
+
+    // Keep the open header in sync when presence / unread refresh
+    effect(() => {
+      const current = this.activeConv();
+      if (!current) return;
+      const updated = this.chatSvc.conversations().find(c => c.conversationId === current.conversationId);
+      if (!updated) return;
+      if (updated.isOnline !== current.isOnline || updated.name !== current.name || updated.unreadCount !== current.unreadCount) {
+        this.activeConv.set(updated);
+      }
+    });
   }
 
   ngAfterViewChecked() {
@@ -895,15 +908,10 @@ export class ChatPanelComponent implements AfterViewChecked {
         }
       });
     } else {
-      if (this.chatSvc.connected()) {
-        this.chatSvc.sendMessage(conv.conversationId, text).catch(() => {
-          // Fallback to REST if SignalR fails
-          this.sendRestFallback(conv.conversationId, text);
-        });
-      } else {
-        // Direct REST send
+      this.chatSvc.sendMessage(conv.conversationId, text).catch(() => {
+        this.draft = text;
         this.sendRestFallback(conv.conversationId, text);
-      }
+      });
     }
   }
 

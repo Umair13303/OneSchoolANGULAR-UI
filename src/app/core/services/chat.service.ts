@@ -75,19 +75,34 @@ export class ChatService {
   // Used directly to open a group or DM by conversationId
   triggerOpenConvId   = signal<number | null>(null);
 
-  connect() {
-    if (this.hub && this.hub.state !== signalR.HubConnectionState.Disconnected) return;
+  private pollHandle: ReturnType<typeof setInterval> | null = null;
 
+  connect() {
+    if (this.hub && this.hub.state !== signalR.HubConnectionState.Disconnected) {
+      this.startFallbackPoll();
+      return;
+    }
+
+    const token = () => this.auth.getToken() ?? '';
     const hubUrl = `${environment.apiUrl.replace('/api', '')}/hubs/chat`;
+    const currentToken = token();
+
+    // MonsterASP/IIS often advertises WebSockets but the upgrade hangs. In production
+    // prefer Long Polling / SSE (they also send the JWT as a header, not only query string).
+    const transport = environment.production
+      ? signalR.HttpTransportType.LongPolling | signalR.HttpTransportType.ServerSentEvents
+      : signalR.HttpTransportType.WebSockets |
+        signalR.HttpTransportType.ServerSentEvents |
+        signalR.HttpTransportType.LongPolling;
+
     this.hub = new signalR.HubConnectionBuilder()
       .withUrl(hubUrl, {
-        accessTokenFactory: () => this.auth.getToken() ?? '',
-        transport: signalR.HttpTransportType.WebSockets |
-                   signalR.HttpTransportType.ServerSentEvents |
-                   signalR.HttpTransportType.LongPolling
+        accessTokenFactory: token,
+        headers: currentToken ? { Authorization: `Bearer ${currentToken}` } : {},
+        transport
       })
       .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
-      .configureLogging(signalR.LogLevel.Warning)
+      .configureLogging(environment.production ? signalR.LogLevel.Error : signalR.LogLevel.Warning)
       .build();
 
     this.hub.on('ReceiveMessage', (msg: ChatMessage) => {
@@ -117,24 +132,90 @@ export class ChatService {
       this.messages.update(m => m.filter(x => x.chatMessageId !== payload.messageId));
     });
 
+    this.hub.on('UserPresence', (p: { userId: number; isOnline: boolean }) => {
+      this.applyPresence(p.userId, p.isOnline);
+    });
+
     // Server tells client to join a new SignalR group when added to a new conversation
     this.hub.on('JoinConversation', (convId: number) => {
       this.hub.invoke('JoinConversation', convId).catch(() => {});
       this.loadConversations();
     });
 
-    this.hub.onreconnected(() => this.connected.set(true));
-    this.hub.onclose(() => this.connected.set(false));
+    this.hub.onreconnected(() => {
+      this.connected.set(true);
+      this.stopFallbackPoll();
+      this.loadConversations();
+    });
+    this.hub.onclose(() => {
+      this.connected.set(false);
+      this.startFallbackPoll();
+    });
 
     this.hub.start()
-      .then(() => this.connected.set(true))
+      .then(() => {
+        this.connected.set(true);
+        this.stopFallbackPoll();
+      })
       .catch((err) => {
-        console.warn('SignalR connection failed:', err);
+        console.warn('SignalR connection failed, using REST polling:', err);
         this.connected.set(false);
+        this.startFallbackPoll();
       });
+
+    this.startFallbackPoll();
   }
 
-  disconnect() { this.hub?.stop(); this.connected.set(false); }
+  disconnect() {
+    this.stopFallbackPoll();
+    this.hub?.stop();
+    this.connected.set(false);
+  }
+
+  applyPresence(userId: number, isOnline: boolean) {
+    this.conversations.update(list => list.map(c => {
+      if (c.otherUserId === userId) return { ...c, isOnline };
+      if (c.members?.some(m => m.userId === userId)) {
+        return {
+          ...c,
+          members: c.members.map(m => m.userId === userId ? { ...m, isOnline } : m)
+        };
+      }
+      return c;
+    }));
+    this.allUsers.update(list => list.map(u =>
+      u.userId === userId ? { ...u, isOnline } : u
+    ));
+  }
+
+  private startFallbackPoll() {
+    if (this.pollHandle) return;
+    this.pollHandle = setInterval(() => this.pollIfNeeded(), 4000);
+  }
+
+  private stopFallbackPoll() {
+    if (!this.pollHandle) return;
+    clearInterval(this.pollHandle);
+    this.pollHandle = null;
+  }
+
+  private pollIfNeeded() {
+    if (this.connected()) return;
+    this.loadConversations();
+    const id = this.activeConvId();
+    if (id == null) return;
+    this.http.get<ChatMessage[]>(`${this.base}/conversations/${id}/messages`).subscribe({
+      next: m => {
+        const current = this.messages();
+        const lastNew = m.at(-1)?.chatMessageId;
+        const lastOld = current.at(-1)?.chatMessageId;
+        if (m.length !== current.length || lastNew !== lastOld) {
+          this.messages.set(m);
+        }
+      },
+      error: () => {}
+    });
+  }
 
   loadConversations() {
     this.http.get<Conversation[]>(`${this.base}/conversations`).subscribe(c => this.conversations.set(c));
@@ -154,22 +235,18 @@ export class ChatService {
     });
   }
 
-  sendMessage(convId: number, content: string): Promise<void> {
-    if (this.hub?.state === signalR.HubConnectionState.Connected) {
-      return this.hub.invoke('SendMessage', convId, content).catch(err => {
-        console.warn('SignalR SendMessage failed, falling back to REST', err);
-        return new Promise<void>((resolve, reject) => {
-          this.sendMessageWithAttachment(convId, content, null).subscribe({
-            next: () => resolve(),
-            error: (e) => reject(e)
-          });
-        });
-      });
-    }
-
-    return new Promise<void>((resolve, reject) => {
+  sendMessage(convId: number, content: string): Promise<ChatMessage> {
+    // Always persist over REST. SignalR on shared IIS hosts is unreliable for
+    // invoke(); live delivery still happens via ReceiveMessage or polling.
+    return new Promise<ChatMessage>((resolve, reject) => {
       this.sendMessageWithAttachment(convId, content, null).subscribe({
-        next: () => resolve(),
+        next: (msg) => {
+          this.messages.update(m =>
+            m.some(x => x.chatMessageId === msg.chatMessageId) ? m : [...m, msg]
+          );
+          this.loadConversations();
+          resolve(msg);
+        },
         error: (e) => reject(e)
       });
     });
