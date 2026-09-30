@@ -34,8 +34,17 @@ import { forkJoin, map } from 'rxjs';
 
       @if (ttLoading()) {
         <div class="tt-loading">
-          <span class="material-icons-round spin">refresh</span>
+          <span class="css-spinner" aria-hidden="true"></span>
           <span class="tt-loading-text">Loading your schedule…</span>
+        </div>
+      } @else if (ttError()) {
+        <div class="tt-empty-state card">
+          <div class="tt-empty-icon-wrap">
+            <span class="material-icons-round tt-empty-icon">wifi_off</span>
+          </div>
+          <div class="tt-empty-title">Couldn’t load your schedule</div>
+          <div class="tt-empty-sub">The connection was slow or timed out. Please try again.</div>
+          <button class="tt-retry-btn" type="button" (click)="loadTeacherSchedule()">Try again</button>
         </div>
       } @else if (teacherEntries().length === 0) {
         <div class="tt-empty-state card">
@@ -560,6 +569,11 @@ import { forkJoin, map } from 'rxjs';
     .tt-empty-icon { font-size:36px; color:var(--t4); }
     .tt-empty-title { font-size:16px; font-weight:700; color:var(--t2); margin-bottom:6px; }
     .tt-empty-sub { font-size:13px; color:var(--t4); }
+    .tt-retry-btn {
+      margin-top: 16px; height: 40px; padding: 0 18px; border: none; border-radius: 10px;
+      background: var(--accent, #4f6ef7); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .tt-retry-btn:hover { filter: brightness(0.95); }
 
     /* ── Stat row ──────────────────────────────────────────────────── */
     .t-stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:18px; }
@@ -763,6 +777,7 @@ export class DashboardComponent implements OnInit {
 
   // Teacher schedule
   ttLoading      = signal(false);
+  ttError        = signal(false);
   teacherEntries = signal<TimetableEntryDto[]>([]);
 
   ttSlots = computed(() => {
@@ -837,25 +852,35 @@ export class DashboardComponent implements OnInit {
   });
   barPct(val: number) { return (val / this.maxBar()) * 100; }
 
+  loadTeacherSchedule() {
+    const user = this.auth.currentUser();
+    if (!user) return;
+    this.ttLoading.set(true);
+    this.ttError.set(false);
+    this.ttSvc.getForTeacher(user.userId).subscribe({
+      next: (days: any[]) => {
+        const entries = days.flatMap((d: any) => d.entries ?? [])
+          .filter((e: any) => !e.isBreak && e.periodNo > 0);
+        this.teacherEntries.set(entries);
+        this.ttLoading.set(false);
+      },
+      error: () => {
+        this.ttLoading.set(false);
+        this.ttError.set(true);
+      }
+    });
+  }
+
   ngOnInit() {
     if (this.isTeacher()) {
-      const user = this.auth.currentUser();
-      if (user) {
-        this.ttLoading.set(true);
-        this.ttSvc.getForTeacher(user.userId).subscribe({
-          next: (days: any[]) => {
-            const entries = days.flatMap((d: any) => d.entries ?? [])
-              .filter((e: any) => !e.isBreak && e.periodNo > 0);
-            this.teacherEntries.set(entries);
-            this.ttLoading.set(false);
-          },
-          error: () => this.ttLoading.set(false)
-        });
-      }
+      this.loadTeacherSchedule();
       // Load working days for correct day columns
-      this.settingsSvc.getWorkingDays().subscribe(wd => {
-        const ordered = [1,2,3,4,5,6,7].filter(d => wd.has(d));
-        this.ttDays.set(ordered.length ? ordered : [1,2,3,4,5]);
+      this.settingsSvc.getWorkingDays().subscribe({
+        next: wd => {
+          const ordered = [1,2,3,4,5,6,7].filter(d => wd.has(d));
+          this.ttDays.set(ordered.length ? ordered : [1,2,3,4,5]);
+        },
+        error: () => {}
       });
       return;
     }

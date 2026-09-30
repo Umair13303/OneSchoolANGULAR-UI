@@ -5,6 +5,7 @@ import { registerLocaleData } from '@angular/common';
 import localeEnGB from '@angular/common/locales/en-GB';
 import { routes } from './app.routes';
 import { jwtInterceptor } from './core/interceptors/jwt.interceptor';
+import { timeoutInterceptor } from './core/interceptors/timeout.interceptor';
 
 // en-GB locale so all date pipes render day-first (dd/MM/yyyy) instead of US mm/dd/yyyy.
 registerLocaleData(localeEnGB);
@@ -14,7 +15,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([jwtInterceptor])),
+    provideHttpClient(withInterceptors([jwtInterceptor, timeoutInterceptor])),
     { provide: LOCALE_ID, useValue: 'en-GB' }
   ]
 };

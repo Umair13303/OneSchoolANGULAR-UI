@@ -166,6 +166,14 @@ body {
 
 a { text-decoration: none; color: inherit; }
 
+/* Keep icon ligature names clipped when Google Fonts is slow or blocked */
+.material-icons-round {
+  width: 1em;
+  height: 1em;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }

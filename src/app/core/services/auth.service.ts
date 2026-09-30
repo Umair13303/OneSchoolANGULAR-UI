@@ -1,7 +1,8 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { tap } from 'rxjs/operators';
+import { Observable, throwError } from 'rxjs';
+import { catchError, finalize, shareReplay, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { LoginRequest, LoginResponse, RefreshTokenRequest, UserInfo } from '../models/auth.model';
 
@@ -13,8 +14,15 @@ const USER_KEY = 'auth_user';
 export class AuthService {
   private apiUrl = environment.apiUrl;
   currentUser = signal<UserInfo | null>(this.getStoredUser());
+  private refreshInFlight$: Observable<LoginResponse> | null = null;
 
-  constructor(private http: HttpClient, private router: Router) {}
+  constructor(private http: HttpClient, private router: Router) {
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') this.refreshIfExpiring();
+      });
+    }
+  }
 
   login(request: LoginRequest) {
     return this.http.post<LoginResponse>(`${this.apiUrl}/auth/login`, request).pipe(
@@ -23,13 +31,28 @@ export class AuthService {
   }
 
   refreshToken() {
-    const body: RefreshTokenRequest = {
-      accessToken: this.getToken() ?? '',
-      refreshToken: this.getRefreshToken() ?? ''
-    };
-    return this.http.post<LoginResponse>(`${this.apiUrl}/auth/refresh-token`, body).pipe(
-      tap(res => this.storeSession(res))
-    );
+    if (!this.getRefreshToken()) {
+      return throwError(() => new Error('No refresh token'));
+    }
+    if (!this.refreshInFlight$) {
+      const body: RefreshTokenRequest = {
+        accessToken: this.getToken() ?? '',
+        refreshToken: this.getRefreshToken() ?? ''
+      };
+      this.refreshInFlight$ = this.http.post<LoginResponse>(`${this.apiUrl}/auth/refresh-token`, body).pipe(
+        tap(res => this.storeSession(res)),
+        catchError(err => throwError(() => err)),
+        finalize(() => { this.refreshInFlight$ = null; }),
+        shareReplay(1)
+      );
+    }
+    return this.refreshInFlight$;
+  }
+
+  /** Refresh when the tab is opened again after the access token has (almost) expired. */
+  refreshIfExpiring() {
+    if (!this.getRefreshToken() || !this.isAccessTokenExpiring(60)) return;
+    this.refreshToken().subscribe({ error: () => {} });
   }
 
   logout() {
@@ -44,6 +67,13 @@ export class AuthService {
   }
 
   isLoggedIn(): boolean { return !!this.getToken(); }
+
+  isAccessTokenExpiring(bufferSeconds = 0): boolean {
+    const exp = this.getAccessTokenExpMs();
+    if (exp == null) return true;
+    return exp < Date.now() + bufferSeconds * 1000;
+  }
+
   getToken(): string | null { return localStorage.getItem(TOKEN_KEY); }
   getRefreshToken(): string | null { return localStorage.getItem(REFRESH_KEY); }
   getRole(): string { return this.currentUser()?.role ?? ''; }
@@ -55,6 +85,17 @@ export class AuthService {
     const updated = { ...user, ...patch };
     localStorage.setItem('auth_user', JSON.stringify(updated));
     this.currentUser.set(updated);
+  }
+
+  private getAccessTokenExpMs(): number | null {
+    const token = this.getToken();
+    if (!token) return null;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      return typeof payload.exp === 'number' ? payload.exp * 1000 : null;
+    } catch {
+      return null;
+    }
   }
 
   private storeSession(res: LoginResponse) {
