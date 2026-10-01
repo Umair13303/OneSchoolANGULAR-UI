@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule, Router, IsActiveMatchOptions } from '@angular/router';
 import { AuthService } from '../core/services/auth.service';
 import { MenuService } from '../core/services/menu.service';
 import { ThemeService, ThemeMode } from '../core/services/theme.service';
@@ -9,6 +9,7 @@ import { SetupNotificationService } from '../core/services/setup-notification.se
 import { ChatPanelComponent } from '../shared/components/chat-panel/chat-panel.component';
 import { ChatService } from '../core/services/chat.service';
 import { SwalNotificationService } from '../core/services/swal-notification.service';
+import { MenuItemTree } from '../core/models/menu.model';
 
 @Component({
   selector: 'app-layout',
@@ -67,18 +68,20 @@ import { SwalNotificationService } from '../core/services/swal-notification.serv
           }
           @for (item of mainMenuItems(); track item.menuItemId) {
             @if (!item.children || item.children.length === 0) {
-              <a [routerLink]="item.routeUrl" routerLinkActive="active"
+              <a [routerLink]="item.routeUrl || '/dashboard'" routerLinkActive="active"
                  class="nav-item" [title]="item.title"
-                 (click)="mobileOpen.set(false)">
+                 (click)="onNavLeafClick()">
                 <span class="ni material-icons-round">{{ item.icon }}</span>
                 @if (!collapsed()) { <span class="nl">{{ item.title }}</span> }
               </a>
             } @else {
               <div class="nav-group">
-                <!-- Parent button -->
                 <button class="nav-item nav-parent"
+                        type="button"
                         [class.open]="open().has(item.menuItemId)"
-                        (click)="!collapsed() && toggle(item.menuItemId)">
+                        [class.active]="isGroupActive(item)"
+                        [title]="item.title"
+                        (click)="onParentClick(item)">
                   <span class="ni material-icons-round">{{ item.icon }}</span>
                   @if (!collapsed()) {
                     <span class="nl">{{ item.title }}</span>
@@ -86,27 +89,11 @@ import { SwalNotificationService } from '../core/services/swal-notification.serv
                   }
                 </button>
 
-                <!-- Inline submenu: expanded sidebar only -->
                 @if (open().has(item.menuItemId) && !collapsed()) {
                   <div class="nav-sub">
                     @for (child of item.children; track child.menuItemId) {
                       <a [routerLink]="child.routeUrl" routerLinkActive="active"
-                         class="nav-sub-item" (click)="mobileOpen.set(false)">
-                        <span class="material-icons-round sub-icon">{{ child.icon }}</span>
-                        {{ child.title }}
-                      </a>
-                    }
-                  </div>
-                }
-
-                <!-- Flyout: collapsed sidebar, shown via CSS :hover on .nav-group -->
-                @if (collapsed()) {
-                  <div class="nav-flyout">
-                    <div class="flyout-title">{{ item.title }}</div>
-                    @for (child of item.children; track child.menuItemId) {
-                      <a [routerLink]="child.routeUrl" routerLinkActive="active"
-                         class="nav-sub-item flyout-item"
-                         (click)="mobileOpen.set(false)">
+                         class="nav-sub-item" (click)="onNavLeafClick()">
                         <span class="material-icons-round sub-icon">{{ child.icon }}</span>
                         {{ child.title }}
                       </a>
@@ -118,7 +105,7 @@ import { SwalNotificationService } from '../core/services/swal-notification.serv
           }
         </nav>
 
-        <button class="toggle-btn" (click)="collapsed.set(!collapsed())">
+        <button class="toggle-btn" type="button" (click)="toggleCollapsed()" title="{{ collapsed() ? 'Expand menu' : 'Collapse menu' }}">
           <span class="material-icons-round">{{ collapsed() ? 'chevron_right' : 'chevron_left' }}</span>
         </button>
       </aside>
@@ -309,7 +296,21 @@ import { SwalNotificationService } from '../core/services/swal-notification.serv
       box-shadow: var(--sh);
       overflow: visible;
     }
-    .sidebar.collapsed { width: 68px; }
+    .sidebar.collapsed { width: 72px; }
+    .sidebar.collapsed .brand {
+      justify-content: center;
+      padding: 14px 12px;
+    }
+    .sidebar.collapsed .nav {
+      padding: 10px 12px;
+      align-items: stretch;
+    }
+    .sidebar.collapsed .nav-item {
+      justify-content: center;
+      padding: 10px 0;
+    }
+    .sidebar.collapsed .ni { width: auto; }
+    .sidebar.collapsed .toggle-btn { margin: 8px 12px 14px; }
 
     /* Brand */
     .brand {
@@ -375,8 +376,6 @@ import { SwalNotificationService } from '../core/services/swal-notification.serv
     .nav-parent.open .caret { transform: rotate(180deg); }
 
     .nav-group { position: relative; }
-    /* Show flyout on hover when sidebar is collapsed */
-    .sidebar.collapsed .nav-group:hover .nav-flyout { opacity: 1; pointer-events: all; transform: translateX(0); }
 
     .nav-sub {
       margin: 2px 0 4px 22px;
@@ -395,36 +394,6 @@ import { SwalNotificationService } from '../core/services/swal-notification.serv
     .nav-sub-item:hover { color: var(--t1); background: var(--surface-2); }
     .nav-sub-item.active { color: var(--accent); font-weight: 600; background: var(--accent-s); }
     .sub-icon { font-size: 15px; color: var(--t4); font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20; }
-
-    /* ── Collapsed flyout popup (CSS hover — no JS) ── */
-    .nav-flyout {
-      position: absolute;
-      left: calc(100% + 6px);
-      top: 0;
-      min-width: 200px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      box-shadow: 0 8px 28px rgba(0,0,0,.15);
-      padding: 6px;
-      z-index: 999;
-      /* Hidden by default; shown on .nav-group:hover via CSS */
-      opacity: 0;
-      pointer-events: none;
-      transform: translateX(-6px);
-      transition: opacity 0.15s, transform 0.15s;
-    }
-    .flyout-title {
-      font-size: 10px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.8px; color: var(--t4);
-      padding: 6px 10px 4px; margin-bottom: 2px;
-    }
-    .flyout-item {
-      padding: 8px 12px; font-size: 13px; font-weight: 500;
-      border-radius: 8px; color: var(--t2);
-    }
-    .flyout-item:hover { background: var(--surface-2); color: var(--t1); }
-    .flyout-item.active { background: var(--accent-s); color: var(--accent); font-weight: 600; }
     .nav-sub-item.active .sub-icon { color: var(--accent); font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20; }
 
     /* Collapse button */
@@ -786,7 +755,14 @@ export class LayoutComponent implements OnInit {
     { value: 'system', label: 'System', icon: 'brightness_auto', desc: 'Follow device setting',  swatchClass: 'sys-sw'   },
   ];
 
-  private closePanels = () => { this.themeOpen.set(false); this.notifOpen.set(false); };
+  private readonly activeOpts: IsActiveMatchOptions = {
+    paths: 'subset', queryParams: 'ignored', fragment: 'ignored', matrixParams: 'ignored'
+  };
+
+  private closePanels = () => {
+    this.themeOpen.set(false);
+    this.notifOpen.set(false);
+  };
 
   ngOnInit() {
     this.menuSvc.ensureLoaded().subscribe();
@@ -798,6 +774,40 @@ export class LayoutComponent implements OnInit {
 
   ngOnDestroy() {
     document.removeEventListener('click', this.closePanels);
+  }
+
+  toggleCollapsed() {
+    this.collapsed.update(v => !v);
+  }
+
+  /**
+   * Collapsed rail (ERP pattern):
+   * - 1 child  → go straight to that page
+   * - 2+ kids  → expand sidebar and open the group
+   * Expanded: toggle the accordion as usual.
+   */
+  onParentClick(item: MenuItemTree) {
+    const kids = item.children ?? [];
+    if (this.collapsed()) {
+      if (kids.length === 1 && kids[0].routeUrl) {
+        this.router.navigateByUrl(kids[0].routeUrl);
+        return;
+      }
+      this.collapsed.set(false);
+      this.open.update(s => new Set(s).add(item.menuItemId));
+      return;
+    }
+    this.toggle(item.menuItemId);
+  }
+
+  onNavLeafClick() {
+    this.mobileOpen.set(false);
+  }
+
+  isGroupActive(item: MenuItemTree): boolean {
+    return (item.children ?? []).some(c =>
+      !!c.routeUrl && this.router.isActive(c.routeUrl, this.activeOpts)
+    );
   }
 
   toggle(id: number) {
