@@ -90,6 +90,12 @@ export const routes: Routes = [
         loadComponent: () => import('./modules/timetable/timetable-view/timetable-view.component').then(m => m.TimetableViewComponent)
       },
       {
+        path: 'timetable/setup',
+        canActivate: [roleGuard],
+        data: { roles: ['superadmin','admin','principal'] },
+        loadComponent: () => import('./modules/timetable/timetable-builder/timetable-builder.component').then(m => m.TimetableBuilderComponent)
+      },
+      {
         path: 'timetable/builder',
         canActivate: [roleGuard],
         data: { roles: ['superadmin','admin','principal'] },
@@ -300,6 +306,12 @@ export const routes: Routes = [
       },
 
       // Admin Settings
+      {
+        path: 'admin/menu',
+        canActivate: [roleGuard],
+        data: { roles: ['superadmin'] },
+        loadComponent: () => import('./modules/admin/menu-management/menu-management.component').then(m => m.MenuManagementComponent)
+      },
       {
         path: 'admin/settings',
         canActivate: [roleGuard],

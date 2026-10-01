@@ -1,8 +1,13 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { tap, catchError, of, shareReplay } from 'rxjs';
+import { Observable, tap, catchError, of, shareReplay } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { MenuItemTree } from '../models/menu.model';
+import {
+  MenuItemTree,
+  MenuItemAdmin,
+  CreateMenuItemRequest,
+  UpdateMenuItemRequest,
+} from '../models/menu.model';
 
 @Injectable({ providedIn: 'root' })
 export class MenuService {
@@ -35,10 +40,7 @@ export class MenuService {
     return this.load$;
   }
 
-  /**
-   * Resolve the leaf menu title for a route (e.g. `/timetable/view` → `View Timetable`).
-   * Falls back when the route is not present in the menu.
-   */
+  /** Resolve the leaf menu title for a route. */
   titleForRoute(routeUrl: string, fallback = ''): string {
     const match = this.findByRoute(routeUrl);
     return match?.title?.trim() || fallback;
@@ -48,6 +50,28 @@ export class MenuService {
     const target = this.normalize(routeUrl);
     if (!target) return null;
     return this.walk(this.items(), target);
+  }
+
+  // ── SuperAdmin management ──────────────────────────────────────────────
+
+  getAllForAdmin(): Observable<MenuItemAdmin[]> {
+    return this.http.get<MenuItemAdmin[]>(`${this.url}/all`);
+  }
+
+  createItem(dto: CreateMenuItemRequest): Observable<MenuItemAdmin> {
+    return this.http.post<MenuItemAdmin>(this.url, dto);
+  }
+
+  updateItem(id: number, dto: UpdateMenuItemRequest): Observable<void> {
+    return this.http.put<void>(`${this.url}/${id}`, dto);
+  }
+
+  deleteItem(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.url}/${id}`);
+  }
+
+  assignRoles(id: number, roleIds: number[]): Observable<void> {
+    return this.http.put<void>(`${this.url}/${id}/roles`, { roleIds });
   }
 
   private fetch() {

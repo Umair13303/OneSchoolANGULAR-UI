@@ -235,7 +235,7 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
                     <input type="file" accept="image/*" (change)="onLogoSelected($event)"/>
                   </div>
                 </div>
-                <div class="fi" style="align-items:center; padding-top:20px;">
+                <div class="fi">
                   <div class="fi-icon"><span class="material-icons-round">toggle_on</span></div>
                   <div class="fi-content">
                     <label class="checkbox-label">
@@ -772,16 +772,20 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
     .empty-state .material-icons-round { font-size: 48px; display: block; margin-bottom: 12px; color: var(--border-2); }
 
     /* ── Admission card (teacher-form pattern) ── */
-    .admission-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--sh); overflow: hidden; }
+    .admission-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; box-shadow: var(--sh); overflow: hidden;
+      max-width: 920px; margin: 0 auto;
+    }
 
-    .adm-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: linear-gradient(135deg, var(--accent-s) 0%, var(--surface) 100%); border-bottom: 1px solid var(--border); gap: 12px; }
+    .adm-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; background: linear-gradient(135deg, var(--accent-s) 0%, var(--surface) 100%); border-bottom: 1px solid var(--border); gap: 12px; }
     .adm-header-left { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
     .adm-header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
     .adm-avatar { width: 40px; height: 40px; border-radius: 11px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.15); transition: background .3s; }
     .adm-avatar.sm { width: 32px; height: 32px; border-radius: 8px; font-size: 12px; }
-    .adm-title { font-size: 14px; font-weight: 700; color: var(--t1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .adm-title { font-size: 15px; font-weight: 700; color: var(--t1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; }
     .adm-name { color: var(--accent); margin-left: 4px; }
-    .adm-sub { font-size: 11.5px; color: var(--t4); margin-top: 1px; }
+    .adm-sub { font-size: 12px; color: var(--t4); margin: 2px 0 0; }
     .adm-step-badge { padding: 4px 12px; border-radius: 99px; background: var(--accent); color: #fff; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
     .adm-back-btn { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border-2); background: var(--surface); color: var(--t3); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .15s; }
     .adm-back-btn .material-icons-round { font-size: 16px; }
@@ -790,9 +794,9 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
     .progress-bar { height: 3px; background: var(--border); }
     .progress-fill { height: 100%; background: var(--accent); transition: width .4s cubic-bezier(.22,1,.36,1); }
 
-    .adm-tabs { display: flex; align-items: center; padding: 10px 20px; background: var(--surface-2); border-bottom: 1px solid var(--border); overflow-x: auto; }
-    .adm-tabs.flat { padding: 0 20px; background: var(--surface); }
-    .adm-tab { display: flex; align-items: center; gap: 6px; background: none; border: none; cursor: pointer; padding: 10px 0; white-space: nowrap; }
+    .adm-tabs { display: flex; align-items: center; padding: 12px 24px; background: var(--surface-2); border-bottom: 1px solid var(--border); overflow-x: auto; gap: 0; }
+    .adm-tabs.flat { padding: 0 24px; background: var(--surface); }
+    .adm-tab { display: flex; align-items: center; gap: 8px; background: none; border: none; cursor: pointer; padding: 8px 0; white-space: nowrap; flex-shrink: 0; }
     .adm-tabs.flat .adm-tab { padding: 12px 4px; border-bottom: 2px solid transparent; margin-bottom: -1px; }
     .adm-tabs.flat .adm-tab.active { border-bottom-color: var(--accent); }
     .tab-dot { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--border-2); background: var(--surface); color: var(--t4); font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: all .2s; flex-shrink: 0; }
@@ -804,42 +808,76 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
     .adm-tab.done .tab-label { color: var(--green); }
     .adm-tabs.flat .adm-tab .material-icons-round { font-size: 16px; color: var(--t4); }
     .adm-tabs.flat .adm-tab.active .material-icons-round { color: var(--accent); }
-    .tab-connector { flex: 1; height: 2px; background: var(--border); min-width: 16px; margin: 0 5px; border-radius: 2px; transition: background .3s; }
+    .tab-connector { flex: 1; height: 2px; background: var(--border); min-width: 20px; max-width: 80px; margin: 0 10px; border-radius: 2px; transition: background .3s; }
     .tab-connector.done { background: var(--green); }
 
     .adm-body { padding: 0; }
-    .tab-pane { padding: 16px 20px; display: flex; flex-direction: column; }
+    .tab-pane { padding: 20px 24px 22px; display: flex; flex-direction: column; gap: 0; }
 
     /* ── Section hint ── */
-    .section-hint { display: flex; align-items: center; gap: 7px; padding: 8px 12px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--border); font-size: 12px; color: var(--t3); font-weight: 500; margin-bottom: 14px; }
-    .section-hint .material-icons-round { font-size: 14px; color: var(--accent); flex-shrink: 0; }
+    .section-hint { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); font-size: 12.5px; color: var(--t3); font-weight: 500; margin-bottom: 18px; }
+    .section-hint .material-icons-round { font-size: 16px; color: var(--accent); flex-shrink: 0; }
 
-    /* ── Field groups (teacher-form pattern) ── */
-    .fg { display: flex; gap: 10px; margin-bottom: 10px; }
-    .fg.two .fi { flex: 1; min-width: 0; }
-    .fi { display: flex; align-items: flex-start; gap: 8px; flex: 1; }
-    .fi-icon { width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0; margin-top: 20px; background: var(--accent-s); display: flex; align-items: center; justify-content: center; }
-    .fi-icon .material-icons-round { font-size: 14px; color: var(--accent); font-variation-settings: 'FILL' 1; }
-    .fi-content { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
-    label { font-size: 10.5px; font-weight: 700; color: var(--t3); letter-spacing: .4px; text-transform: uppercase; }
+    /* ── Field groups: aligned 2-col grid ── */
+    .fg {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px 20px;
+      margin-bottom: 16px;
+      align-items: start;
+    }
+    .fg.two .fi { flex: unset; min-width: 0; }
+    .fi {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      min-width: 0;
+      width: 100%;
+    }
+    .fi-icon {
+      width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+      margin-top: 0;
+      background: var(--accent-s);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .fi-icon .material-icons-round { font-size: 15px; color: var(--accent); font-variation-settings: 'FILL' 1; }
+    .fi-content { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+    .fi-content > label,
+    .fi-content .lic-label-row {
+      min-height: 28px;
+      display: flex;
+      align-items: center;
+    }
+    label { font-size: 11px; font-weight: 700; color: var(--t3); letter-spacing: .35px; text-transform: uppercase; margin: 0; }
     .req { color: var(--red); }
-    input, select { width: 100%; padding: 8px 11px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; font-family: inherit; background: var(--surface); color: var(--t1); transition: border-color .15s, box-shadow .15s; box-sizing: border-box; }
+    input, select {
+      width: 100%; height: 40px; padding: 0 12px;
+      border: 1.5px solid var(--border); border-radius: 9px;
+      font-size: 13.5px; font-family: inherit;
+      background: var(--surface); color: var(--t1);
+      transition: border-color .15s, box-shadow .15s; box-sizing: border-box;
+    }
     input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-g); }
     input::placeholder { color: var(--t5); }
-    input[type=checkbox] { width: auto; }
-    input[type=file] { padding: 6px 10px; font-size: 12px; }
-    .ferr { font-size: 10.5px; color: var(--red); font-weight: 600; }
-    .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: var(--t2); cursor: pointer; text-transform: none; letter-spacing: 0; }
-    .lic-label-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    .lic-unlimited { display: flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 700; color: var(--t3); cursor: pointer; letter-spacing: .4px; text-transform: uppercase; }
+    input[type=checkbox] { width: auto; height: auto; }
+    input[type=file] { height: auto; padding: 8px 10px; font-size: 12px; }
+    .ferr { font-size: 11px; color: var(--red); font-weight: 600; }
+    .fhint { font-size: 11px; color: var(--t4); line-height: 1.35; }
+    .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: var(--t2); cursor: pointer; text-transform: none; letter-spacing: 0; min-height: 28px; }
+    .lic-label-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
+    .lic-unlimited { display: flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 700; color: var(--t3); cursor: pointer; letter-spacing: .4px; text-transform: uppercase; margin: 0; }
     .lic-unlimited input[type=checkbox] { margin: 0; accent-color: var(--accent); }
     input:disabled { background: var(--surface-2); color: var(--t3); cursor: not-allowed; }
+
+    /* Date picker fills field width like inputs */
+    .fi-content app-date-picker { display: block; width: 100%; --input-h: 40px; }
 
     /* ── Module toggles ── */
     .module-toggles { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
     .toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); cursor: pointer; }
     .toggle-row:hover { border-color: var(--border-2); background: var(--surface-2); }
     .toggle-info { display: flex; gap: 10px; align-items: center; }
+    .toggle-info .fi-icon { margin-top: 0; }
     .toggle-info strong { font-size: 13px; font-weight: 600; color: var(--t1); display: block; }
     .toggle-info p { font-size: 11.5px; color: var(--t4); margin: 1px 0 0; }
     .toggle-switch { width: 42px; height: 23px; border-radius: 12px; background: var(--border-2); position: relative; cursor: pointer; transition: background .2s; flex-shrink: 0; }
@@ -861,10 +899,24 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
     .empty-text { padding: 18px; text-align: center; color: var(--t5); font-size: 13px; }
     .admins-panel { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px; }
 
-    /* ── Tab nav footer ── */
-    .tab-nav { display: flex; justify-content: space-between; align-items: center; padding-top: 14px; margin-top: 6px; border-top: 1px solid var(--border); }
-    .tab-nav .btn-primary, .tab-nav .btn-secondary { display: inline-flex; align-items: center; gap: 6px; }
+    /* ── Tab nav footer (clear chat FAB) ── */
+    .tab-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 16px 0 4px; margin-top: 8px;
+      border-top: 1px solid var(--border);
+      padding-right: 72px;
+      gap: 12px;
+    }
+    .tab-nav .btn-primary, .tab-nav .btn-secondary { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 18px; }
     .tab-nav .btn-primary .material-icons-round, .tab-nav .btn-secondary .material-icons-round { font-size: 15px; }
+
+    @media (max-width: 720px) {
+      .admission-card { max-width: none; }
+      .fg { grid-template-columns: 1fr; gap: 14px; }
+      .adm-header, .adm-tabs, .tab-pane { padding-left: 16px; padding-right: 16px; }
+      .tab-nav { padding-right: 64px; }
+      .tab-connector { min-width: 12px; max-width: 40px; margin: 0 6px; }
+    }
 
     /* ── Alert ── */
     .tm-alert { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 500; margin-bottom: 10px; }
