@@ -17,7 +17,17 @@ export class MenuService {
     return this.ensureLoaded();
   }
 
-  /** Load once and share; safe to call from layout and feature pages. */
+  /**
+   * Drop the in-memory menu cache. Must run on login/logout so the next
+   * ensureLoaded() fetches menus for the new role (otherwise a prior
+   * teacher session keeps showing after switching to admin/superadmin).
+   */
+  clear() {
+    this.load$ = undefined;
+    this.items.set([]);
+  }
+
+  /** Load once per auth session and share; safe to call from layout + pages. */
   ensureLoaded() {
     if (!this.load$) {
       this.load$ = this.fetch().pipe(shareReplay(1));

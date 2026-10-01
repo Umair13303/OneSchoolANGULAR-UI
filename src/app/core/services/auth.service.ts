@@ -1,10 +1,11 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, throwError } from 'rxjs';
 import { catchError, finalize, shareReplay, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { LoginRequest, LoginResponse, RefreshTokenRequest, UserInfo } from '../models/auth.model';
+import { MenuService } from './menu.service';
 
 const TOKEN_KEY = 'access_token';
 const REFRESH_KEY = 'refresh_token';
@@ -13,6 +14,7 @@ const USER_KEY = 'auth_user';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private apiUrl = environment.apiUrl;
+  private menuSvc = inject(MenuService);
   currentUser = signal<UserInfo | null>(this.getStoredUser());
   private refreshInFlight$: Observable<LoginResponse> | null = null;
 
@@ -26,7 +28,11 @@ export class AuthService {
 
   login(request: LoginRequest) {
     return this.http.post<LoginResponse>(`${this.apiUrl}/auth/login`, request).pipe(
-      tap(res => this.storeSession(res))
+      tap(res => {
+        // Always drop prior role's menu before storing the new session.
+        this.menuSvc.clear();
+        this.storeSession(res);
+      })
     );
   }
 
@@ -110,6 +116,7 @@ export class AuthService {
     localStorage.removeItem(REFRESH_KEY);
     localStorage.removeItem(USER_KEY);
     this.currentUser.set(null);
+    this.menuSvc.clear();
   }
 
   private getStoredUser(): UserInfo | null {

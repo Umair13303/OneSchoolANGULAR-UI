@@ -17,16 +17,45 @@ import { forkJoin, map } from 'rxjs';
   imports: [CommonModule, RouterModule],
   template: `
     <!-- ═══ Hero ═══ -->
-    <div class="hero">
-      <div>
-        <p class="eyebrow">{{ timeOfDay }},</p>
+    <div class="hero" [class.hero-teacher]="isTeacher()">
+      <div class="hero-copy">
+        <p class="eyebrow">{{ timeOfDay }}</p>
         <h1>{{ auth.currentUser()?.fullName }}</h1>
-        <p class="hero-sub">{{ today }}</p>
+        <p class="hero-sub">
+          @if (isTeacher()) {
+            @if (ttLoading()) { Preparing your teaching day… }
+            @else if (teacherEntries().length > 0) {
+              {{ today }} · {{ todayClasses().length }} class{{ todayClasses().length === 1 ? '' : 'es' }} today
+            } @else {
+              {{ today }} · Your teaching workspace
+            }
+          } @else {
+            {{ today }}
+          }
+        </p>
       </div>
-      <div class="hero-badge">
-        <span class="material-icons-round">auto_awesome</span>
-        School Dashboard
-      </div>
+
+      @if (isTeacher()) {
+        <div class="hero-actions">
+          <a routerLink="/attendance/mark" class="hero-cta hero-cta-primary">
+            <span class="material-icons-round">how_to_reg</span>
+            Mark Attendance
+          </a>
+          <a routerLink="/homework/assign" class="hero-cta">
+            <span class="material-icons-round">assignment</span>
+            Assign Homework
+          </a>
+          <a routerLink="/timetable/view" class="hero-cta">
+            <span class="material-icons-round">calendar_view_week</span>
+            Timetable
+          </a>
+        </div>
+      } @else {
+        <div class="hero-date-chip">
+          <span class="material-icons-round">calendar_today</span>
+          {{ today }}
+        </div>
+      }
     </div>
 
     <!-- ═══ Teacher Dashboard ═══ -->
@@ -38,27 +67,107 @@ import { forkJoin, map } from 'rxjs';
           <span class="tt-loading-text">Loading your schedule…</span>
         </div>
       } @else if (ttError()) {
-        <div class="tt-empty-state card">
-          <div class="tt-empty-icon-wrap">
-            <span class="material-icons-round tt-empty-icon">wifi_off</span>
+        <div class="td-empty">
+          <div class="td-empty-main">
+            <div class="td-empty-icon warn">
+              <span class="material-icons-round">wifi_off</span>
+            </div>
+            <div class="td-empty-copy">
+              <h2>Couldn’t load your schedule</h2>
+              <p>The connection was slow or timed out. Please try again.</p>
+            </div>
+            <button class="td-retry" type="button" (click)="loadTeacherSchedule()">Try again</button>
           </div>
-          <div class="tt-empty-title">Couldn’t load your schedule</div>
-          <div class="tt-empty-sub">The connection was slow or timed out. Please try again.</div>
-          <button class="tt-retry-btn" type="button" (click)="loadTeacherSchedule()">Try again</button>
         </div>
       } @else if (teacherEntries().length === 0) {
-        <div class="tt-empty-state card">
-          <div class="tt-empty-icon-wrap">
-            <span class="material-icons-round tt-empty-icon">calendar_month</span>
+        <div class="td-empty">
+          <div class="td-empty-main">
+            <div class="td-empty-icon">
+              <span class="material-icons-round">event_available</span>
+            </div>
+            <div class="td-empty-copy">
+              <h2>No schedule assigned yet</h2>
+              <p>Ask your admin to assign your timetable. Meanwhile, you can still mark attendance, set homework, and open exams.</p>
+            </div>
           </div>
-          <div class="tt-empty-title">No schedule assigned yet</div>
-          <div class="tt-empty-sub">Contact your admin to set up your timetable.</div>
+
+          <div class="td-week">
+            @for (d of emptyWeekDays; track d.key) {
+              <div class="td-week-day" [class.is-today]="d.key === todayDow">
+                <span class="td-week-label">{{ d.label }}</span>
+                <span class="td-week-state">{{ d.key === todayDow ? 'Today' : '—' }}</span>
+              </div>
+            }
+          </div>
+
+          <div class="td-shortcuts">
+            <a routerLink="/attendance/mark" class="td-shortcut">
+              <span class="td-shortcut-icon" style="--ic:#0891b2">
+                <span class="material-icons-round">how_to_reg</span>
+              </span>
+              <span class="td-shortcut-body">
+                <strong>Mark Attendance</strong>
+                <span>Record who’s present in class</span>
+              </span>
+              <span class="material-icons-round td-shortcut-arrow">arrow_forward</span>
+            </a>
+            <a routerLink="/attendance/view" class="td-shortcut">
+              <span class="td-shortcut-icon" style="--ic:#059669">
+                <span class="material-icons-round">fact_check</span>
+              </span>
+              <span class="td-shortcut-body">
+                <strong>View Attendance</strong>
+                <span>Review past attendance records</span>
+              </span>
+              <span class="material-icons-round td-shortcut-arrow">arrow_forward</span>
+            </a>
+            <a routerLink="/homework/assign" class="td-shortcut">
+              <span class="td-shortcut-icon" style="--ic:#d97706">
+                <span class="material-icons-round">edit_note</span>
+              </span>
+              <span class="td-shortcut-body">
+                <strong>Assign Homework</strong>
+                <span>Create and publish class work</span>
+              </span>
+              <span class="material-icons-round td-shortcut-arrow">arrow_forward</span>
+            </a>
+            <a routerLink="/exams/papers" class="td-shortcut">
+              <span class="td-shortcut-icon" style="--ic:#db2777">
+                <span class="material-icons-round">quiz</span>
+              </span>
+              <span class="td-shortcut-body">
+                <strong>Exam Papers</strong>
+                <span>Set up papers and enter results</span>
+              </span>
+              <span class="material-icons-round td-shortcut-arrow">arrow_forward</span>
+            </a>
+            <a routerLink="/homework/list" class="td-shortcut">
+              <span class="td-shortcut-icon" style="--ic:#0284c7">
+                <span class="material-icons-round">menu_book</span>
+              </span>
+              <span class="td-shortcut-body">
+                <strong>Homework Diary</strong>
+                <span>See assigned and due work</span>
+              </span>
+              <span class="material-icons-round td-shortcut-arrow">arrow_forward</span>
+            </a>
+            <a routerLink="/timetable/view" class="td-shortcut">
+              <span class="td-shortcut-icon" style="--ic:#4f6ef7">
+                <span class="material-icons-round">calendar_view_week</span>
+              </span>
+              <span class="td-shortcut-body">
+                <strong>View Timetable</strong>
+                <span>Check class timings when assigned</span>
+              </span>
+              <span class="material-icons-round td-shortcut-arrow">arrow_forward</span>
+            </a>
+          </div>
         </div>
       } @else {
 
         <!-- Stat row -->
         <div class="t-stats-row">
-          <div class="t-stat-card" style="--c:#7c3aed;--clight:#ede9fe;--cdark:#5b21b6">
+          <div class="t-stat-card" style="--c:#4f6ef7;--clight:#eef1ff;--cdark:#2a44cc">
             <div class="t-stat-icon-wrap">
               <span class="material-icons-round t-stat-icon">event_note</span>
             </div>
@@ -291,7 +400,7 @@ import { forkJoin, map } from 'rxjs';
     <!-- ═══ Stat Widgets (hidden for teacher) ═══ -->
     @if (!isTeacher()) {
     <div class="stats-grid">
-      <div class="stat-card" style="--clr:#7c3aed;--bg:rgba(124,58,237,0.10)">
+      <div class="stat-card" style="--clr:#4f6ef7;--bg:rgba(79,110,247,0.10)">
         <div class="stat-icon"><span class="material-icons-round">groups</span></div>
         <div class="stat-body">
           <div class="stat-value">{{ loading() ? '—' : stats().students }}</div>
@@ -457,32 +566,54 @@ import { forkJoin, map } from 'rxjs';
     /* Hero */
     .hero {
       display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 24px; gap: 20px;
-      background: linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%);
-      border: 1px solid var(--border); border-radius: var(--r-2xl);
-      padding: 28px 32px; box-shadow: var(--sh);
+      margin-bottom: 16px; gap: 16px;
+      background:
+        radial-gradient(ellipse 80% 120% at 100% 0%, rgba(var(--accent-rgb), 0.10), transparent 55%),
+        linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%);
+      border: 1px solid var(--border); border-radius: var(--r-xl);
+      padding: 16px 20px; box-shadow: var(--sh);
       position: relative; overflow: hidden;
+      animation: td-rise 0.45s ease both;
     }
-    .hero::before {
-      content: ''; position: absolute; top: -40px; right: -40px;
-      width: 180px; height: 180px; border-radius: 50%;
-      background: var(--accent-g); pointer-events: none;
-    }
+    .hero-copy { min-width: 0; position: relative; z-index: 1; flex: 1; }
     .eyebrow {
-      font-size: 10.5px; font-weight: 700; color: var(--accent);
-      text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 6px;
-      display: flex; align-items: center; gap: 5px;
+      font-size: 10px; font-weight: 700; color: var(--accent);
+      text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;
+      display: flex; align-items: center; gap: 8px;
     }
-    .eyebrow::before { content: ''; width: 16px; height: 2px; background: var(--accent); border-radius: 2px; }
-    h1 { font-size: 26px; font-weight: 800; color: var(--t1); letter-spacing: -0.5px; }
-    .hero-sub { font-size: 13px; color: var(--t4); margin-top: 6px; }
-    .hero-badge {
-      display: flex; align-items: center; gap: 7px; padding: 9px 18px;
-      background: var(--accent); border-radius: 99px;
-      font-size: 12px; font-weight: 700; color: #fff; white-space: nowrap; flex-shrink: 0;
-      box-shadow: 0 4px 14px rgba(var(--accent-rgb),0.4); position: relative; z-index: 1;
+    .eyebrow::before { content: ''; width: 14px; height: 2px; background: var(--accent); border-radius: 2px; }
+    h1 {
+      font-size: 22px; font-weight: 800; color: var(--t1); letter-spacing: -0.4px;
+      line-height: 1.15; margin: 0;
     }
-    .hero-badge .material-icons-round { font-size: 16px; }
+    .hero-sub { font-size: 12.5px; color: var(--t4); margin-top: 4px; line-height: 1.35; }
+    .hero-actions {
+      display: flex; flex-wrap: nowrap; gap: 8px; justify-content: flex-end;
+      position: relative; z-index: 1; flex-shrink: 0;
+    }
+    .hero-cta {
+      display: inline-flex; align-items: center; gap: 5px;
+      height: 34px; padding: 0 12px; white-space: nowrap;
+      border: 1px solid var(--border); border-radius: 9px;
+      background: var(--surface); color: var(--t2);
+      font-size: 12px; font-weight: 700; text-decoration: none;
+      transition: border-color .15s, color .15s, background .15s, transform .15s;
+    }
+    .hero-cta .material-icons-round { font-size: 15px; }
+    .hero-cta:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
+    .hero-cta-primary {
+      background: var(--accent); border-color: var(--accent); color: #fff;
+      box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.25);
+    }
+    .hero-cta-primary:hover { background: var(--accent-h); color: #fff; border-color: var(--accent-h); }
+    .hero-date-chip {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 12px; border-radius: 10px;
+      background: var(--surface); border: 1px solid var(--border);
+      font-size: 12px; font-weight: 650; color: var(--t2);
+      position: relative; z-index: 1; white-space: nowrap;
+    }
+    .hero-date-chip .material-icons-round { font-size: 15px; color: var(--accent); }
 
     /* Stat widgets */
     .stats-grid {
@@ -559,24 +690,118 @@ import { forkJoin, map } from 'rxjs';
     .hbar-val { font-size: 12px; font-weight: 700; color: var(--t2); min-width: 24px; text-align: right; }
 
     @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes td-rise {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes td-fade {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
     .spin { animation: spin 0.9s linear infinite; display: inline-block; font-size: 28px; }
 
-    /* ── Teacher dashboard ─────────────────────────────────────────── */
-    .tt-loading { display:flex; flex-direction:column; align-items:center; gap:12px; padding:72px; color:var(--t4); }
-    .tt-loading-text { font-size:13px; font-weight:600; }
-    .tt-empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 24px; text-align:center; margin-bottom:20px; }
-    .tt-empty-icon-wrap { width:72px; height:72px; border-radius:20px; background:var(--surface-2,#f1f5f9); display:flex; align-items:center; justify-content:center; margin-bottom:16px; }
-    .tt-empty-icon { font-size:36px; color:var(--t4); }
-    .tt-empty-title { font-size:16px; font-weight:700; color:var(--t2); margin-bottom:6px; }
-    .tt-empty-sub { font-size:13px; color:var(--t4); }
-    .tt-retry-btn {
-      margin-top: 16px; height: 40px; padding: 0 18px; border: none; border-radius: 10px;
-      background: var(--accent, #4f6ef7); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
+    /* ── Teacher loading / empty ───────────────────────────────────── */
+    .tt-loading {
+      display:flex; flex-direction:column; align-items:center; gap:12px;
+      padding:64px 24px; color:var(--t4);
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r-2xl); animation: td-rise .4s ease both;
     }
-    .tt-retry-btn:hover { filter: brightness(0.95); }
+    .tt-loading-text { font-size:13px; font-weight:600; }
+
+    .td-empty {
+      display: flex; flex-direction: column; gap: 18px;
+      animation: td-rise 0.5s ease both;
+    }
+    .td-empty-main {
+      display: flex; align-items: center; gap: 18px;
+      padding: 22px 24px;
+      background:
+        linear-gradient(135deg, rgba(var(--accent-rgb), 0.06), transparent 42%),
+        var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-2xl);
+      box-shadow: var(--sh);
+    }
+    .td-empty-icon {
+      width: 56px; height: 56px; border-radius: 16px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--accent-s); color: var(--accent);
+    }
+    .td-empty-icon.warn { background: #fff7ed; color: #ea580c; }
+    .td-empty-icon .material-icons-round { font-size: 28px; }
+    .td-empty-copy { flex: 1; min-width: 0; }
+    .td-empty-copy h2 {
+      margin: 0; font-size: 17px; font-weight: 800; color: var(--t1); letter-spacing: -0.2px;
+    }
+    .td-empty-copy p {
+      margin: 6px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--t3); max-width: 52ch;
+    }
+    .td-retry {
+      height: 40px; padding: 0 16px; border: none; border-radius: 10px;
+      background: var(--accent); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+      flex-shrink: 0;
+    }
+    .td-retry:hover { background: var(--accent-h); }
+
+    .td-week {
+      display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
+    }
+    .td-week-day {
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      padding: 12px 8px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; min-height: 68px; justify-content: center;
+      transition: border-color .15s, background .15s;
+    }
+    .td-week-day.is-today {
+      border-color: rgba(var(--accent-rgb), 0.45);
+      background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.1), var(--surface));
+    }
+    .td-week-label { font-size: 11px; font-weight: 800; color: var(--t3); letter-spacing: 0.4px; text-transform: uppercase; }
+    .td-week-day.is-today .td-week-label { color: var(--accent); }
+    .td-week-state { font-size: 12px; font-weight: 650; color: var(--t4); }
+    .td-week-day.is-today .td-week-state { color: var(--accent); font-weight: 800; }
+
+    .td-shortcuts {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    }
+    .td-shortcut {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 14px 14px 12px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; text-decoration: none; color: inherit;
+      transition: transform .15s, border-color .15s, box-shadow .15s;
+      animation: td-rise 0.45s ease both;
+    }
+    .td-shortcut:nth-child(1) { animation-delay: .04s; }
+    .td-shortcut:nth-child(2) { animation-delay: .08s; }
+    .td-shortcut:nth-child(3) { animation-delay: .12s; }
+    .td-shortcut:nth-child(4) { animation-delay: .16s; }
+    .td-shortcut:nth-child(5) { animation-delay: .20s; }
+    .td-shortcut:nth-child(6) { animation-delay: .24s; }
+    .td-shortcut:hover {
+      transform: translateY(-2px);
+      border-color: rgba(var(--accent-rgb), 0.35);
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    }
+    .td-shortcut:hover .td-shortcut-arrow { color: var(--accent); transform: translateX(2px); }
+    .td-shortcut-icon {
+      width: 40px; height: 40px; border-radius: 11px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: color-mix(in srgb, var(--ic) 14%, white);
+      color: var(--ic);
+    }
+    .td-shortcut-icon .material-icons-round { font-size: 20px; }
+    .td-shortcut-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .td-shortcut-body strong { font-size: 13px; font-weight: 800; color: var(--t1); }
+    .td-shortcut-body span { font-size: 11.5px; color: var(--t4); line-height: 1.35; }
+    .td-shortcut-arrow {
+      font-size: 18px; color: var(--t4); transition: color .15s, transform .15s;
+    }
 
     /* ── Stat row ──────────────────────────────────────────────────── */
-    .t-stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:18px; }
+    .t-stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:18px; animation: td-rise .45s ease both; }
     @media(max-width:900px){ .t-stats-row { grid-template-columns:repeat(2,1fr); } }
     @media(max-width:480px){ .t-stats-row { grid-template-columns:repeat(1,1fr); } }
 
@@ -600,7 +825,7 @@ import { forkJoin, map } from 'rxjs';
     .t-stat-trend { position:absolute; right:12px; bottom:4px; line-height:1; }
 
     /* ── Main layout ───────────────────────────────────────────────── */
-    .t-main-layout { display:grid; grid-template-columns:1fr 290px; gap:18px; align-items:start; }
+    .t-main-layout { display:grid; grid-template-columns:1fr 290px; gap:18px; align-items:start; animation: td-rise .5s ease both; }
     @media(max-width:1060px){ .t-main-layout { grid-template-columns:1fr; } }
 
     /* ── Grid card ─────────────────────────────────────────────────── */
@@ -613,7 +838,7 @@ import { forkJoin, map } from 'rxjs';
     .t-grid-hd-left { display:flex; align-items:center; gap:12px; }
     .t-grid-hd-icon {
       width:36px; height:36px; border-radius:10px;
-      background:linear-gradient(135deg,#6366f1,#8b5cf6);
+      background:var(--accent);
       display:flex; align-items:center; justify-content:center;
       color:#fff; font-size:18px; flex-shrink:0;
     }
@@ -646,11 +871,11 @@ import { forkJoin, map } from 'rxjs';
     .t-th-today { color:#fff !important; position:relative; }
     .t-th-today::after {
       content:''; position:absolute; bottom:0; left:0; right:0; height:2px;
-      background:linear-gradient(90deg,#6366f1,#8b5cf6);
+      background: var(--accent);
     }
     .t-day-name { display:block; font-size:11px; font-weight:800; }
     .t-today-pill {
-      display:inline-block; background:linear-gradient(135deg,#6366f1,#8b5cf6);
+      display:inline-block; background: var(--accent);
       font-size:8px; font-weight:800; padding:2px 8px; border-radius:99px;
       margin-top:4px; letter-spacing:.5px; color:#fff; text-transform:uppercase;
     }
@@ -664,8 +889,8 @@ import { forkJoin, map } from 'rxjs';
     .t-td-no { text-align:center; padding:10px 6px; background:#f8fafc; border-left:none !important; }
     .t-pno-wrap { display:flex; justify-content:center; }
     .t-pno {
-      font-size:11px; font-weight:800; color:#6366f1;
-      background:#eef2ff; padding:3px 7px; border-radius:6px; letter-spacing:.3px;
+      font-size:11px; font-weight:800; color: var(--accent);
+      background: var(--accent-s); padding:3px 7px; border-radius:6px; letter-spacing:.3px;
     }
 
     .t-td-time { padding:0 14px; background:#fafafa; }
@@ -676,16 +901,16 @@ import { forkJoin, map } from 'rxjs';
 
     .t-td-filled {
       padding:10px 12px; cursor:default;
-      background:color-mix(in srgb, var(--subj-clr, #6366f1) 8%, white);
+      background:color-mix(in srgb, var(--subj-clr, #4f6ef7) 8%, white);
     }
     .t-td-filled.t-td-today {
-      background:color-mix(in srgb, var(--subj-clr, #6366f1) 14%, white);
-      border-left:3px solid var(--subj-clr, #6366f1) !important;
+      background:color-mix(in srgb, var(--subj-clr, #4f6ef7) 14%, white);
+      border-left:3px solid var(--subj-clr, #4f6ef7) !important;
     }
     .t-entry { display:flex; align-items:flex-start; gap:8px; }
     .t-entry-dot {
       width:8px; height:8px; border-radius:50%; margin-top:3px; flex-shrink:0;
-      background:var(--subj-clr, #6366f1);
+      background:var(--subj-clr, #4f6ef7);
     }
     .t-entry-text { min-width:0; }
     .t-entry-subject { display:block; font-size:12px; font-weight:700; color:var(--t1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -703,7 +928,7 @@ import { forkJoin, map } from 'rxjs';
     .t-today-hd {
       display:flex; align-items:center; gap:12px; padding:16px 18px 14px;
       border-bottom:1px solid var(--border);
-      background:linear-gradient(135deg,#f97316,#f59e0b);
+      background:linear-gradient(135deg,#ea580c,#f59e0b);
     }
     .t-today-hd-icon {
       width:36px; height:36px; border-radius:10px;
@@ -724,9 +949,9 @@ import { forkJoin, map } from 'rxjs';
     .t-today-timeline { display:flex; flex-direction:column; align-items:center; margin-right:14px; flex-shrink:0; }
     .t-today-num {
       width:30px; height:30px; border-radius:50%;
-      background:var(--item-clr, #6366f1); color:#fff;
+      background:var(--item-clr, #4f6ef7); color:#fff;
       font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0;
-      box-shadow:0 2px 8px color-mix(in srgb, var(--item-clr, #6366f1) 40%, transparent);
+      box-shadow:0 2px 8px color-mix(in srgb, var(--item-clr, #4f6ef7) 40%, transparent);
     }
     .t-today-line { width:2px; flex:1; min-height:12px; background:var(--border); margin:4px 0; }
 
@@ -736,10 +961,17 @@ import { forkJoin, map } from 'rxjs';
     .t-today-time { font-size:10.5px; color:var(--t4); margin-top:3px; display:flex; align-items:center; gap:3px; }
 
     /* ── Mobile ──────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .td-shortcuts { grid-template-columns: repeat(2, 1fr); }
+      .td-week { grid-template-columns: repeat(3, 1fr); }
+      .hero-actions { flex-wrap: wrap; max-width: 100%; }
+    }
     @media (max-width: 768px) {
-      .hero { flex-direction: column; align-items: flex-start; padding: 20px 18px; gap: 14px; }
-      .hero-badge { width: 100%; justify-content: center; }
+      .hero { flex-direction: column; align-items: stretch; padding: 14px 16px; gap: 12px; }
+      .hero-actions { width: 100%; max-width: none; justify-content: flex-start; flex-wrap: wrap; }
+      .hero-date-chip { width: 100%; justify-content: flex-start; }
       h1 { font-size: 20px; }
+      .td-empty-main { flex-direction: column; align-items: flex-start; }
       .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
       .stat-card { padding: 14px; gap: 10px; }
       .charts-row { grid-template-columns: 1fr !important; }
@@ -747,12 +979,17 @@ import { forkJoin, map } from 'rxjs';
       .t-grid-right { width: 100%; justify-content: flex-end; }
       .t-grid-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     }
+    @media (max-width: 560px) {
+      .td-shortcuts { grid-template-columns: 1fr; }
+      .hero-cta { flex: 1 1 auto; justify-content: center; }
+    }
     @media (max-width: 480px) {
-      .hero { padding: 16px 14px; }
+      .hero { padding: 12px 14px; }
       h1 { font-size: 18px; }
       .stats-grid { gap: 8px; }
       .stat-card { padding: 12px; flex-direction: column; align-items: flex-start; gap: 8px; }
       .t-stats-row { grid-template-columns: repeat(2, 1fr) !important; }
+      .td-week { grid-template-columns: repeat(2, 1fr); }
     }
   `]
 })
@@ -764,12 +1001,20 @@ export class DashboardComponent implements OnInit {
   private ttSvc        = inject(TimetableService);
   private settingsSvc  = inject(SettingsService);
 
-  readonly COLORS = ['#7c3aed','#0891b2','#059669','#d97706','#db2777','#ea580c','#0284c7','#16a34a'];
+  readonly COLORS = ['#4f6ef7','#0891b2','#059669','#d97706','#db2777','#ea580c','#0284c7','#16a34a'];
   readonly circumference = 2 * Math.PI * 46;
   ttDays    = signal<number[]>([1, 2, 3, 4, 5]);
   showWeekly = signal(false);
   readonly dayNames = DAY_NAMES;
   readonly todayDow = (() => { const d = new Date().getDay(); return d === 0 ? 7 : d; })();
+  readonly emptyWeekDays = [
+    { key: 1, label: 'Mon' },
+    { key: 2, label: 'Tue' },
+    { key: 3, label: 'Wed' },
+    { key: 4, label: 'Thu' },
+    { key: 5, label: 'Fri' },
+    { key: 6, label: 'Sat' },
+  ];
 
   today = new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -809,7 +1054,7 @@ export class DashboardComponent implements OnInit {
   fmt(t: string): string { return t ? t.slice(0, 5) : ''; }
 
   private readonly SUBJECT_COLORS = [
-    '#6366f1','#0891b2','#059669','#d97706','#db2777','#ea580c','#7c3aed','#0284c7',
+    '#4f6ef7','#0891b2','#059669','#d97706','#db2777','#ea580c','#0284c7','#0d9488',
   ];
   private subjectColorMap = new Map<string, string>();
   subjectColor(subjectName: string): string {

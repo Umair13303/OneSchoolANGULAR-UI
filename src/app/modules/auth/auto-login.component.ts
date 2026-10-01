@@ -1,5 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { MenuService } from '../../core/services/menu.service';
 
 @Component({
   standalone: true,
@@ -7,6 +8,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 })
 export class AutoLoginComponent implements OnInit {
   msg = 'Logging in...';
+  private menuSvc = inject(MenuService);
 
   constructor(private route: ActivatedRoute, private router: Router) {}
 
@@ -17,6 +19,7 @@ export class AutoLoginComponent implements OnInit {
     const user    = p.get('u');
 
     if (token && refresh && user) {
+      this.menuSvc.clear();
       localStorage.setItem('access_token', token);
       localStorage.setItem('refresh_token', refresh);
       localStorage.setItem('auth_user', decodeURIComponent(user));
