@@ -48,9 +48,12 @@ function fromYMD(s: string): Date | null {
         }
       </div>
 
-      <!-- Dropdown panel -->
+      <!-- Dropdown panel (fixed so it never clips inside overflow sheets/modals) -->
       @if (open()) {
-        <div class="dp-panel" [class.dp-drop-up]="dropUp()" (click)="$event.stopPropagation()">
+        <div class="dp-panel" [class.dp-drop-up]="dropUp()"
+             [style.top.px]="panelTop()"
+             [style.left.px]="panelLeft()"
+             (click)="$event.stopPropagation()">
 
           <!-- Header: prev / month+year / next -->
           <div class="dp-header">
@@ -183,7 +186,7 @@ function fromYMD(s: string): Date | null {
 
     /* ── Panel ───────────────────────────────────── */
     .dp-panel {
-      position: absolute; top: calc(100% + 6px); left: 0; z-index: 1300;
+      position: fixed; z-index: 1400;
       width: 288px;
       background: var(--surface);
       border: 1px solid var(--border);
@@ -193,12 +196,14 @@ function fromYMD(s: string): Date | null {
       animation: dp-in .14s ease-out;
     }
     .dp-panel.dp-drop-up {
-      top: auto;
-      bottom: calc(100% + 6px);
+      transform: translateY(-100%);
       animation: dp-in-up .14s ease-out;
     }
     @keyframes dp-in { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
-    @keyframes dp-in-up { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+    @keyframes dp-in-up {
+      from { opacity:0; transform:translateY(calc(-100% + 4px)); }
+      to { opacity:1; transform:translateY(-100%); }
+    }
 
     /* ── Header ──────────────────────────────────── */
     .dp-header {
@@ -320,15 +325,26 @@ export class DatePickerComponent implements OnInit, OnDestroy, ControlValueAcces
   value   = signal<string | null>(null);
   open    = signal(false);
   dropUp  = signal(false);
+  panelTop = signal(0);
+  panelLeft = signal(0);
   view    = signal<'days' | 'months' | 'years'>('days');
   cursor  = signal({ year: new Date().getFullYear(), month: new Date().getMonth() });
 
   private onChange: (v: string | null) => void = () => {};
   private onTouched: () => void = () => {};
   private docClick = () => this.open.set(false);
+  private onScrollOrResize = () => { if (this.open()) this.reposition(); };
 
-  ngOnInit() { document.addEventListener('click', this.docClick); }
-  ngOnDestroy() { document.removeEventListener('click', this.docClick); }
+  ngOnInit() {
+    document.addEventListener('click', this.docClick);
+    window.addEventListener('scroll', this.onScrollOrResize, true);
+    window.addEventListener('resize', this.onScrollOrResize);
+  }
+  ngOnDestroy() {
+    document.removeEventListener('click', this.docClick);
+    window.removeEventListener('scroll', this.onScrollOrResize, true);
+    window.removeEventListener('resize', this.onScrollOrResize);
+  }
 
   // ── ControlValueAccessor ─────────────────────────
   writeValue(v: string | null) {
@@ -399,9 +415,24 @@ export class DatePickerComponent implements OnInit, OnDestroy, ControlValueAcces
   private reposition() {
     const rect = this.host.nativeElement.getBoundingClientRect();
     const panelH = 340;
+    const panelW = 288;
+    const gap = 6;
     const spaceBelow = window.innerHeight - rect.bottom;
     const spaceAbove = rect.top;
-    this.dropUp.set(spaceBelow < panelH && spaceAbove > spaceBelow);
+    // Prefer drop-down; only flip up when there is clearly enough room above for the full panel.
+    const up = spaceBelow < panelH && spaceAbove >= panelH + gap;
+    this.dropUp.set(up);
+
+    if (up) {
+      // Anchor just above the input; CSS translateY(-100%) lifts the panel.
+      this.panelTop.set(rect.top - gap);
+    } else {
+      this.panelTop.set(Math.min(rect.bottom + gap, Math.max(8, window.innerHeight - panelH - 8)));
+    }
+
+    let left = rect.left;
+    left = Math.max(8, Math.min(left, window.innerWidth - panelW - 8));
+    this.panelLeft.set(left);
   }
 
   selectDay(day: Day) {
