@@ -17,6 +17,10 @@ export const routes: Routes = [
         path: 'dashboard',
         loadComponent: () => import('./modules/dashboard/dashboard.component').then(m => m.DashboardComponent)
       },
+      {
+        path: 'account/profile',
+        loadComponent: () => import('./modules/account/my-profile.component').then(m => m.MyProfileComponent)
+      },
 
       // Students
       {

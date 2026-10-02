@@ -10,6 +10,7 @@ import { ChatPanelComponent } from '../shared/components/chat-panel/chat-panel.c
 import { ChatService } from '../core/services/chat.service';
 import { SwalNotificationService } from '../core/services/swal-notification.service';
 import { MenuItemTree } from '../core/models/menu.model';
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-layout',
@@ -258,13 +259,31 @@ import { MenuItemTree } from '../core/models/menu.model';
                 }
               </div>
 
-            <div class="user-pill">
-              <div class="u-av">{{ initials() }}</div>
-              <div class="u-meta">
-                <span class="u-name">{{ auth.currentUser()?.fullName }}</span>
-                <span class="u-role">{{ auth.currentUser()?.role | titlecase }}</span>
-              </div>
-              <span class="material-icons-round u-chev">expand_more</span>
+            <div class="user-wrap" [class.open]="userMenuOpen()" (click)="$event.stopPropagation()">
+              <button type="button" class="user-pill" (click)="toggleUserMenu()" title="Account">
+                <div class="u-av">
+                  @if (avatarUrl(); as url) {
+                    <img [src]="url" alt="" />
+                  } @else {
+                    {{ initials() }}
+                  }
+                </div>
+                <div class="u-meta">
+                  <span class="u-name">{{ auth.currentUser()?.fullName }}</span>
+                  <span class="u-role">{{ auth.currentUser()?.role | titlecase }}</span>
+                </div>
+                <span class="material-icons-round u-chev">expand_more</span>
+              </button>
+              @if (userMenuOpen()) {
+                <div class="user-menu" (click)="$event.stopPropagation()">
+                  <button type="button" class="um-item" (click)="goProfile()">
+                    <span class="material-icons-round">person</span> My Profile
+                  </button>
+                  <button type="button" class="um-item danger" (click)="auth.logout()">
+                    <span class="material-icons-round">logout</span> Sign out
+                  </button>
+                </div>
+              }
             </div>
             <button class="sign-out" (click)="auth.logout()" title="Sign out">
               <span class="material-icons-round">logout</span>
@@ -425,25 +444,43 @@ import { MenuItemTree } from '../core/models/menu.model';
     .topbar-r { display: flex; align-items: center; gap: 8px; }
 
     /* User pill */
+    .user-wrap { position: relative; }
     .user-pill {
       display: flex; align-items: center; gap: 9px;
       padding: 5px 12px 5px 5px;
       background: var(--surface-2); border: 1px solid var(--border);
       border-radius: 99px; cursor: pointer;
-      transition: all 0.15s;
+      transition: all 0.15s; font: inherit;
     }
-    .user-pill:hover { border-color: var(--accent-s); background: var(--accent-s); }
+    .user-pill:hover, .user-wrap.open .user-pill { border-color: var(--accent-s); background: var(--accent-s); }
     .u-av {
       width: 30px; height: 30px; border-radius: 50%;
       background: linear-gradient(135deg, var(--accent), var(--accent-h));
       color: #fff; display: flex; align-items: center; justify-content: center;
       font-size: 10.5px; font-weight: 800; flex-shrink: 0;
       box-shadow: 0 2px 6px rgba(var(--accent-rgb),0.35);
+      overflow: hidden;
     }
-    .u-meta { display: flex; flex-direction: column; }
+    .u-av img { width: 100%; height: 100%; object-fit: cover; }
+    .u-meta { display: flex; flex-direction: column; text-align: left; }
     .u-name { font-size: 12.5px; font-weight: 700; color: var(--t1); line-height: 1.2; }
     .u-role { font-size: 10px; color: var(--t4); font-weight: 500; }
     .u-chev { font-size: 16px; color: var(--t4); }
+    .user-menu {
+      position: absolute; right: 0; top: calc(100% + 8px); z-index: 40;
+      min-width: 180px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; box-shadow: var(--sh); padding: 6px; display: grid; gap: 2px;
+    }
+    .um-item {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      border: none; background: transparent; border-radius: 8px;
+      padding: 9px 10px; font: inherit; font-size: 13px; font-weight: 600;
+      color: var(--t2); cursor: pointer; text-align: left;
+    }
+    .um-item:hover { background: var(--surface-2); color: var(--t1); }
+    .um-item.danger { color: var(--red); }
+    .um-item.danger:hover { background: var(--red-s); }
+    .um-item .material-icons-round { font-size: 18px; }
 
     /* Icon buttons */
     .icon-btn, .sign-out {
@@ -737,6 +774,7 @@ export class LayoutComponent implements OnInit {
   themeOpen  = signal(false);
   mobileOpen = signal(false);
   notifOpen  = signal(false);
+  userMenuOpen = signal(false);
   today = new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   showNotifications = computed(() => {
@@ -762,6 +800,7 @@ export class LayoutComponent implements OnInit {
   private closePanels = () => {
     this.themeOpen.set(false);
     this.notifOpen.set(false);
+    this.userMenuOpen.set(false);
   };
 
   ngOnInit() {
@@ -830,7 +869,24 @@ export class LayoutComponent implements OnInit {
 
   goTo(route: string) {
     this.notifOpen.set(false);
+    this.userMenuOpen.set(false);
     this.router.navigate([route]);
+  }
+
+  toggleUserMenu() {
+    this.userMenuOpen.update(v => !v);
+    this.themeOpen.set(false);
+    this.notifOpen.set(false);
+  }
+
+  goProfile() {
+    this.userMenuOpen.set(false);
+    this.router.navigate(['/account/profile']);
+  }
+
+  avatarUrl(): string | null {
+    const id = this.auth.currentUser()?.photoFileId;
+    return id ? `${environment.fileServerUrl}/files/${id}` : null;
   }
 
   openChat(convId: number) {

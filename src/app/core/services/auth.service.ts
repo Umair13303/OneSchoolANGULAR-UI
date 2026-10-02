@@ -86,10 +86,15 @@ export class AuthService {
   hasRole(...roles: string[]): boolean { return roles.includes(this.getRole()); }
 
   updateCurrentUserBranding(patch: Partial<{ instituteName: string; tagline: string; logoUrl: string; copyrightText: string }>) {
+    this.patchCurrentUser(patch);
+  }
+
+  /** Merge fields into the stored session user (name, email, photo, branding, …). */
+  patchCurrentUser(patch: Partial<UserInfo>) {
     const user = this.currentUser();
     if (!user) return;
     const updated = { ...user, ...patch };
-    localStorage.setItem('auth_user', JSON.stringify(updated));
+    localStorage.setItem(USER_KEY, JSON.stringify(updated));
     this.currentUser.set(updated);
   }
 

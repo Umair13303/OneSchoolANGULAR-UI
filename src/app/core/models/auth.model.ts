@@ -15,6 +15,7 @@ export interface UserInfo {
   tagline?: string;
   logoUrl?: string;
   copyrightText?: string;
+  photoFileId?: number | null;
 }
 
 export interface LoginResponse {

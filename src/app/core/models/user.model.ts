@@ -16,6 +16,24 @@ export interface UserListDto {
   dateOfBirth?: string;
   joiningDate?: string;
   signatureUrl?: string;
+  photoFileId?: number | null;
+}
+
+export interface UpdateMyProfileDto {
+  fullName: string;
+  email: string;
+  phone?: string | null;
+  gender?: string | null;
+  address?: string | null;
+  dateOfBirth?: string | null;
+  cnic?: string | null;
+  qualification?: string | null;
+  specialization?: string | null;
+}
+
+export interface ChangeMyPasswordDto {
+  currentPassword: string;
+  newPassword: string;
 }
 
 export interface CreateUserDto {
