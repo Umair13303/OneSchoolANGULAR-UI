@@ -121,6 +121,8 @@ export interface ExamQuestionDto {
   correctAnswer?:      string;
   isTrue?:             boolean;
   questionNote?:       string;
+  courseTopicId?:      number | null;
+  topicTitle?:         string | null;
   options:             ExamQuestionOptionDto[];
 }
 
@@ -142,6 +144,7 @@ export interface CreateExamQuestionDto {
   correctAnswer?:     string;
   isTrue?:            boolean;
   questionNote?:      string;
+  courseTopicId?:     number | null;
   options:            CreateExamQuestionOptionDto[];
 }
 

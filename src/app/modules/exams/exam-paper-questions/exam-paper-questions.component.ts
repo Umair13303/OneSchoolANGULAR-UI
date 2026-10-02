@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ExamService } from '../../../core/services/exam.service';
+import { AssessmentService } from '../../../core/services/assessment.service';
 import {
   ExamPaperDto, ExamQuestionDto, CreateExamQuestionDto,
   SavePaperQuestionsDto, QUESTION_TYPES, QUESTION_LANGUAGES
@@ -19,6 +20,7 @@ interface QuestionForm {
   correctAnswer?: string;
   isTrue?: boolean;
   questionNote?: string;
+  courseTopicId?: number | null;
   answerLines?: number;
   options: { optionLabel: string; optionText: string; isCorrect: boolean }[];
   _collapsed: boolean;
@@ -122,10 +124,15 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
     /* Question text */
     .q-text-row { margin-bottom:.75rem; }
     .q-text-row label { font-size:.75rem; font-weight:600; color:#64748b; display:block; margin-bottom:.3rem; }
-    .q-text-row textarea { width:100%; padding:.5rem .75rem; border:1.5px solid #e2e8f0; border-radius:8px;
-                           font-size:.88rem; color:#374151; background:#fff; box-sizing:border-box;
-                           font-family:inherit; resize:vertical; min-height:62px; }
-    .q-text-row textarea:focus { outline:none; border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.1); }
+    .q-text-row textarea, .q-text-row select {
+      width:100%; padding:.5rem .75rem; border:1.5px solid #e2e8f0; border-radius:8px;
+      font-size:.88rem; color:#374151; background:#fff; box-sizing:border-box;
+      font-family:inherit;
+    }
+    .q-text-row textarea { resize:vertical; min-height:62px; }
+    .q-text-row textarea:focus, .q-text-row select:focus {
+      outline:none; border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.1);
+    }
 
     /* MCQ options grid */
     .mcq-grid { display:grid; grid-template-columns:1fr 1fr; gap:.45rem .75rem; margin-bottom:.65rem; }
@@ -303,6 +310,17 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
                               [placeholder]="questionPlaceholder(q.questionType, qi + 1)"
                               rows="2"></textarea>
                   </div>
+                  @if (syllabusTopics().length) {
+                    <div class="q-text-row">
+                      <label>Course Topic (optional)</label>
+                      <select [(ngModel)]="q.courseTopicId">
+                        <option [ngValue]="null">— None —</option>
+                        @for (tp of syllabusTopics(); track tp.id) {
+                          <option [ngValue]="tp.id">{{ tp.title }}</option>
+                        }
+                      </select>
+                    </div>
+                  }
 
                   <!-- MCQ: 4-option grid -->
                   @if (q.questionType === 1) {
@@ -414,6 +432,17 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
                 <label>Question Text</label>
                 <textarea [(ngModel)]="q.questionText" rows="2" placeholder="Enter question…"></textarea>
               </div>
+              @if (syllabusTopics().length) {
+                <div class="q-text-row">
+                  <label>Course Topic (optional)</label>
+                  <select [(ngModel)]="q.courseTopicId">
+                    <option [ngValue]="null">— None —</option>
+                    @for (tp of syllabusTopics(); track tp.id) {
+                      <option [ngValue]="tp.id">{{ tp.title }}</option>
+                    }
+                  </select>
+                </div>
+              }
               @if (q.questionType === 1) {
                 <div class="mcq-grid">
                   @for (opt of q.options; track $index; let oi = $index) {
@@ -486,9 +515,11 @@ export class ExamPaperQuestionsComponent implements OnInit {
   private route   = inject(ActivatedRoute);
   private router  = inject(Router);
   private examSvc = inject(ExamService);
+  private assessmentSvc = inject(AssessmentService);
 
   paper     = signal<ExamPaperDto | null>(null);
   questions = signal<(QuestionForm & { _idx: number })[]>([]);
+  syllabusTopics = signal<{ id: number; title: string }[]>([]);
   saving    = signal(false);
   toast     = signal('');
   toastType = signal<'success'|'error'>('success');
@@ -507,6 +538,15 @@ export class ExamPaperQuestionsComponent implements OnInit {
       this.paper.set(p);
       this.examSvc.getQuestions(this.paperId).subscribe(qs => {
         this.questions.set(qs.map(q => this.serverToForm(q)));
+      });
+      this.assessmentSvc.getExamSyllabus(this.paperId).subscribe({
+        next: syl => {
+          const topics = (syl.items || [])
+            .filter(i => i.courseTopicId)
+            .map(i => ({ id: i.courseTopicId!, title: i.topicTitle || `Topic ${i.courseTopicId}` }));
+          this.syllabusTopics.set(topics);
+        },
+        error: () => this.syllabusTopics.set([])
       });
     });
   }
@@ -577,6 +617,7 @@ export class ExamPaperQuestionsComponent implements OnInit {
       correctAnswer:      undefined,
       isTrue:             undefined,
       questionNote:       undefined,
+      courseTopicId:      null,
       options:            qtype === 1 ? this.defaultOptions() : [],
       _collapsed:         false,
     }));
@@ -596,6 +637,7 @@ export class ExamPaperQuestionsComponent implements OnInit {
       correctAnswer:      undefined,
       isTrue:             undefined,
       questionNote:       undefined,
+      courseTopicId:      null,
       options:            type === 1 ? this.defaultOptions() : [],
       _collapsed:         false,
     };
@@ -636,6 +678,7 @@ export class ExamPaperQuestionsComponent implements OnInit {
         correctAnswer:      q.correctAnswer,
         isTrue:             q.isTrue,
         questionNote:       q.questionNote,
+        courseTopicId:      q.courseTopicId ?? null,
         options: q.questionType === 1
           ? q.options.map((o, j) => ({
               optionLabel: ['A','B','C','D'][j] || String(j+1),
@@ -678,6 +721,7 @@ export class ExamPaperQuestionsComponent implements OnInit {
       correctAnswer:      q.correctAnswer,
       isTrue:             q.isTrue,
       questionNote:       q.questionNote,
+      courseTopicId:      q.courseTopicId ?? null,
       options: q.options.length
         ? q.options.map(o => ({ optionLabel: o.optionLabel, optionText: o.optionText, isCorrect: o.isCorrect }))
         : (q.questionTypeId === 1 ? this.defaultOptions() : []),

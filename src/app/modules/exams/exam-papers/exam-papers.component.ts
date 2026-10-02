@@ -5,7 +5,10 @@ import { Router, RouterModule } from '@angular/router';
 import { Subscription, merge } from 'rxjs';
 import { ExamService }     from '../../../core/services/exam.service';
 import { AcademicService } from '../../../core/services/academic.service';
+import { AssessmentService } from '../../../core/services/assessment.service';
+import { CurriculumService } from '../../../core/services/curriculum.service';
 import { ExamPaperDto, EXAM_TYPES, CLASS_GROUPS } from '../../../core/models/exam.model';
+import { CourseChapterDto } from '../../../core/models/curriculum.model';
 import { ConfirmDeleteComponent } from '../../../shared/components/confirm-delete/confirm-delete.component';
 import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/confirm-delete.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -29,6 +32,9 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
   template: `
     <div class="os-page compact exam-papers-page">
     <app-page-header [dense]="true" [title]="pageTitle()">
+      <a class="btn-secondary" routerLink="/exams/question-bank">
+        <span class="material-icons-round">library_books</span> Question Bank
+      </a>
       <button class="btn-primary" (click)="openForm()">
         <span class="material-icons-round">add</span> New Paper
       </button>
@@ -172,7 +178,7 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
 
               <div class="fg two">
                 <div class="fi">
-                  <label>Syllabus / Chapters</label>
+                  <label>Syllabus note (free text)</label>
                   <input formControlName="syllabusNote" placeholder="e.g. Chapter 1 – 5" />
                 </div>
                 <div class="fi">
@@ -180,6 +186,35 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
                   <input formControlName="instructions" placeholder="e.g. Attempt all questions…" />
                 </div>
               </div>
+
+              @if (editPaper()) {
+                <div class="syllabus-box">
+                  <div class="syllabus-head">
+                    <strong>Exam Syllabus</strong>
+                    <span class="muted">{{ syllabusPlanTitle() || 'No published course plan for this class/subject' }}</span>
+                  </div>
+                  @if (syllabusChapters().length) {
+                    @for (ch of syllabusChapters(); track ch.courseChapterId) {
+                      <label class="syl-ch">
+                        <input type="checkbox" [checked]="isChapterSelected(ch.courseChapterId)"
+                               (change)="toggleChapter(ch.courseChapterId, $event)" />
+                        <span>{{ ch.title }}</span>
+                      </label>
+                      @for (tp of ch.topics; track tp.courseTopicId) {
+                        <label class="syl-tp">
+                          <input type="checkbox" [checked]="isTopicSelected(tp.courseTopicId)"
+                                 (change)="toggleTopic(tp.courseTopicId, $event)" />
+                          <span>{{ tp.title }}</span>
+                        </label>
+                      }
+                    }
+                    <button type="button" class="btn-secondary btn-sm" [disabled]="savingSyllabus()" (click)="saveSyllabus()">
+                      Save Exam Syllabus
+                    </button>
+                    @if (syllabusMsg()) { <div class="muted">{{ syllabusMsg() }}</div> }
+                  }
+                </div>
+              }
 
             </div>
             <!-- end tab 0 -->
@@ -483,6 +518,17 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
 
     /* Section card */
     .sec-card { display:flex; border:1.5px solid var(--border); border-radius:10px; overflow:hidden; margin-bottom:10px; background:var(--surface); }
+    .syllabus-box {
+      margin-top: 12px; border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
+      background: #fafbfc; display: grid; gap: 6px;
+    }
+    .syllabus-head { display:flex; flex-wrap:wrap; gap:8px; align-items:baseline; margin-bottom:4px; }
+    .syllabus-head .muted { font-size: .8rem; color: #64748b; }
+    .syl-ch, .syl-tp {
+      display:flex; gap:8px; align-items:center; font-size: .85rem; cursor:pointer;
+    }
+    .syl-tp { padding-left: 18px; color: #475569; }
+    .btn-sm { font-size: .8rem; padding: .35rem .7rem; width: fit-content; margin-top: 6px; }
     .sec-card:hover { border-color:var(--accent); }
     .sec-card-bar  { width:5px; flex-shrink:0; }
     .sec-card-body { flex:1; padding:14px 16px; }
@@ -501,9 +547,9 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
     .alert-error { display:flex; align-items:center; gap:8px; padding:10px 14px; background:var(--red-s); border:1px solid var(--red-b); border-radius:8px; font-size:13px; color:var(--red); margin-top:10px; }
     .alert-error .material-icons-round { font-size:16px; }
 
-    .btn-primary   { display:flex; align-items:center; gap:6px; padding:9px 18px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; }
+    .btn-primary   { display:flex; align-items:center; gap:6px; padding:9px 18px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; text-decoration:none; }
     .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
-    .btn-secondary { display:flex; align-items:center; gap:6px; padding:9px 18px; background:var(--surface); color:var(--t2); border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; }
+    .btn-secondary { display:flex; align-items:center; gap:6px; padding:9px 18px; background:var(--surface); color:var(--t2); border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; text-decoration:none; }
     .btn-primary .material-icons-round, .btn-secondary .material-icons-round { font-size:16px; }
 
     @keyframes spin { to { transform:rotate(360deg); } }
@@ -512,6 +558,8 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
 })
 export class ExamPapersComponent implements OnInit, OnDestroy {
   private examSvc = inject(ExamService);
+  private assessmentSvc = inject(AssessmentService);
+  private curriculumSvc = inject(CurriculumService);
   private confirmDelete = inject(ConfirmDeleteService);
   private acSvc   = inject(AcademicService);
   private router  = inject(Router);
@@ -528,6 +576,12 @@ export class ExamPapersComponent implements OnInit, OnDestroy {
   editPaper = signal<ExamPaperDto | null>(null);
   formError = signal('');
   activeTab = signal(0);
+  syllabusChapters = signal<CourseChapterDto[]>([]);
+  syllabusPlanTitle = signal('');
+  selectedChapterIds = signal<Set<number>>(new Set());
+  selectedTopicIds = signal<Set<number>>(new Set());
+  savingSyllabus = signal(false);
+  syllabusMsg = signal('');
 
   filterClass = '';
   filterType  = '';
@@ -636,8 +690,14 @@ export class ExamPapersComponent implements OnInit, OnDestroy {
         syllabusNote:    (paper as any).syllabusNote ?? '',
       });
       (paper.sections ?? []).forEach(s => this.sections.push(this.newSectionGroup(s)));
+      this.loadSyllabusUi(paper.examPaperId);
     } else {
       this.form.reset({ classGroup: 1, totalMarks: 100, passMarks: 33 });
+      this.syllabusChapters.set([]);
+      this.syllabusPlanTitle.set('');
+      this.selectedChapterIds.set(new Set());
+      this.selectedTopicIds.set(new Set());
+      this.syllabusMsg.set('');
     }
 
     this.titleSub?.unsubscribe();
@@ -772,6 +832,66 @@ export class ExamPapersComponent implements OnInit, OnDestroy {
     req.subscribe({
       next:  () => { this.saving.set(false); this.closeForm(); this.load(); },
       error: (e: any) => { this.saving.set(false); this.formError.set(e?.error?.error ?? 'Failed to save.'); }
+    });
+  }
+
+  loadSyllabusUi(paperId: number) {
+    this.syllabusMsg.set('');
+    this.assessmentSvc.getExamSyllabus(paperId).subscribe({
+      next: syl => {
+        this.syllabusPlanTitle.set(syl.coursePlanTitle || '');
+        const chIds = new Set((syl.items || []).filter(i => i.courseChapterId).map(i => i.courseChapterId!));
+        const tpIds = new Set((syl.items || []).filter(i => i.courseTopicId).map(i => i.courseTopicId!));
+        this.selectedChapterIds.set(chIds);
+        this.selectedTopicIds.set(tpIds);
+        if (syl.coursePlanId) {
+          this.curriculumSvc.getPlan(syl.coursePlanId).subscribe({
+            next: plan => this.syllabusChapters.set(plan.chapters || []),
+            error: () => this.syllabusChapters.set([])
+          });
+        } else {
+          this.syllabusChapters.set([]);
+        }
+      },
+      error: () => {
+        this.syllabusChapters.set([]);
+        this.syllabusPlanTitle.set('');
+      }
+    });
+  }
+
+  isChapterSelected(id: number) { return this.selectedChapterIds().has(id); }
+  isTopicSelected(id: number) { return this.selectedTopicIds().has(id); }
+
+  toggleChapter(id: number, ev: Event) {
+    const checked = (ev.target as HTMLInputElement).checked;
+    const next = new Set(this.selectedChapterIds());
+    if (checked) next.add(id); else next.delete(id);
+    this.selectedChapterIds.set(next);
+  }
+
+  toggleTopic(id: number, ev: Event) {
+    const checked = (ev.target as HTMLInputElement).checked;
+    const next = new Set(this.selectedTopicIds());
+    if (checked) next.add(id); else next.delete(id);
+    this.selectedTopicIds.set(next);
+  }
+
+  saveSyllabus() {
+    const paper = this.editPaper();
+    if (!paper) return;
+    const items: { courseChapterId?: number | null; courseTopicId?: number | null }[] = [
+      ...[...this.selectedChapterIds()].map(id => ({ courseChapterId: id, courseTopicId: null })),
+      ...[...this.selectedTopicIds()].map(id => ({ courseChapterId: null, courseTopicId: id }))
+    ];
+    this.savingSyllabus.set(true);
+    this.syllabusMsg.set('');
+    this.assessmentSvc.saveExamSyllabus(paper.examPaperId, items).subscribe({
+      next: () => { this.savingSyllabus.set(false); this.syllabusMsg.set('Exam syllabus saved.'); },
+      error: (e: any) => {
+        this.savingSyllabus.set(false);
+        this.syllabusMsg.set(e?.error?.error || 'Failed to save syllabus.');
+      }
     });
   }
 

@@ -63,7 +63,7 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
         </div>
         <div class="inst-stats">
           <span><strong>{{ inst.campusCount }}</strong> Campus(es)</span>
-          <span>{{ activeModuleCount(inst) }} / 7 Modules</span>
+          <span>{{ activeModuleCount(inst) }} / 8 Modules</span>
         </div>
         <div class="module-chips">
           <span class="chip" [class.chip-on]="inst.moduleAttendance">Attendance</span>
@@ -73,6 +73,7 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
           <span class="chip" [class.chip-on]="inst.moduleTimetable">Timetable</span>
           <span class="chip" [class.chip-on]="inst.moduleHR">HR</span>
           <span class="chip" [class.chip-on]="inst.moduleReports">Reports</span>
+          <span class="chip" [class.chip-on]="inst.moduleCurriculum">Curriculum</span>
         </div>
         <div class="inst-actions">
           <button class="btn-outline btn-sm" (click)="startManage(inst)">
@@ -398,7 +399,7 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
         </div>
         <div>
           <h2 class="adm-title">{{ selectedInstitute.name }}</h2>
-          <p class="adm-sub">{{ selectedInstitute.campusCount }} campus(es) · {{ activeModuleCount(selectedInstitute) }}/7 modules active</p>
+          <p class="adm-sub">{{ selectedInstitute.campusCount }} campus(es) · {{ activeModuleCount(selectedInstitute) }}/8 modules active</p>
         </div>
       </div>
       <div class="adm-header-right">
@@ -1026,6 +1027,7 @@ export class InstitutesComponent implements OnInit {
     { key: 'moduleTimetable',  label: 'Timetable',   icon: 'schedule',    desc: 'Class timetable builder and view' },
     { key: 'moduleHR',         label: 'HR',          icon: 'badge',       desc: 'Teaching and non-teaching staff management' },
     { key: 'moduleReports',    label: 'Reports',     icon: 'bar_chart',   desc: 'Attendance, fee and academic reports' },
+    { key: 'moduleCurriculum', label: 'Curriculum',  icon: 'auto_stories', desc: 'Course plans, daily teaching and progress' },
   ];
 
   instForm!: FormGroup;
@@ -1128,6 +1130,7 @@ export class InstitutesComponent implements OnInit {
       moduleTimetable:  inst?.moduleTimetable  ?? true,
       moduleHR:         inst?.moduleHR         ?? true,
       moduleReports:    inst?.moduleReports    ?? true,
+      moduleCurriculum: inst?.moduleCurriculum ?? true,
     };
   }
 
@@ -1224,6 +1227,7 @@ export class InstitutesComponent implements OnInit {
       moduleTimetable:  inst.moduleTimetable,
       moduleHR:         inst.moduleHR,
       moduleReports:    inst.moduleReports,
+      moduleCurriculum: inst.moduleCurriculum ?? true,
     };
   }
 
@@ -1321,6 +1325,6 @@ export class InstitutesComponent implements OnInit {
   }
 
   activeModuleCount(inst: InstituteDto): number {
-    return [inst.moduleAttendance, inst.moduleFees, inst.moduleHomework, inst.moduleExams, inst.moduleTimetable, inst.moduleHR, inst.moduleReports].filter(Boolean).length;
+    return [inst.moduleAttendance, inst.moduleFees, inst.moduleHomework, inst.moduleExams, inst.moduleTimetable, inst.moduleHR, inst.moduleReports, inst.moduleCurriculum].filter(Boolean).length;
   }
 }

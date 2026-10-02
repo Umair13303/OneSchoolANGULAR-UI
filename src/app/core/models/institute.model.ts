@@ -15,6 +15,7 @@ export interface InstituteDto {
   moduleTimetable: boolean;
   moduleHR: boolean;
   moduleReports: boolean;
+  moduleCurriculum: boolean;
   campusCount: number;
   challanTemplate: string;
   schoolStampUrl?: string;
@@ -35,6 +36,7 @@ export interface CreateInstituteDto {
   moduleTimetable: boolean;
   moduleHR: boolean;
   moduleReports: boolean;
+  moduleCurriculum: boolean;
 }
 
 export interface CampusDto {

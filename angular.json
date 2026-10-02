@@ -49,11 +49,24 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "**/*",
+                "input": "node_modules/katex/dist/fonts",
+                "output": "/fonts"
               }
             ],
             "styles": [
+              "node_modules/quill/dist/quill.snow.css",
+              "node_modules/katex/dist/katex.min.css",
               "src/styles.scss"
-            ]
+            ],
+            "loader": {
+              ".woff": "file",
+              ".woff2": "file",
+              ".ttf": "file",
+              ".eot": "file"
+            }
           },
           "configurations": {
             "production": {
@@ -116,6 +129,8 @@
               }
             ],
             "styles": [
+              "node_modules/quill/dist/quill.snow.css",
+              "node_modules/katex/dist/katex.min.css",
               "src/styles.scss"
             ]
           }

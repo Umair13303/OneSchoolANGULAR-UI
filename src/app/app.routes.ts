@@ -142,6 +142,50 @@ export const routes: Routes = [
         loadComponent: () => import('./modules/homework/assign-homework/assign-homework.component').then(m => m.AssignHomeworkComponent)
       },
 
+      // Curriculum / Course Content
+      {
+        path: 'curriculum/plans',
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'principal'] },
+        loadComponent: () => import('./modules/curriculum/course-plans/course-plans.component').then(m => m.CoursePlansComponent)
+      },
+      {
+        path: 'curriculum/plans/:id',
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'principal'] },
+        loadComponent: () => import('./modules/curriculum/course-plan-builder/course-plan-builder.component').then(m => m.CoursePlanBuilderComponent)
+      },
+      {
+        path: 'curriculum/plans/:planId/topics/:topicId',
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'principal'] },
+        loadComponent: () => import('./modules/curriculum/topic-editor/topic-editor.component').then(m => m.TopicEditorComponent)
+      },
+      {
+        path: 'curriculum/progress',
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'principal'] },
+        loadComponent: () => import('./modules/curriculum/curriculum-progress/curriculum-progress.component').then(m => m.CurriculumProgressComponent)
+      },
+      {
+        path: 'curriculum/my-courses',
+        canActivate: [roleGuard],
+        data: { roles: ['teacher'] },
+        loadComponent: () => import('./modules/curriculum/my-courses/my-courses.component').then(m => m.MyCoursesComponent)
+      },
+      {
+        path: 'curriculum/workspace/:planId',
+        canActivate: [roleGuard],
+        data: { roles: ['teacher', 'admin', 'principal'] },
+        loadComponent: () => import('./modules/curriculum/course-workspace/course-workspace.component').then(m => m.CourseWorkspaceComponent)
+      },
+      {
+        path: 'curriculum/topics/:topicId',
+        canActivate: [roleGuard],
+        data: { roles: ['teacher', 'admin', 'principal'] },
+        loadComponent: () => import('./modules/curriculum/topic-detail/topic-detail.component').then(m => m.TopicDetailComponent)
+      },
+
       // Teachers
       {
         path: 'teachers',
@@ -259,6 +303,12 @@ export const routes: Routes = [
         canActivate: [roleGuard],
         data: { roles: ['superadmin','admin','principal','teacher'] },
         loadComponent: () => import('./modules/exams/exam-papers/exam-papers.component').then(m => m.ExamPapersComponent)
+      },
+      {
+        path: 'exams/question-bank',
+        canActivate: [roleGuard],
+        data: { roles: ['superadmin','admin','principal','teacher'] },
+        loadComponent: () => import('./modules/exams/question-bank/question-bank.component').then(m => m.QuestionBankComponent)
       },
       {
         path: 'exams/papers/:paperId/questions',

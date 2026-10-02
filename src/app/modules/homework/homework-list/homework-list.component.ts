@@ -4,7 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { HomeworkService } from '../../../core/services/homework.service';
 import { AcademicService } from '../../../core/services/academic.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { CurriculumService } from '../../../core/services/curriculum.service';
 import { HomeworkDto, SubmissionDto } from '../../../core/models/homework.model';
+import { TeachingLogDto } from '../../../core/models/curriculum.model';
 import { ClassDto, AcademicYear, SubjectDto } from '../../../core/models/academic.model';
 import { RouterModule } from '@angular/router';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -88,10 +90,35 @@ type Tab = 'diary' | 'manage';
     @if (tab() === 'diary') {
       @if (loading()) { <app-loading /> }
       @else if (!selectedClass) {
-        <div class="os-panel"><app-empty-state message="Select a class to view homework." icon="menu_book" /></div>
-      } @else if (homework().length === 0) {
-        <div class="os-panel"><app-empty-state message="No homework found for selected filters." icon="edit_note" /></div>
+        <div class="os-panel"><app-empty-state message="Select a class to view the diary." icon="menu_book" /></div>
       } @else {
+        <!-- Today's Learning (curriculum teaching) — separate from Homework -->
+        <div class="os-panel learning-panel">
+          <h3 class="section-title">Today's Learning</h3>
+          @if (learning().length === 0) {
+            <div class="muted-empty">No teaching recorded for the selected filters.</div>
+          } @else {
+            <div class="learning-list">
+              @for (group of learningBySubject(); track group.subject) {
+                <div class="learning-group">
+                  <div class="learning-subject">{{ group.subject }}</div>
+                  @for (item of group.items; track item.courseTeachingLogId) {
+                    <div class="learning-item">
+                      <span class="learning-type">{{ item.teachingType }}</span>
+                      <span>{{ item.chapterTitle ? item.chapterTitle + ' — ' : '' }}{{ item.topicTitle }}</span>
+                      @if (item.remarks) { <span class="learning-remark">{{ item.remarks }}</span> }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <h3 class="section-title hw-section-title">Homework</h3>
+        @if (homework().length === 0) {
+          <div class="os-panel"><app-empty-state message="No homework found for selected filters." icon="edit_note" /></div>
+        } @else {
         <!-- Summary strip -->
         <div class="summary-strip">
           <div class="sum-item"><span class="num">{{ homework().length }}</span><span>Total</span></div>
@@ -129,6 +156,7 @@ type Tab = 'diary' | 'manage';
             </div>
           }
         </div>
+        }
       }
     }
 
@@ -259,6 +287,16 @@ type Tab = 'diary' | 'manage';
     .btn-clear { padding:8px 14px; border:1px solid var(--border); border-radius:6px; background:var(--surface-2); cursor:pointer; font-size:13px; color:var(--t3); font-family:inherit; }
 
     .summary-strip { display:flex; gap:14px; margin-bottom:20px; }
+    .section-title { font-size: 1rem; font-weight: 700; margin: 0 0 .75rem; }
+    .hw-section-title { margin: 1.25rem 0 .75rem; }
+    .learning-panel { margin-bottom: .5rem; }
+    .muted-empty { color: var(--t4, #9ca3af); font-size: .9rem; }
+    .learning-list { display: grid; gap: .75rem; }
+    .learning-subject { font-weight: 700; font-size: .9rem; margin-bottom: .35rem; }
+    .learning-item { display: flex; flex-wrap: wrap; gap: .4rem .65rem; align-items: baseline; font-size: .9rem; padding: .25rem 0; }
+    .learning-type { font-size: .7rem; font-weight: 600; background: #eff6ff; color: #1d4ed8; padding: .1rem .4rem; border-radius: 4px; }
+    .learning-remark { color: var(--t3, #6b7280); font-size: .85rem; width: 100%; }
+
     .sum-item { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 22px; box-shadow:var(--sh);
       display:flex; flex-direction:column; align-items:center; gap:4px; }
     .sum-item .num { font-size:26px; font-weight:700; color:var(--accent); }
@@ -336,6 +374,7 @@ type Tab = 'diary' | 'manage';
 export class HomeworkListComponent implements OnInit {
   private hwSvc       = inject(HomeworkService);
   private academicSvc = inject(AcademicService);
+  private curriculumSvc = inject(CurriculumService);
   auth = inject(AuthService);
   private confirmDeleteSvc = inject(ConfirmDeleteService);
   private menuSvc = inject(MenuService);
@@ -344,6 +383,7 @@ export class HomeworkListComponent implements OnInit {
   classes   = signal<ClassDto[]>([]);
   subjects  = signal<SubjectDto[]>([]);
   homework  = signal<HomeworkDto[]>([]);
+  learning  = signal<TeachingLogDto[]>([]);
   loading   = signal(false);
 
   tab = signal<Tab>('diary');
@@ -405,12 +445,28 @@ export class HomeworkListComponent implements OnInit {
   clearFilters() {
     this.selectedYear = null; this.selectedClass = null;
     this.selectedSubject = null; this.fromDate = ''; this.toDate = '';
-    this.homework.set([]); this.classes.set([]);
+    this.homework.set([]); this.learning.set([]); this.classes.set([]);
   }
 
   load() {
-    if (!this.selectedClass) { this.homework.set([]); return; }
+    if (!this.selectedClass) { this.homework.set([]); this.learning.set([]); return; }
     this.loading.set(true);
+
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const learningFrom = this.fromDate || todayStr;
+    const learningTo = this.toDate || todayStr;
+
+    this.curriculumSvc.getTeaching({
+      classId: this.selectedClass,
+      subjectId: this.selectedSubject,
+      from: learningFrom,
+      to: learningTo
+    }).subscribe({
+      next: logs => this.learning.set(logs),
+      error: () => this.learning.set([])
+    });
+
     this.hwSvc.getForClass(
       this.selectedClass,
       undefined,
@@ -426,6 +482,16 @@ export class HomeworkListComponent implements OnInit {
       error: () => this.loading.set(false)
     });
   }
+
+  learningBySubject = computed(() => {
+    const map = new Map<string, TeachingLogDto[]>();
+    for (const log of this.learning()) {
+      const key = log.subjectName || 'Other';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(log);
+    }
+    return [...map.entries()].map(([subject, items]) => ({ subject, items }));
+  });
 
   // ── Computed helpers ────────────────────────────────────────────────────────
   isOverdue(date: string)  { return new Date(date) < new Date(new Date().toDateString()); }
