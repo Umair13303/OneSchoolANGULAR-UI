@@ -2,7 +2,7 @@ import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular
 import { Subject, takeUntil } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { HomeworkService } from '../../../core/services/homework.service';
 import { AcademicService } from '../../../core/services/academic.service';
 import { SettingsService } from '../../../core/services/settings.service';
@@ -12,20 +12,31 @@ import { ClassDto, SubjectDto, ClassSubjectDto } from '../../../core/models/acad
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { DatePickerComponent } from '../../../shared/components/date-picker/date-picker.component';
 import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
+import {
+  classroomReturnQueryFromParamMap,
+  isFromClassroom
+} from '../../classroom/classroom-context.util';
 
 @Component({
   selector: 'app-assign-homework',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, PageHeaderComponent, DatePickerComponent, OsSelectComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, PageHeaderComponent, DatePickerComponent, OsSelectComponent],
   template: `
     <div class="os-page compact hw-assign-page">
       <div class="form-shell">
-        <app-page-header [dense]="true" [title]="pageTitle()" />
+        <app-page-header [dense]="true" [title]="pageTitle()" routeUrl="/homework/assign">
+          @if (fromClassroom()) {
+            <a class="btn-secondary" [routerLink]="['/classroom/today']" [queryParams]="classroomReturnQp()">Back to class</a>
+          }
+        </app-page-header>
 
         @if (success()) {
           <div class="alert success">
             <span class="material-icons-round">check_circle</span>
             <span class="alert-text">Homework assigned successfully.</span>
+            @if (fromClassroom()) {
+              <a class="link-btn" [routerLink]="['/classroom/today']" [queryParams]="classroomReturnQp()">Back to class</a>
+            }
             <button type="button" class="link-btn" (click)="assignAnother()">Assign another</button>
             <button type="button" class="link-btn" (click)="router.navigate(['/homework/list'])">View diary</button>
           </div>
@@ -103,9 +114,15 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
                 </div>
               </div>
 
-              <div class="form-footer">
-                <button type="button" class="btn-secondary btn-sm"
-                        (click)="router.navigate(['/homework/list'])">Cancel</button>
+              <div class="form-footer fab-sticky-foot">
+                @if (fromClassroom()) {
+                  <a class="btn-secondary btn-sm"
+                     [routerLink]="['/classroom/today']"
+                     [queryParams]="classroomReturnQp()">Cancel</a>
+                } @else {
+                  <button type="button" class="btn-secondary btn-sm"
+                          (click)="router.navigate(['/homework/list'])">Cancel</button>
+                }
                 <button type="submit" class="btn-primary btn-sm" [disabled]="saving()">
                   @if (saving()) {
                     <span class="spinner-sm"></span> Saving…
@@ -125,10 +142,7 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
     :host {
       display: block;
       min-width: 0;
-      margin-top: -16px;
     }
-    @media (max-width: 900px) { :host { margin-top: -6px; } }
-    @media (max-width: 640px) { :host { margin-top: -4px; } }
 
     /* Full content width — no unused side gutter */
     .form-shell {
@@ -262,12 +276,16 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
       justify-content: flex-end;
       align-items: center;
       gap: 8px;
-      padding: 10px 16px;
+      padding: 10px var(--fab-padding-right) 10px 16px;
       border-top: 1px solid var(--border);
       background: var(--surface-2);
       position: relative;
       z-index: 1;
       border-radius: 0 0 var(--r-lg, 12px) var(--r-lg, 12px);
+    }
+
+    .hw-assign-page {
+      padding-bottom: var(--fab-page-pad);
     }
 
     .err {
@@ -352,6 +370,7 @@ export class AssignHomeworkComponent implements OnInit, OnDestroy {
   private authSvc     = inject(AuthService);
   private menuSvc     = inject(MenuService);
   private fb          = inject(FormBuilder);
+  private route       = inject(ActivatedRoute);
   router = inject(Router);
 
   classes        = signal<ClassDto[]>([]);
@@ -380,6 +399,10 @@ export class AssignHomeworkComponent implements OnInit, OnDestroy {
   private workingDays = new Set<number>();
   private isTeacher = false;
   private teacherAssignments: ClassSubjectDto[] = [];
+  fromClassroom = signal(false);
+  private classroomReturn: Record<string, string | number> | null = null;
+
+  classroomReturnQp() { return this.classroomReturn; }
 
   form = this.fb.group({
     classId:      [null as number | null, Validators.required],
@@ -394,6 +417,11 @@ export class AssignHomeworkComponent implements OnInit, OnDestroy {
     this.menuSvc.ensureLoaded().subscribe();
     const user = this.authSvc.currentUser();
     this.isTeacher = this.authSvc.hasRole('teacher');
+    const qp = this.route.snapshot.queryParamMap;
+    this.fromClassroom.set(isFromClassroom(qp));
+    this.classroomReturn = classroomReturnQueryFromParamMap(qp);
+    const prefClassId = Number(qp.get('classId')) || null;
+    const prefSubjectId = Number(qp.get('subjectId')) || null;
 
     if (this.isTeacher && user) {
       this.academicSvc.getAssignmentsByTeacher(user.userId).subscribe(assignments => {
@@ -403,9 +431,23 @@ export class AssignHomeworkComponent implements OnInit, OnDestroy {
           unique.set(a.classId, { classId: a.classId, className: a.className, section: a.classSection ?? '' } as any)
         );
         this.classes.set([...unique.values()]);
+        if (prefClassId && unique.has(prefClassId)) {
+          this.form.patchValue({ classId: prefClassId });
+          this.onClassChange();
+          if (prefSubjectId && this.subjects().some(s => s.subjectId === prefSubjectId)) {
+            this.form.patchValue({ subjectId: prefSubjectId });
+          }
+        }
       });
     } else {
-      this.academicSvc.getClasses().subscribe(c => this.classes.set(c));
+      this.academicSvc.getClasses().subscribe(c => {
+        this.classes.set(c);
+        if (prefClassId) {
+          this.form.patchValue({ classId: prefClassId });
+          this.onClassChange();
+          if (prefSubjectId) this.form.patchValue({ subjectId: prefSubjectId });
+        }
+      });
       this.academicSvc.getSubjects().subscribe(s => this.subjects.set(s));
     }
 

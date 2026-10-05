@@ -26,6 +26,11 @@ export class ExamService {
   updatePaper(id: number, dto: any)           { return this.http.put<void>(`${this.base}/papers/${id}`, dto); }
   deletePaper(id: number)                     { return this.http.delete<void>(`${this.base}/papers/${id}`); }
   publishPaper(id: number)                    { return this.http.post<void>(`${this.base}/papers/${id}/publish`, {}); }
+  downloadPaperPdf(id: number, answerKey = false) {
+    let p = new HttpParams();
+    if (answerKey) p = p.set('answerKey', 'true');
+    return this.http.get(`${this.base}/papers/${id}/pdf`, { params: p, responseType: 'blob' });
+  }
 
   // Schedules
   getSchedules(classId?: number, from?: string, to?: string) {

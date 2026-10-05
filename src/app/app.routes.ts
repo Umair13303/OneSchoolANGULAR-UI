@@ -23,6 +23,13 @@ export const routes: Routes = [
       },
 
       // Students
+      // Section index: the seeded menu gives the "Students" parent item a
+      // routeUrl of /students, so the breadcrumb renders it as a link. That
+      // path had no route, so it fell through to the '**' wildcard and landed
+      // on the Dashboard. pathMatch 'full' means this only catches the bare
+      // path and never shadows students/list, /new, /add, /import or /edit/:id.
+      // No guard here on purpose — the redirect target keeps its own roleGuard.
+      { path: 'students', redirectTo: 'students/list', pathMatch: 'full' },
       {
         path: 'students/list',
         canActivate: [roleGuard],
@@ -156,13 +163,13 @@ export const routes: Routes = [
       {
         path: 'curriculum/plans/:id',
         canActivate: [roleGuard],
-        data: { roles: ['admin', 'principal'] },
+        data: { roles: ['admin', 'principal', 'teacher'] },
         loadComponent: () => import('./modules/curriculum/course-plan-builder/course-plan-builder.component').then(m => m.CoursePlanBuilderComponent)
       },
       {
         path: 'curriculum/plans/:planId/topics/:topicId',
         canActivate: [roleGuard],
-        data: { roles: ['admin', 'principal'] },
+        data: { roles: ['admin', 'principal', 'teacher'] },
         loadComponent: () => import('./modules/curriculum/topic-editor/topic-editor.component').then(m => m.TopicEditorComponent)
       },
       {
@@ -170,6 +177,12 @@ export const routes: Routes = [
         canActivate: [roleGuard],
         data: { roles: ['admin', 'principal'] },
         loadComponent: () => import('./modules/curriculum/curriculum-progress/curriculum-progress.component').then(m => m.CurriculumProgressComponent)
+      },
+      {
+        path: 'classroom/today',
+        canActivate: [roleGuard],
+        data: { roles: ['teacher'] },
+        loadComponent: () => import('./modules/classroom/classroom-today/classroom-today.component').then(m => m.ClassroomTodayComponent)
       },
       {
         path: 'curriculum/my-courses',

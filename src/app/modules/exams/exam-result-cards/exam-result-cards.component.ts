@@ -16,7 +16,7 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
   imports: [CommonModule, FormsModule, PageHeaderComponent, OsSelectComponent, LoadingComponent, EmptyStateComponent],
   template: `
     <div class="os-page compact exam-result-cards-page">
-    <app-page-header [dense]="true" [title]="pageTitle()" />
+    <app-page-header [dense]="true" [title]="pageTitle()" routeUrl="/exams/results/cards" />
 
     <div class="os-toolbar">
       <div class="os-toolbar-group">
@@ -129,9 +129,7 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
     </div>
   `,
   styles: [`
-    :host { display:block; min-width:0; margin-top:-16px; }
-    @media (max-width:900px) { :host { margin-top:-6px; } }
-    @media (max-width:640px) { :host { margin-top:-4px; } }
+    :host { display:block; min-width:0; }
 
     .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
     .ph-left { display:flex; align-items:center; gap:12px; }
@@ -184,7 +182,10 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
     .absent-tag { font-size:11px; font-weight:700; color:var(--t3); background:var(--surface-2); padding:3px 8px; border-radius:99px; }
 
     .grade-badge { font-size:12px; font-weight:800; padding:3px 10px; border-radius:99px; }
-    .grade-a\+ { background:#d1fae5; color:#065f46; }
+    /* Needs a DOUBLE backslash: this is a TS template literal, so a single
+       \+ is consumed by JavaScript and Sass received ".grade-a+", a bogus
+       combinator it dropped entirely — the A+ badge rendered unstyled. */
+    .grade-a\\+ { background:#d1fae5; color:#065f46; }
     .grade-a  { background:#d1fae5; color:#065f46; }
     .grade-b  { background:#dbeafe; color:#1e40af; }
     .grade-c  { background:#fef3c7; color:#92400e; }

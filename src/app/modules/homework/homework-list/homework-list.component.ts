@@ -8,7 +8,7 @@ import { CurriculumService } from '../../../core/services/curriculum.service';
 import { HomeworkDto, SubmissionDto } from '../../../core/models/homework.model';
 import { TeachingLogDto } from '../../../core/models/curriculum.model';
 import { ClassDto, AcademicYear, SubjectDto } from '../../../core/models/academic.model';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { DatePickerComponent } from '../../../shared/components/date-picker/date-picker.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
@@ -17,6 +17,10 @@ import { ConfirmDeleteComponent } from '../../../shared/components/confirm-delet
 import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/confirm-delete.service';
 import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
 import { MenuService } from '../../../core/services/menu.service';
+import {
+  classroomReturnQueryFromParamMap,
+  isFromClassroom
+} from '../../classroom/classroom-context.util';
 
 type Tab = 'diary' | 'manage';
 
@@ -26,14 +30,19 @@ type Tab = 'diary' | 'manage';
   imports: [CommonModule, FormsModule, RouterModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, ConfirmDeleteComponent, DatePickerComponent, OsSelectComponent],
   template: `
     <div class="os-page compact hw-list-page">
-    <app-page-header [dense]="true" [title]="pageTitle()">
-      @if (isTeacher()) {
-        <a class="btn-primary" routerLink="/homework/assign">+ Assign Homework</a>
-      }
-    </app-page-header>
+      <app-page-header [dense]="true" [title]="pageTitle()" routeUrl="/homework/list">
+          @if (fromClassroom()) {
+            <a class="btn-secondary" [routerLink]="['/classroom/today']" [queryParams]="classroomReturnQp()">Back to class</a>
+          }
+        @if (isTeacher()) {
+          <a class="btn-primary" routerLink="/homework/assign"
+             [queryParams]="fromClassroom() ? assignPrefill() : null">+ Assign Homework</a>
+        }
+      </app-page-header>
 
+    <div class="os-stage">
     @if (isTeacher()) {
-      <div class="os-toolbar">
+      <div class="os-stage-bar">
         <div class="os-seg" role="tablist">
           <button type="button" class="os-seg-btn" [class.active]="tab() === 'diary'" (click)="tab.set('diary')">
             Diary
@@ -45,7 +54,7 @@ type Tab = 'diary' | 'manage';
       </div>
     }
 
-    <div class="os-toolbar">
+    <div class="os-stage-bar">
       <div class="os-toolbar-group">
         <div class="os-field inline grow">
           <label class="os-field-label">Year</label>
@@ -88,12 +97,13 @@ type Tab = 'diary' | 'manage';
     </div>
 
     @if (tab() === 'diary') {
-      @if (loading()) { <app-loading /> }
+      @if (loading()) { <div class="os-stage-body pad"><app-loading /></div> }
       @else if (!selectedClass) {
-        <div class="os-panel"><app-empty-state message="Select a class to view the diary." icon="menu_book" /></div>
+        <div class="os-stage-body pad"><app-empty-state message="Select a class to view the diary." icon="menu_book" /></div>
       } @else {
+        <div class="os-stage-body pad">
         <!-- Today's Learning (curriculum teaching) — separate from Homework -->
-        <div class="os-panel learning-panel">
+        <div class="learning-panel">
           <h3 class="section-title">Today's Learning</h3>
           @if (learning().length === 0) {
             <div class="muted-empty">No teaching recorded for the selected filters.</div>
@@ -117,7 +127,7 @@ type Tab = 'diary' | 'manage';
 
         <h3 class="section-title hw-section-title">Homework</h3>
         @if (homework().length === 0) {
-          <div class="os-panel"><app-empty-state message="No homework found for selected filters." icon="edit_note" /></div>
+          <app-empty-state message="No homework found for selected filters." icon="edit_note" />
         } @else {
         <!-- Summary strip -->
         <div class="summary-strip">
@@ -157,18 +167,19 @@ type Tab = 'diary' | 'manage';
           }
         </div>
         }
+        </div>
       }
     }
 
     <!-- ── MANAGE TAB (teacher) ────────────────────────────────────────────── -->
     @if (tab() === 'manage' && isTeacher()) {
-      @if (loading()) { <app-loading /> }
+      @if (loading()) { <div class="os-stage-body pad"><app-loading /></div> }
       @else if (!selectedClass) {
-        <div class="os-panel"><app-empty-state message="Select a class to manage homework." icon="assignment" /></div>
+        <div class="os-stage-body pad"><app-empty-state message="Select a class to manage homework." icon="assignment" /></div>
       } @else if (homework().length === 0) {
-        <div class="os-panel"><app-empty-state message="No homework found. Assign some!" icon="edit_note" /></div>
+        <div class="os-stage-body pad"><app-empty-state message="No homework found. Assign some!" icon="edit_note" /></div>
       } @else {
-        <div class="os-panel">
+        <div class="os-stage-body pad">
           <table class="table">
             <thead>
               <tr>
@@ -202,6 +213,7 @@ type Tab = 'diary' | 'manage';
         </div>
       }
     }
+    </div>
 
     <!-- ── SUBMISSIONS PANEL ───────────────────────────────────────────────── -->
     @if (submissionPanel()) {
@@ -273,9 +285,7 @@ type Tab = 'diary' | 'manage';
     </div>
   `,
   styles: [`
-    :host { display:block; min-width:0; margin-top:-16px; }
-    @media (max-width:900px) { :host { margin-top:-6px; } }
-    @media (max-width:640px) { :host { margin-top:-4px; } }
+    :host { display:block; min-width:0; }
 
     .tab-bar { display:flex; gap:0; margin-bottom:20px; border-bottom:2px solid var(--border); }
     .tab-bar button { padding:10px 24px; border:none; background:none; cursor:pointer; font-size:14px; color:var(--t4); font-family:inherit; }
@@ -378,6 +388,7 @@ export class HomeworkListComponent implements OnInit {
   auth = inject(AuthService);
   private confirmDeleteSvc = inject(ConfirmDeleteService);
   private menuSvc = inject(MenuService);
+  private route = inject(ActivatedRoute);
 
   years     = signal<AcademicYear[]>([]);
   classes   = signal<ClassDto[]>([]);
@@ -409,9 +420,24 @@ export class HomeworkListComponent implements OnInit {
 
   isTeacher = computed(() => this.auth.hasRole('teacher', 'superadmin', 'admin', 'principal'));
 
+  fromClassroom = signal(false);
+  private classroomReturn: Record<string, string | number> | null = null;
+
   pageTitle = computed(() =>
     this.menuSvc.titleForRoute('/homework/list', 'Diary / Homework')
   );
+
+  classroomReturnQp() { return this.classroomReturn; }
+  assignPrefill() {
+    const q: Record<string, string | number> = { from: 'classroom' };
+    if (this.selectedClass) q['classId'] = this.selectedClass;
+    if (this.selectedSubject) q['subjectId'] = this.selectedSubject;
+    if (this.classroomReturn) {
+      Object.assign(q, this.classroomReturn);
+      q['from'] = 'classroom';
+    }
+    return q;
+  }
 
   yearOptions = computed<OsSelectOption<number | null>[]>(() => [
     { value: null, label: 'All years' },
@@ -432,8 +458,32 @@ export class HomeworkListComponent implements OnInit {
 
   ngOnInit() {
     this.menuSvc.ensureLoaded().subscribe();
-    this.academicSvc.getYears().subscribe(y => this.years.set(y));
+    const qp = this.route.snapshot.queryParamMap;
+    this.fromClassroom.set(isFromClassroom(qp));
+    this.classroomReturn = classroomReturnQueryFromParamMap(qp);
+    const prefYear = Number(qp.get('academicYearId')) || null;
+    const prefClass = Number(qp.get('classId')) || null;
+    const prefSubject = Number(qp.get('subjectId')) || null;
+
     this.academicSvc.getSubjects().subscribe(s => this.subjects.set(s));
+    this.academicSvc.getYears().subscribe(y => {
+      this.years.set(y);
+      if (!prefClass) return;
+      const yearId = prefYear
+        || y.find(x => (x as any).isActive)?.academicYearId
+        || y[0]?.academicYearId
+        || null;
+      if (!yearId) return;
+      this.selectedYear = yearId;
+      this.academicSvc.getClasses(yearId).subscribe(classes => {
+        this.classes.set(classes);
+        if (classes.some(c => c.classId === prefClass)) {
+          this.selectedClass = prefClass;
+          this.selectedSubject = prefSubject;
+          this.load();
+        }
+      });
+    });
   }
 
   onYearChange() {

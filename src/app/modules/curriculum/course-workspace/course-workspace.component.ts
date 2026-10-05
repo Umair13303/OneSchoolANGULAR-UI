@@ -14,7 +14,7 @@ import { courseHeading, progressDisplay } from '../curriculum-ui.util';
   imports: [CommonModule, RouterModule, PageHeaderComponent, LoadingComponent],
   template: `
     <div class="os-page compact">
-      <app-page-header [dense]="true" [title]="pageTitle()">
+      <app-page-header [dense]="true" [title]="pageTitle()" routeUrl="/curriculum/my-courses">
         <a class="btn-secondary" routerLink="/curriculum/my-courses">My Courses</a>
       </app-page-header>
 

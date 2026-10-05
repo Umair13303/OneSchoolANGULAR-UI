@@ -49,6 +49,8 @@ export interface ClassDto {
   isActive: boolean;
   instituteId?: number | null;
   instituteName?: string | null;
+  campusId?: number | null;
+  campusName?: string | null;
   subjectCount: number;
 }
 

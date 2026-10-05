@@ -29,21 +29,18 @@ type Tab = 'content' | 'materials' | 'activities';
     OsSelectComponent, RichContentEditorComponent, RichContentViewComponent
   ],
   template: `
-    <div class="os-page compact">
-      <app-page-header [dense]="true" [title]="headerTitle()">
-        <a class="btn-secondary" [routerLink]="['/curriculum/plans', planId()]">Back</a>
-        @if (!preview()) {
-          <button type="button" class="btn-secondary" (click)="preview.set(true)" [disabled]="!topic()">Preview</button>
-          <button type="button" class="btn-primary" (click)="save()" [disabled]="busy() || !canSave()">Save</button>
-        } @else {
+    <div class="os-page compact te-page">
+      <app-page-header
+        [dense]="true"
+        [title]="titleModel.trim() || 'Write lesson'"
+        [subtitle]="courseLabel()">
+        @if (preview()) {
           <button type="button" class="btn-primary" (click)="preview.set(false)">Back to Edit</button>
         }
       </app-page-header>
 
       @if (loading()) { <app-loading /> }
       @else if (topic(); as t) {
-        <div class="back-line muted">{{ courseLabel() }}</div>
-
         @if (preview()) {
           <div class="preview-shell">
             <h2 class="preview-title">{{ titleModel }}</h2>
@@ -91,98 +88,116 @@ type Tab = 'content' | 'materials' | 'activities';
             }
           </div>
         } @else {
-          <div class="os-field title-field">
-            <label class="os-field-label">Topic title</label>
-            <input class="os-input title-input" [(ngModel)]="titleModel" placeholder="Topic title" />
-          </div>
-
-          <div class="tabs" role="tablist">
-            <button type="button" class="tab" [class.active]="tab() === 'content'" (click)="tab.set('content')">Content</button>
-            <button type="button" class="tab" [class.active]="tab() === 'materials'" (click)="tab.set('materials')">
-              Materials @if (t.materials.length) { <span class="count">{{ t.materials.length }}</span> }
-            </button>
-            <button type="button" class="tab" [class.active]="tab() === 'activities'" (click)="tab.set('activities')">
-              Activities @if (t.activities.length) { <span class="count">{{ t.activities.length }}</span> }
-            </button>
-          </div>
-
-          @if (error()) { <div class="os-error">{{ error() }}</div> }
-
-          @if (tab() === 'content') {
-            <div class="editor-wrap">
-              <app-rich-content-editor
-                [(ngModel)]="contentModel"
-                placeholder="Write the lesson here — type or paste. Maths, Urdu, Arabic, images and tables are supported."
-                uploadEntityType="CourseTopic"
-                minHeight="280px" />
-            </div>
-            <div class="sticky-actions">
-              <button type="button" class="btn-secondary" (click)="preview.set(true)">Preview</button>
-              <button type="button" class="btn-primary" (click)="save()" [disabled]="busy() || !canSave()">Save</button>
-            </div>
-          }
-
-          @if (tab() === 'materials') {
-            <div class="panel">
-              <div class="panel-head">
-                <p class="muted">Attachments for this topic (PDF, Word, worksheet, image, or link).</p>
-                <button type="button" class="btn-primary btn-sm" (click)="openMaterial()">+ Add Material</button>
+          <div class="te-card">
+            <div class="te-card-top">
+              <div class="os-field title-field">
+                <label class="os-field-label" for="te-topic-title">Topic name</label>
+                <input id="te-topic-title" class="os-input title-input" [(ngModel)]="titleModel"
+                       name="topicTitle" autocomplete="off"
+                       placeholder="e.g. Introduction to nouns" />
               </div>
-              @if (!t.materials.length) {
-                <div class="empty">No materials yet.</div>
-              } @else {
-                @for (m of t.materials; track m.courseMaterialId) {
-                  <div class="mat-row">
-                    <span class="chip">{{ matLabel(m.materialType) }}</span>
-                    <span class="grow">{{ m.title }}</span>
-                    @if (m.fileName) { <span class="muted">{{ m.fileName }}</span> }
-                    @if (m.fileStoreId) {
-                      <a [href]="fileUrl(m.fileStoreId)" target="_blank" rel="noopener">Open</a>
-                    } @else if (m.url) {
-                      <a [href]="m.url" target="_blank" rel="noopener">Open</a>
-                    }
-                    <button type="button" class="link danger" (click)="removeMaterial(m.courseMaterialId)">Remove</button>
-                  </div>
+
+              <div class="tabs" role="tablist">
+                <button type="button" class="tab" [class.active]="tab() === 'content'" (click)="tab.set('content')">
+                  <span class="material-icons-round">edit_note</span> Lesson
+                </button>
+                <button type="button" class="tab" [class.active]="tab() === 'materials'" (click)="tab.set('materials')">
+                  <span class="material-icons-round">attach_file</span>
+                  Files @if (t.materials.length) { <span class="count">{{ t.materials.length }}</span> }
+                </button>
+                <button type="button" class="tab" [class.active]="tab() === 'activities'" (click)="tab.set('activities')">
+                  <span class="material-icons-round">extension</span>
+                  Activities @if (t.activities.length) { <span class="count">{{ t.activities.length }}</span> }
+                </button>
+              </div>
+            </div>
+
+            <div class="te-card-body">
+              @if (error()) { <div class="os-error">{{ error() }}</div> }
+              @if (savedFlash()) { <div class="os-ok">Lesson saved.</div> }
+
+              @if (tab() === 'content') {
+                <p class="tab-hint">Write or paste the lesson. Maths, Urdu, Arabic, images and tables are supported.</p>
+                <div class="editor-wrap">
+                  <app-rich-content-editor
+                    [(ngModel)]="contentModel"
+                    placeholder="Start typing the lesson…"
+                    uploadEntityType="CourseTopic"
+                    minHeight="320px" />
+                </div>
+              }
+
+              @if (tab() === 'materials') {
+                <div class="panel-head in-card">
+                  <p class="muted">Attach PDF, Word, worksheet, image, or a link.</p>
+                  <button type="button" class="btn-primary btn-sm" (click)="openMaterial()">+ Add file</button>
+                </div>
+                @if (!t.materials.length) {
+                  <div class="empty">No files yet — add a worksheet or notes for students.</div>
+                } @else {
+                  @for (m of t.materials; track m.courseMaterialId) {
+                    <div class="mat-row">
+                      <span class="chip">{{ matLabel(m.materialType) }}</span>
+                      <span class="grow">{{ m.title }}</span>
+                      @if (m.fileName) { <span class="muted">{{ m.fileName }}</span> }
+                      @if (m.fileStoreId) {
+                        <a [href]="fileUrl(m.fileStoreId)" target="_blank" rel="noopener">Open</a>
+                      } @else if (m.url) {
+                        <a [href]="m.url" target="_blank" rel="noopener">Open</a>
+                      }
+                      <button type="button" class="link danger" (click)="removeMaterial(m.courseMaterialId)">Remove</button>
+                    </div>
+                  }
+                }
+              }
+
+              @if (tab() === 'activities') {
+                <div class="panel-head in-card">
+                  <p class="muted">Optional early-grade activities for this topic.</p>
+                  <button type="button" class="btn-primary btn-sm" (click)="openActivity()">+ Add activity</button>
+                </div>
+                @if (!t.activities.length) {
+                  <div class="empty">No activities yet.</div>
+                } @else {
+                  @for (a of t.activities; track a.courseTopicActivityId) {
+                    <div class="act-card">
+                      <div class="act-top">
+                        <span class="chip act">{{ actLabel(a.activityType) }}</span>
+                        <strong class="grow">{{ a.title }}</strong>
+                        <button type="button" class="link danger" (click)="removeActivity(a.courseTopicActivityId)">Remove</button>
+                      </div>
+                      @if (a.instructionText) { <div class="instr">{{ a.instructionText }}</div> }
+                      <div class="act-media">
+                        @if (a.referenceImageFileId) {
+                          <img [src]="fileUrl(a.referenceImageFileId)" alt="" />
+                        }
+                        @if (a.exampleImageFileId) {
+                          <img [src]="fileUrl(a.exampleImageFileId)" alt="" />
+                        }
+                        @if (a.worksheetFileId) {
+                          <a [href]="fileUrl(a.worksheetFileId)" target="_blank" rel="noopener">
+                            {{ a.worksheetFileName || 'Worksheet' }}
+                          </a>
+                        }
+                      </div>
+                    </div>
+                  }
                 }
               }
             </div>
-          }
 
-          @if (tab() === 'activities') {
-            <div class="panel">
-              <div class="panel-head">
-                <p class="muted">Early-grade activities for this topic.</p>
-                <button type="button" class="btn-primary btn-sm" (click)="openActivity()">+ Add Activity</button>
+            <div class="te-card-foot">
+              <a class="btn-secondary te-act"
+                 [routerLink]="['/curriculum/plans', planId()]">Cancel</a>
+              <div class="te-card-foot-end">
+                <button type="button" class="btn-secondary te-act" (click)="preview.set(true)">Preview</button>
+                <button type="button" class="btn-primary te-act te-save"
+                        (click)="save()" [disabled]="busy() || !canSave()">
+                  {{ busy() ? 'Saving…' : 'Save' }}
+                </button>
               </div>
-              @if (!t.activities.length) {
-                <div class="empty">No activities yet.</div>
-              } @else {
-                @for (a of t.activities; track a.courseTopicActivityId) {
-                  <div class="act-card">
-                    <div class="act-top">
-                      <span class="chip act">{{ actLabel(a.activityType) }}</span>
-                      <strong class="grow">{{ a.title }}</strong>
-                      <button type="button" class="link danger" (click)="removeActivity(a.courseTopicActivityId)">Remove</button>
-                    </div>
-                    @if (a.instructionText) { <div class="instr">{{ a.instructionText }}</div> }
-                    <div class="act-media">
-                      @if (a.referenceImageFileId) {
-                        <img [src]="fileUrl(a.referenceImageFileId)" alt="" />
-                      }
-                      @if (a.exampleImageFileId) {
-                        <img [src]="fileUrl(a.exampleImageFileId)" alt="" />
-                      }
-                      @if (a.worksheetFileId) {
-                        <a [href]="fileUrl(a.worksheetFileId)" target="_blank" rel="noopener">
-                          {{ a.worksheetFileName || 'Worksheet' }}
-                        </a>
-                      }
-                    </div>
-                  </div>
-                }
-              }
             </div>
-          }
+          </div>
         }
       }
     </div>
@@ -302,48 +317,118 @@ type Tab = 'content' | 'materials' | 'activities';
     }
   `,
   styles: [`
-    .back-line { font-size: .85rem; margin: -.25rem 0 .75rem; }
-    .muted { color: #6b7280; }
-    .os-error { color: #b91c1c; margin: .5rem 0; }
-    .title-field { margin-bottom: .75rem; }
+    :host { display: block; }
+    .te-page { padding-bottom: var(--fab-page-pad); }
+
+    .te-card {
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden;
+      box-shadow: 0 1px 2px rgba(15,23,42,.04);
+    }
+    .te-card-top {
+      padding: .9rem 1rem .15rem; background: #f8fafc; border-bottom: 1px solid #eef2f7;
+    }
+    .te-card-body { padding: .85rem 1rem 1rem; }
+
+    /* Symmetric Cancel ←→ Preview + Save, sticky above chat FAB */
+    .te-card-foot {
+      position: sticky;
+      bottom: var(--fab-sticky-bottom);
+      z-index: var(--z-sticky-footer);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .75rem;
+      padding: .85rem var(--fab-padding-right) .85rem 1rem;
+      border-top: 1px solid #e2e8f0;
+      background: rgba(248, 250, 252, .97);
+      backdrop-filter: blur(8px);
+    }
+    .te-card-foot-end {
+      display: flex;
+      align-items: center;
+      gap: .55rem;
+      margin-left: auto;
+    }
+    .te-act {
+      box-sizing: border-box;
+      min-width: 6.75rem;
+      height: 40px !important;
+      padding: 0 1.1rem !important;
+      justify-content: center;
+      text-align: center;
+      font-weight: 700 !important;
+    }
+    .te-save { min-width: 7.25rem; }
+
+    .title-field { margin-bottom: .45rem; }
+    .title-field .os-field-label {
+      display: block; margin-bottom: .3rem;
+      font-size: .68rem; font-weight: 700; letter-spacing: .04em;
+      text-transform: uppercase; color: #64748b;
+    }
     .title-input {
-      box-sizing: border-box; width: 100%; height: 40px; padding: 0 12px;
-      border: 1px solid var(--border, #e5e7eb); border-radius: 10px;
-      font: inherit; font-size: 1.05rem; font-weight: 700;
+      box-sizing: border-box; width: 100%; height: 46px; padding: 0 14px;
+      border: 1px solid #e2e8f0; border-radius: 11px;
+      font: inherit; font-size: 1.08rem; font-weight: 700; color: #0f172a;
+      background: #fff;
     }
+    .title-input:focus {
+      outline: none; border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+    }
+
     .tabs {
-      display: flex; gap: .15rem; border-bottom: 1px solid #e5e7eb; margin-bottom: .85rem;
-      overflow-x: auto;
+      display: flex; gap: .15rem; margin: 0 -.25rem;
+      overflow-x: auto; scrollbar-width: none;
     }
+    .tabs::-webkit-scrollbar { display: none; }
     .tab {
+      display: inline-flex; align-items: center; gap: .3rem;
       background: none; border: none; border-bottom: 2px solid transparent;
-      padding: .55rem .85rem; font: inherit; font-size: .88rem; font-weight: 600;
+      padding: .65rem .75rem; font: inherit; font-size: .86rem; font-weight: 700;
       color: #64748b; cursor: pointer; white-space: nowrap;
     }
+    .tab .material-icons-round { font-size: 18px; opacity: .85; }
     .tab.active { color: #1d4ed8; border-bottom-color: #2563eb; }
     .count {
-      display: inline-block; margin-left: .25rem; font-size: .7rem;
+      display: inline-block; margin-left: .15rem; font-size: .68rem;
       background: #e2e8f0; color: #475569; padding: .05rem .35rem; border-radius: 999px;
     }
-    .editor-wrap { margin-bottom: .75rem; }
-    .sticky-actions {
-      position: sticky; bottom: 0; display: flex; gap: .5rem; justify-content: flex-end;
-      padding: .65rem 0; background: linear-gradient(transparent, var(--bg, #f0f2f5) 30%);
-      z-index: 5;
+    .tab.active .count { background: #dbeafe; color: #1d4ed8; }
+
+    .tab-hint { margin: 0 0 .65rem; font-size: .82rem; color: #64748b; }
+    .muted { color: #6b7280; }
+    .os-error {
+      margin: 0 0 .65rem; padding: .55rem .75rem; border-radius: 10px;
+      background: #fef2f2; color: #b91c1c; font-size: .85rem; font-weight: 600;
     }
-    .panel {
-      background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: .85rem 1rem;
+    .os-ok {
+      margin: 0 0 .65rem; padding: .55rem .75rem; border-radius: 10px;
+      background: #dcfce7; color: #166534; font-size: .85rem; font-weight: 700;
     }
-    .panel-head {
+
+    .editor-wrap { margin-bottom: .25rem; }
+    .editor-wrap ::ng-deep .ql-toolbar {
+      border-radius: 10px 10px 0 0 !important; border-color: #e2e8f0 !important;
+      background: #f8fafc;
+    }
+    .editor-wrap ::ng-deep .ql-container {
+      border-radius: 0 0 10px 10px !important; border-color: #e2e8f0 !important;
+    }
+
+    .panel-head.in-card {
       display: flex; justify-content: space-between; gap: .75rem; align-items: center;
       margin-bottom: .75rem; flex-wrap: wrap;
     }
     .panel-head .muted { margin: 0; font-size: .85rem; }
     .btn-sm { height: 32px !important; padding: 0 12px !important; font-size: 12px !important; }
-    .empty { color: #94a3b8; font-size: .9rem; padding: .5rem 0; }
+    .empty {
+      color: #94a3b8; font-size: .9rem; padding: 1.25rem .5rem;
+      text-align: center; border: 1px dashed #e2e8f0; border-radius: 10px;
+    }
     .mat-row, .act-top {
       display: flex; gap: .5rem; align-items: center; flex-wrap: wrap;
-      padding: .45rem 0; border-top: 1px solid #f1f5f9; font-size: .9rem;
+      padding: .55rem 0; border-top: 1px solid #f1f5f9; font-size: .9rem;
     }
     .grow { flex: 1; min-width: 0; }
     .chip {
@@ -387,10 +472,22 @@ type Tab = 'content' | 'materials' | 'activities';
     @media (min-width: 720px) {
       .sheet-backdrop { place-items: center; padding: 1rem; }
       .sheet, .sheet-lg { border-radius: 12px; }
+      .te-card-foot { padding-left: 1.15rem; padding-right: 1.15rem; }
     }
     @media (max-width: 560px) {
-      .panel-head { align-items: stretch; }
+      .panel-head.in-card { align-items: stretch; }
       .panel-head .btn-primary { width: 100%; }
+      .te-card-foot {
+        flex-direction: column-reverse;
+        align-items: stretch;
+      }
+      .te-card-foot-end {
+        margin-left: 0;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: .5rem;
+      }
+      .te-act { width: 100%; min-width: 0; }
     }
   `]
 })
@@ -406,6 +503,7 @@ export class TopicEditorComponent implements OnInit {
   loading = signal(true);
   busy = signal(false);
   error = signal('');
+  savedFlash = signal(false);
   tab = signal<Tab>('content');
   preview = signal(false);
 
@@ -466,10 +564,9 @@ export class TopicEditorComponent implements OnInit {
     'FillBlanks', 'CircleSelect', 'ImageQuestion'
   ]);
 
-  headerTitle = computed(() => this.topic()?.title || 'Topic');
   courseLabel = computed(() => {
     const p = this.plan();
-    return p ? courseHeading(p.subjectName, p.className, p.section) : 'Course';
+    return p ? courseHeading(p.subjectName, p.className, p.section) : '';
   });
 
   ngOnInit() {
@@ -552,11 +649,17 @@ export class TopicEditorComponent implements OnInit {
     if (!t || !this.titleModel.trim()) return;
     this.busy.set(true);
     this.error.set('');
+    this.savedFlash.set(false);
     this.curriculum.updateTopic(t.courseTopicId, {
       title: this.titleModel.trim(),
       description: isEmptyRichHtml(this.contentModel) ? null : sanitizeRichHtml(this.contentModel)
     }).subscribe({
-      next: () => { this.busy.set(false); this.reload(); },
+      next: () => {
+        this.busy.set(false);
+        this.savedFlash.set(true);
+        this.reload();
+        setTimeout(() => this.savedFlash.set(false), 2000);
+      },
       error: err => {
         this.busy.set(false);
         this.error.set(err?.error?.error || 'Could not save topic.');

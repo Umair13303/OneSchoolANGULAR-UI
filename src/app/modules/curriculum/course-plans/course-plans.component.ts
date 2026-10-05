@@ -19,7 +19,7 @@ import { classDisplay, courseHeading } from '../curriculum-ui.util';
   imports: [CommonModule, FormsModule, RouterModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, OsSelectComponent],
   template: `
     <div class="os-page compact">
-      <app-page-header [dense]="true" [title]="pageTitle()">
+      <app-page-header [dense]="true" [title]="pageTitle()" routeUrl="/curriculum/plans">
         <button type="button" class="btn-primary" (click)="showCreate.set(true)">+ New Course</button>
       </app-page-header>
 

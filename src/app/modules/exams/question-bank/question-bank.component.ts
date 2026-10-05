@@ -37,95 +37,103 @@ interface BankForm {
   imports: [CommonModule, FormsModule, RouterModule, PageHeaderComponent, EmptyStateComponent],
   template: `
     <div class="os-page compact qb-page">
-      <app-page-header [dense]="true" [title]="pageTitle()" subtitle="Reusable questions linked to course topics">
+      <app-page-header [dense]="true" [title]="pageTitle()" routeUrl="/exams/question-bank" subtitle="Reusable questions linked to course topics">
         <button type="button" class="btn-primary" (click)="openCreate()">
           <span class="material-icons-round">add</span> New Question
         </button>
       </app-page-header>
 
-      <div class="os-toolbar">
-        <div class="os-toolbar-group wrap">
-          <div class="os-field inline grow">
-            <label class="os-field-label">Search</label>
-            <input class="os-input" type="search" [(ngModel)]="search" (keyup.enter)="load()" placeholder="Question text…" />
+      <div class="os-stage">
+        <div class="os-stage-bar">
+          <div class="os-toolbar-group qb-filters">
+            <div class="os-field inline grow">
+              <label class="os-field-label">Search</label>
+              <input class="os-input" type="search" [(ngModel)]="search" (keyup.enter)="load()" placeholder="Question text…" />
+            </div>
+            <div class="os-field inline grow">
+              <label class="os-field-label">Course Topic</label>
+              <select class="os-input" [(ngModel)]="filterTopicId" (ngModelChange)="load()">
+                <option [ngValue]="null">All topics</option>
+                @for (t of topics(); track t.id) {
+                  <option [ngValue]="t.id">{{ t.label }}</option>
+                }
+              </select>
+            </div>
+            <div class="os-field inline">
+              <label class="os-field-label">Type</label>
+              <select class="os-input" [(ngModel)]="filterType" (ngModelChange)="applyClientFilters()">
+                <option value="">All types</option>
+                @for (qt of questionTypes; track qt.value) {
+                  <option [value]="qt.value">{{ qt.label }}</option>
+                }
+              </select>
+            </div>
+            <div class="os-field inline">
+              <label class="os-field-label">Status</label>
+              <select class="os-input" [(ngModel)]="filterActive" (ngModelChange)="load()">
+                <option value="active">Active</option>
+                <option value="all">All</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
           </div>
-          <div class="os-field inline grow">
-            <label class="os-field-label">Course Topic</label>
-            <select class="os-input" [(ngModel)]="filterTopicId" (ngModelChange)="load()">
-              <option [ngValue]="null">All topics</option>
-              @for (t of topics(); track t.id) {
-                <option [ngValue]="t.id">{{ t.label }}</option>
-              }
-            </select>
+          <div class="os-toolbar-group end">
+            <button type="button" class="btn-secondary" (click)="load()" [disabled]="loading()">
+              <span class="material-icons-round">search</span> Search
+            </button>
           </div>
-          <div class="os-field inline">
-            <label class="os-field-label">Type</label>
-            <select class="os-input" [(ngModel)]="filterType" (ngModelChange)="applyClientFilters()">
-              <option value="">All types</option>
-              @for (qt of questionTypes; track qt.value) {
-                <option [value]="qt.value">{{ qt.label }}</option>
-              }
-            </select>
-          </div>
-          <div class="os-field inline">
-            <label class="os-field-label">Status</label>
-            <select class="os-input" [(ngModel)]="filterActive" (ngModelChange)="load()">
-              <option value="active">Active</option>
-              <option value="all">All</option>
-              <option value="archived">Archived</option>
-            </select>
-          </div>
-          <button type="button" class="btn-secondary" (click)="load()" [disabled]="loading()">
-            <span class="material-icons-round">search</span> Search
-          </button>
+        </div>
+
+        <div class="os-stage-body">
+          @if (error()) {
+            <div class="banner error">{{ error() }}</div>
+          }
+
+          @if (loading()) {
+            <div class="banner muted">Loading question bank…</div>
+          } @else if (!filtered().length) {
+            <app-empty-state title="No questions" message="Create a question or adjust filters." icon="quiz" />
+          } @else {
+            <div class="table-wrap">
+              <table class="qb-table">
+                <thead>
+                  <tr>
+                    <th class="col-q">Question</th>
+                    <th class="col-topic">Topic</th>
+                    <th class="col-type">Type</th>
+                    <th class="col-marks">Marks</th>
+                    <th class="col-status">Status</th>
+                    <th class="col-act">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (q of filtered(); track q.questionBankItemId) {
+                    <tr>
+                      <td class="col-q">
+                        <span class="q-text" [title]="q.questionText">{{ q.questionText }}</span>
+                      </td>
+                      <td class="col-topic">{{ q.topicTitle || '—' }}</td>
+                      <td class="col-type">{{ typeLabel(q.questionTypeId) }}</td>
+                      <td class="col-marks">{{ q.marks }}</td>
+                      <td class="col-status">
+                        <span class="chip" [class.on]="q.isActive" [class.off]="!q.isActive">
+                          {{ q.isActive ? 'Active' : 'Archived' }}
+                        </span>
+                      </td>
+                      <td class="col-act">
+                        <div class="qb-actions">
+                          <button type="button" class="act-btn" (click)="openEdit(q)">Edit</button>
+                          <button type="button" class="act-btn" (click)="openCopy(q)">Add to paper</button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
         </div>
       </div>
-
-      @if (error()) {
-        <div class="banner error">{{ error() }}</div>
-      }
-
-      @if (loading()) {
-        <div class="banner muted">Loading question bank…</div>
-      } @else if (!filtered().length) {
-        <div class="os-panel">
-          <app-empty-state title="No questions" message="Create a question or adjust filters." icon="quiz" />
-        </div>
-      } @else {
-        <div class="os-panel table-wrap">
-          <table class="qb-table">
-            <thead>
-              <tr>
-                <th>Question</th>
-                <th>Topic</th>
-                <th>Type</th>
-                <th>Marks</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (q of filtered(); track q.questionBankItemId) {
-                <tr>
-                  <td class="q-text">{{ q.questionText }}</td>
-                  <td>{{ q.topicTitle || '—' }}</td>
-                  <td>{{ typeLabel(q.questionTypeId) }}</td>
-                  <td>{{ q.marks }}</td>
-                  <td>
-                    <span class="chip" [class.on]="q.isActive" [class.off]="!q.isActive">
-                      {{ q.isActive ? 'Active' : 'Archived' }}
-                    </span>
-                  </td>
-                  <td class="actions">
-                    <button type="button" class="link-btn" (click)="openEdit(q)">Edit</button>
-                    <button type="button" class="link-btn" (click)="openCopy(q)">Add to Exam Paper</button>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      }
 
       @if (showForm()) {
         <div class="sheet-backdrop" (click)="closeForm()"></div>
@@ -253,38 +261,92 @@ interface BankForm {
     </div>
   `,
   styles: [`
-    :host { display:block; }
-    .qb-page { max-width: 1100px; }
-    .os-toolbar-group.wrap { flex-wrap: wrap; gap: 8px; }
-    .os-field.inline { min-width: 140px; }
-    .os-field.grow { flex: 1; min-width: 180px; }
+    :host { display: block; min-width: 0; }
+    .qb-page { width: 100%; max-width: none; }
+    .qb-filters { flex: 1; min-width: 0; flex-wrap: wrap; gap: 8px; }
+    .qb-filters .os-field.inline { min-width: 120px; }
+    .qb-filters .os-field.grow { flex: 1 1 160px; min-width: 160px; }
+    .os-stage-body { padding: 0; }
     .os-input, .fi select, .fi input, .fi textarea {
-      width: 100%; padding: .45rem .7rem; border: 1.5px solid var(--border, #e2e8f0);
-      border-radius: 8px; font-size: .88rem; font-family: inherit; background: #fff; box-sizing: border-box;
+      width: 100%; height: 34px; padding: 0 10px;
+      border: 1px solid var(--border); border-radius: 0;
+      font-size: 13px; font-family: inherit;
+      background: var(--surface); color: var(--t1); box-sizing: border-box;
     }
-    .fi textarea { resize: vertical; min-height: 72px; }
+    .fi textarea { height: auto; padding: 8px 10px; resize: vertical; min-height: 72px; }
     .btn-primary, .btn-secondary {
-      display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 8px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      height: 34px; padding: 0 14px; border-radius: 0;
       font-size: 13px; font-weight: 600; cursor: pointer; border: none;
     }
-    .btn-primary { background: var(--accent, #6366f1); color: #fff; }
+    .btn-primary { background: var(--accent); color: #fff; }
     .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
-    .btn-secondary { background: var(--surface, #fff); color: var(--t2, #475569); border: 1.5px solid var(--border, #e2e8f0); }
-    .banner { padding: .65rem .9rem; border-radius: 8px; margin: .5rem 0 1rem; font-size: .88rem; }
-    .banner.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-    .banner.ok { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
-    .banner.muted { color: #64748b; }
-    .table-wrap { overflow-x: auto; }
-    .qb-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
-    .qb-table th { text-align: left; padding: .55rem .65rem; color: #64748b; font-size: .72rem;
-      text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid #e2e8f0; }
-    .qb-table td { padding: .7rem .65rem; border-bottom: 1px solid #f1f5f9; vertical-align: top; color: #1e293b; }
-    .q-text { max-width: 360px; }
-    .chip { display: inline-block; padding: .15rem .5rem; border-radius: 999px; font-size: .72rem; font-weight: 600; }
+    .btn-secondary {
+      background: var(--surface); color: var(--t2);
+      border: 1px solid var(--border);
+    }
+    .banner { padding: 10px 12px; margin: 0; font-size: 13px; border-bottom: 1px solid var(--border); }
+    .banner.error { background: #fef2f2; color: #991b1b; }
+    .banner.ok { background: #ecfdf5; color: #065f46; }
+    .banner.muted { color: var(--t4); }
+
+    .table-wrap { width: 100%; overflow-x: auto; }
+    .qb-table {
+      width: 100%; border-collapse: collapse; table-layout: fixed;
+      font-size: 13px;
+    }
+    .qb-table th {
+      text-align: left; padding: 10px 12px;
+      color: var(--t4); font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .04em;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-2); white-space: nowrap;
+    }
+    .qb-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle; color: var(--t2);
+    }
+    .qb-table tbody tr:hover td { background: var(--surface-2); }
+    .qb-table tbody tr:last-child td { border-bottom: none; }
+
+    .col-q { width: 34%; }
+    .col-topic { width: 16%; }
+    .col-type { width: 14%; }
+    .col-marks { width: 8%; text-align: center; }
+    .col-status { width: 10%; }
+    .col-act { width: 18%; text-align: right; }
+    th.col-marks, th.col-act { text-align: inherit; }
+    th.col-act { text-align: right; }
+
+    .q-text {
+      display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      font-weight: 600; color: var(--t1);
+    }
+    .col-topic, .col-type {
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .chip {
+      display: inline-flex; align-items: center;
+      height: 22px; padding: 0 8px; border-radius: 999px;
+      font-size: 11px; font-weight: 700;
+    }
     .chip.on { background: #d1fae5; color: #065f46; }
-    .chip.off { background: #f1f5f9; color: #64748b; }
-    .actions { white-space: nowrap; display: flex; flex-wrap: wrap; gap: .35rem; }
-    .link-btn { background: none; border: none; color: #4f46e5; font-weight: 600; font-size: .8rem; cursor: pointer; padding: 0; }
+    .chip.off { background: var(--surface-2); color: var(--t4); }
+
+    /* Do NOT use global .actions — it breaks <td> layout */
+    .qb-actions {
+      display: inline-flex; align-items: center; justify-content: flex-end;
+      gap: 6px; flex-wrap: wrap;
+    }
+    .act-btn {
+      height: 28px; padding: 0 10px;
+      border: 1px solid var(--border); border-radius: 0;
+      background: var(--surface); color: var(--accent);
+      font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+      white-space: nowrap;
+    }
+    .act-btn:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--surface)); }
     .sheet-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,.35); z-index: 40; }
     .sheet {
       position: fixed; top: 0; right: 0; width: min(440px, 100%); height: 100%; background: #fff;
@@ -315,10 +377,23 @@ interface BankForm {
     .tf { display: flex; gap: .5rem; margin-bottom: .85rem; }
     .tf button { padding: .4rem 1rem; border-radius: 8px; border: 1.5px solid #e2e8f0; background: #fff; cursor: pointer; font-weight: 600; }
     .tf button.on { background: #d1fae5; border-color: #10b981; color: #065f46; }
+    @media (max-width: 900px) {
+      .col-type, .col-marks { display: none; }
+      .col-q { width: 40%; }
+      .col-topic { width: 22%; }
+      .col-status { width: 14%; }
+      .col-act { width: 24%; }
+    }
     @media (max-width: 640px) {
-      .qb-table th:nth-child(3), .qb-table td:nth-child(3),
-      .qb-table th:nth-child(5), .qb-table td:nth-child(5) { display: none; }
-      .q-text { max-width: 180px; }
+      .os-stage-bar { flex-direction: column; align-items: stretch; }
+      .os-toolbar-group.end { margin-left: 0; width: 100%; }
+      .os-toolbar-group.end .btn-secondary { width: 100%; }
+      .col-status { display: none; }
+      .col-q { width: 48%; }
+      .col-topic { width: 24%; }
+      .col-act { width: 28%; }
+      .qb-actions { flex-direction: column; align-items: stretch; }
+      .act-btn { width: 100%; }
       .sheet { width: 100%; }
     }
   `]

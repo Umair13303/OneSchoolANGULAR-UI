@@ -109,7 +109,7 @@ export interface OsSelectOption<T = unknown> {
       height: 34px;
       padding: 0 8px 0 10px;
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: 0;
       background: var(--surface);
       color: var(--t1);
       font: inherit;
@@ -176,7 +176,7 @@ export interface OsSelectOption<T = unknown> {
       z-index: 40;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 0;
       box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.06);
       overflow: hidden;
       animation: os-dd-in 0.14s ease-out;

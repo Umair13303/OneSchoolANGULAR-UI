@@ -26,4 +26,15 @@ export class TimetableService {
   create(dto: any) { return this.http.post<TimetableEntryDto>(`${this.base}/timetable`, dto); }
   update(id: number, dto: any) { return this.http.put(`${this.base}/timetable/${id}`, dto); }
   delete(id: number) { return this.http.delete(`${this.base}/timetable/${id}`); }
+
+  /** Landscape class timetable PDF (no browser print headers). */
+  downloadPdf(classId: number, dayOfWeek?: number, academicYearId?: number) {
+    let params = new HttpParams().set('classId', classId);
+    if (dayOfWeek)      params = params.set('dayOfWeek', dayOfWeek);
+    if (academicYearId) params = params.set('academicYearId', academicYearId);
+    return this.http.get(`${this.base}/timetable/pdf`, {
+      params,
+      responseType: 'blob'
+    });
+  }
 }

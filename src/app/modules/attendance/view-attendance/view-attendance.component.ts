@@ -20,9 +20,10 @@ import { MenuService } from '../../../core/services/menu.service';
   imports: [CommonModule, FormsModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, DatePickerComponent, OsSelectComponent],
   template: `
     <div class="os-page compact view-att-page">
-    <app-page-header [dense]="true" [title]="pageTitle()" />
+    <app-page-header [dense]="true" [title]="pageTitle()" routeUrl="/attendance/view" />
 
-    <div class="os-toolbar">
+    <div class="os-stage">
+    <div class="os-stage-bar">
       <div class="os-seg" role="tablist" aria-label="Attendance mode">
         <button type="button" class="os-seg-btn" [class.active]="tab() === 'daily'" (click)="switchTab('daily')">
           <span class="material-icons-round">view_list</span>
@@ -38,7 +39,7 @@ import { MenuService } from '../../../core/services/menu.service';
     </div>
 
     @if (tab() === 'daily') {
-      <div class="os-toolbar">
+      <div class="os-stage-bar">
         <div class="os-toolbar-group">
           <div class="os-field inline grow">
             <label class="os-field-label">Class</label>
@@ -76,14 +77,15 @@ import { MenuService } from '../../../core/services/menu.service';
       </div>
 
       @if (loading()) {
-        <app-loading />
+        <div class="os-stage-body pad"><app-loading /></div>
       } @else if (searched() && records().length === 0) {
-        <div class="os-panel">
+        <div class="os-stage-body pad">
           <app-empty-state title="No records found" message="No attendance records match the selected class, period, and date." icon="event_available" />
         </div>
       } @else if (records().length > 0) {
 
-        <div class="action-card os-panel">
+        <div class="os-stage-body">
+        <div class="action-card">
           <div class="stats-group">
             @for (s of dailyStats(); track s.label) {
               <div class="stat-pill" [style.background]="s.bg" [style.color]="s.color">
@@ -96,7 +98,7 @@ import { MenuService } from '../../../core/services/menu.service';
           </div>
         </div>
 
-        <div class="roster-card os-panel">
+        <div class="roster-card">
           <table class="roster-table">
             <thead>
               <tr>
@@ -136,11 +138,12 @@ import { MenuService } from '../../../core/services/menu.service';
             </tbody>
           </table>
         </div>
+        </div>
       }
     }
 
     @if (tab() === 'summary') {
-      <div class="os-toolbar">
+      <div class="os-stage-bar">
         <div class="os-toolbar-group">
           <div class="os-field inline grow">
             <label class="os-field-label">Class</label>
@@ -173,13 +176,13 @@ import { MenuService } from '../../../core/services/menu.service';
       </div>
 
       @if (loading()) {
-        <app-loading />
+        <div class="os-stage-body pad"><app-loading /></div>
       } @else if (searched() && summaries().length === 0) {
-        <div class="os-panel">
+        <div class="os-stage-body pad">
           <app-empty-state title="No summary data" message="No attendance records found for this class within the specified date range." icon="bar_chart" />
         </div>
       } @else if (summaries().length > 0) {
-        <div class="roster-card os-panel">
+        <div class="os-stage-body roster-card">
           <table class="roster-table">
             <thead>
               <tr>
@@ -235,21 +238,17 @@ import { MenuService } from '../../../core/services/menu.service';
       }
     }
     </div>
+    </div>
   `,
   styles: [`
     :host {
       display: block;
       min-width: 0;
-      margin-top: -16px;
     }
     .seg-short { display: none; }
     @media (max-width: 900px) {
-      :host { margin-top: -6px; }
       .seg-full { display: none; }
       .seg-short { display: inline; }
-    }
-    @media (max-width: 640px) {
-      :host { margin-top: -4px; }
     }
 
     /* ═══ TABS NAV BAR ═══════════════════════════════ */

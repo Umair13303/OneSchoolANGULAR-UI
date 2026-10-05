@@ -7,6 +7,13 @@ export interface MenuItemTree {
   children: MenuItemTree[];
 }
 
+/** One segment in a page header breadcrumb (e.g. Academic › Timetable › View Timetable). */
+export interface MenuCrumb {
+  title: string;
+  routeUrl: string | null;
+  icon?: string | null;
+}
+
 /** Flat admin view from GET /api/menu/all */
 export interface MenuItemAdmin {
   menuItemId: number;

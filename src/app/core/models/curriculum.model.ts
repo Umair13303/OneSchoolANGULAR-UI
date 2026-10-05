@@ -25,6 +25,19 @@ export interface CoursePlanDetailDto extends CoursePlanListDto {
   chapters: CourseChapterDto[];
 }
 
+export interface TeacherCourseSlotDto {
+  classId: number;
+  className: string;
+  section?: string | null;
+  subjectId: number;
+  subjectName: string;
+  academicYearId: number;
+  yearLabel: string;
+  coursePlanId?: number | null;
+  planStatus?: string | null;
+  planTitle?: string | null;
+}
+
 export interface CreateCoursePlanDto {
   academicYearId: number;
   classId: number;

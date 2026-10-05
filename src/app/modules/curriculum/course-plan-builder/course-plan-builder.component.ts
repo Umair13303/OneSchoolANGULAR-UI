@@ -1,13 +1,15 @@
-import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { CurriculumService } from '../../../core/services/curriculum.service';
 import { MenuService } from '../../../core/services/menu.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { CoursePlanDetailDto, CourseChapterDto, CourseTopicDto } from '../../../core/models/curriculum.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { courseHeading } from '../curriculum-ui.util';
+import { isEmptyRichHtml } from '../../../shared/rich-content/rich-content.util';
 
 @Component({
   selector: 'app-course-plan-builder',
@@ -16,13 +18,13 @@ import { courseHeading } from '../curriculum-ui.util';
   template: `
     <div class="os-page compact">
       <app-page-header [dense]="true" [title]="headerTitle()">
-        <a class="btn-secondary" routerLink="/curriculum/plans">Courses</a>
+        <a class="btn-secondary" [routerLink]="coursesBackLink()">{{ coursesBackLabel() }}</a>
         @if (plan(); as p) {
           @if (p.status !== 'Archived') {
             <button type="button" class="btn-secondary" (click)="openAddChapter()">Add Chapter</button>
             @if (p.status !== 'Published') {
               <button type="button" class="btn-primary" (click)="publish()" [disabled]="busy()">Publish</button>
-            } @else {
+            } @else if (!isTeacher()) {
               <button type="button" class="btn-secondary" (click)="archive()" [disabled]="busy()">Archive</button>
             }
           }
@@ -35,17 +37,30 @@ import { courseHeading } from '../curriculum-ui.util';
           <div class="hero-text">
             <h1>{{ courseTitle() }}</h1>
             <div class="hero-meta">
-              <span>Academic Year {{ p.yearLabel }}</span>
+              <span>{{ p.yearLabel }}</span>
               <span class="dot">·</span>
-              <span class="status" [attr.data-status]="p.status">{{ p.status }}</span>
+              <span class="status" [attr.data-status]="p.status">
+                {{ p.status === 'Draft' ? 'Not published' : p.status }}
+              </span>
               <span class="dot">·</span>
               <span>{{ p.chapterCount }} Chapters · {{ p.topicCount }} Topics</span>
             </div>
             @if (p.status === 'Draft') {
-              <p class="draft-hint">Draft — teachers cannot see this course until you publish.</p>
+              <p class="draft-hint">{{ isTeacher()
+                ? 'Add chapters and topics below. Publish when you are ready to teach.'
+                : 'Draft — teachers cannot see this course until you publish.' }}</p>
             }
           </div>
         </div>
+
+        @if (showGuide()) {
+          <div class="guide">
+            <div class="guide-step done"><span>1</span> Course created</div>
+            <div class="guide-step" [class.active]="!p.chapters.length"><span>2</span> Add a chapter</div>
+            <div class="guide-step" [class.active]="!!p.chapters.length && !p.topicCount"><span>3</span> Add topics</div>
+            <div class="guide-step"><span>4</span> Publish</div>
+          </div>
+        }
 
         @if (error()) { <div class="os-error">{{ error() }}</div> }
 
@@ -79,7 +94,10 @@ import { courseHeading } from '../curriculum-ui.util';
               @if (isOpen(ch.courseChapterId)) {
                 <div class="topics">
                   @if (!ch.topics.length) {
-                    <div class="empty-topics">No topics yet.</div>
+                    <div class="empty-topics">
+                      No topics yet —
+                      <button type="button" class="linkish" (click)="openAddTopic(ch)">add the first topic</button>
+                    </div>
                   }
                   @for (t of ch.topics; track t.courseTopicId; let ti = $index) {
                     <div class="topic-row">
@@ -87,7 +105,9 @@ import { courseHeading } from '../curriculum-ui.util';
                          [routerLink]="['/curriculum/plans', p.coursePlanId, 'topics', t.courseTopicId]">
                         <span class="t-ord">{{ ci + 1 }}.{{ ti + 1 }}</span>
                         <span class="t-title">{{ t.title }}</span>
-                        @if (t.materials.length || t.activities.length) {
+                        @if (!t.description || isBlankHtml(t.description)) {
+                          <span class="t-need">Add lesson</span>
+                        } @else if (t.materials.length || t.activities.length) {
                           <span class="t-meta">
                             @if (t.materials.length) { {{ t.materials.length }} material{{ t.materials.length === 1 ? '' : 's' }} }
                             @if (t.materials.length && t.activities.length) { · }
@@ -102,7 +122,7 @@ import { courseHeading } from '../curriculum-ui.util';
                           @if (openMenu() === 't-' + t.courseTopicId) {
                             <div class="menu" role="menu">
                               <a role="menuitem"
-                                 [routerLink]="['/curriculum/plans', p.coursePlanId, 'topics', t.courseTopicId]">Open</a>
+                                 [routerLink]="['/curriculum/plans', p.coursePlanId, 'topics', t.courseTopicId]">Write lesson</a>
                               <a role="menuitem"
                                  [routerLink]="['/curriculum/plans', p.coursePlanId, 'topics', t.courseTopicId]"
                                  [queryParams]="{ preview: '1' }">Preview</a>
@@ -116,17 +136,17 @@ import { courseHeading } from '../curriculum-ui.util';
                     </div>
                   }
                   @if (p.status !== 'Archived') {
-                    <button type="button" class="add-inline" (click)="openAddTopic(ch)">+ Add Topic</button>
+                    <button type="button" class="add-inline" (click)="openAddTopic(ch)">+ Add topic</button>
                   }
                 </div>
               }
             </div>
           } @empty {
             <div class="empty-outline">
-              <strong>No chapters yet</strong>
-              <p>Add a chapter to begin building this course.</p>
+              <strong>Start with a chapter</strong>
+              <p>Example: “Numbers”, “Fractions”, or “Unit 1”. Then add topics under it.</p>
               @if (p.status !== 'Archived') {
-                <button type="button" class="btn-primary" (click)="openAddChapter()">Add Chapter</button>
+                <button type="button" class="btn-primary" (click)="openAddChapter()">Add first chapter</button>
               }
             </div>
           }
@@ -137,15 +157,19 @@ import { courseHeading } from '../curriculum-ui.util';
     @if (chapterSheet()) {
       <div class="sheet-backdrop" (click)="chapterSheet.set(false)">
         <div class="sheet" (click)="$event.stopPropagation()">
-          <h3>{{ renamingChapterId() ? 'Rename Chapter' : 'Add Chapter' }}</h3>
+          <h3>{{ renamingChapterId() ? 'Rename chapter' : 'New chapter' }}</h3>
+          <p class="sheet-hint">A chapter groups related topics (like a unit in the textbook).</p>
           <div class="os-field">
-            <label class="os-field-label">Chapter title *</label>
-            <input class="os-input" [(ngModel)]="chapterTitle" placeholder="e.g. Numbers" (keydown.enter)="saveChapterSheet()" />
+            <label class="os-field-label">Chapter name *</label>
+            <input #chapterInput class="os-input" [(ngModel)]="chapterTitle"
+                   placeholder="e.g. Numbers" (keydown.enter)="saveChapterSheet()" />
           </div>
           @if (sheetError()) { <div class="os-error">{{ sheetError() }}</div> }
           <div class="sheet-actions">
             <button type="button" class="btn-secondary" (click)="chapterSheet.set(false)">Cancel</button>
-            <button type="button" class="btn-primary" (click)="saveChapterSheet()" [disabled]="busy()">Save</button>
+            <button type="button" class="btn-primary" (click)="saveChapterSheet()" [disabled]="busy()">
+              {{ renamingChapterId() ? 'Save' : 'Add chapter' }}
+            </button>
           </div>
         </div>
       </div>
@@ -154,15 +178,19 @@ import { courseHeading } from '../curriculum-ui.util';
     @if (topicSheet()) {
       <div class="sheet-backdrop" (click)="topicSheet.set(false)">
         <div class="sheet" (click)="$event.stopPropagation()">
-          <h3>Add Topic</h3>
+          <h3>New topic</h3>
+          <p class="sheet-hint">After you add it, you can write the lesson content right away.</p>
           <div class="os-field">
-            <label class="os-field-label">Topic title *</label>
-            <input class="os-input" [(ngModel)]="topicTitle" placeholder="e.g. Addition up to 10" (keydown.enter)="saveTopicSheet()" />
+            <label class="os-field-label">Topic name *</label>
+            <input #topicInput class="os-input" [(ngModel)]="topicTitle"
+                   placeholder="e.g. Addition up to 10" (keydown.enter)="saveTopicSheet()" />
           </div>
           @if (sheetError()) { <div class="os-error">{{ sheetError() }}</div> }
           <div class="sheet-actions">
             <button type="button" class="btn-secondary" (click)="topicSheet.set(false)">Cancel</button>
-            <button type="button" class="btn-primary" (click)="saveTopicSheet()" [disabled]="busy()">Add</button>
+            <button type="button" class="btn-primary" (click)="saveTopicSheet()" [disabled]="busy()">
+              Add &amp; write lesson
+            </button>
           </div>
         </div>
       </div>
@@ -177,6 +205,22 @@ import { courseHeading } from '../curriculum-ui.util';
     }
     .dot { color: #cbd5e1; }
     .draft-hint { margin: .45rem 0 0; font-size: .8rem; color: #92400e; }
+    .guide {
+      display: flex; flex-wrap: wrap; gap: .45rem; margin: 0 0 1rem;
+    }
+    .guide-step {
+      display: inline-flex; align-items: center; gap: .4rem;
+      padding: .35rem .65rem; border-radius: 999px; font-size: .78rem; font-weight: 700;
+      background: #f1f5f9; color: #64748b;
+    }
+    .guide-step span {
+      width: 18px; height: 18px; border-radius: 999px; display: grid; place-items: center;
+      background: #e2e8f0; font-size: .7rem;
+    }
+    .guide-step.active { background: #dbeafe; color: #1d4ed8; }
+    .guide-step.active span { background: #2563eb; color: #fff; }
+    .guide-step.done { background: #dcfce7; color: #166534; }
+    .guide-step.done span { background: #16a34a; color: #fff; }
     .status {
       font-size: .7rem; font-weight: 700; padding: .15rem .45rem; border-radius: 999px;
       background: #f3f4f6; color: #4b5563;
@@ -208,6 +252,14 @@ import { courseHeading } from '../curriculum-ui.util';
 
     .topics { padding: .15rem 0 .35rem; }
     .empty-topics { padding: .65rem 1rem .5rem 2.4rem; font-size: .85rem; color: #94a3b8; }
+    .linkish {
+      background: none; border: none; padding: 0; font: inherit; font-size: inherit;
+      color: #2563eb; font-weight: 700; cursor: pointer; text-decoration: underline;
+    }
+    .t-need {
+      font-size: .72rem; font-weight: 800; color: #b45309; background: #fef3c7;
+      padding: .12rem .4rem; border-radius: 999px; flex-shrink: 0;
+    }
     .topic-row {
       display: flex; align-items: stretch; border-top: 1px solid #f1f5f9;
     }
@@ -263,6 +315,7 @@ import { courseHeading } from '../curriculum-ui.util';
       border-radius: 16px 16px 0 0; padding: 1.15rem; display: grid; gap: .7rem;
     }
     .sheet h3 { margin: 0; font-size: 1.05rem; }
+    .sheet-hint { margin: 0; font-size: .82rem; color: #64748b; line-height: 1.4; }
     .sheet .os-input {
       box-sizing: border-box; width: 100%; height: 36px; padding: 0 10px;
       border: 1px solid #e5e7eb; border-radius: 10px; font: inherit; font-size: 13px; font-weight: 600;
@@ -283,6 +336,7 @@ export class CoursePlanBuilderComponent implements OnInit {
   private router = inject(Router);
   private curriculum = inject(CurriculumService);
   private menuSvc = inject(MenuService);
+  private auth = inject(AuthService);
 
   plan = signal<CoursePlanDetailDto | null>(null);
   loading = signal(true);
@@ -295,9 +349,22 @@ export class CoursePlanBuilderComponent implements OnInit {
   topicSheet = signal(false);
   sheetError = signal('');
   renamingChapterId = signal<number | null>(null);
+  welcome = signal(false);
   addTopicChapterId: number | null = null;
   chapterTitle = '';
   topicTitle = '';
+  pendingTopicAfterChapter = false;
+
+  @ViewChild('chapterInput') chapterInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('topicInput') topicInput?: ElementRef<HTMLInputElement>;
+
+  isTeacher = () => this.auth.hasRole('teacher') && !this.auth.hasRole('admin', 'principal', 'superadmin');
+  coursesBackLink = () => this.isTeacher() ? '/curriculum/my-courses' : '/curriculum/plans';
+  coursesBackLabel = () => this.isTeacher() ? 'My Courses' : 'Courses';
+  showGuide = computed(() => {
+    const p = this.plan();
+    return !!p && p.status === 'Draft' && (this.welcome() || p.chapterCount === 0 || p.topicCount === 0);
+  });
 
   headerTitle = computed(() => this.courseTitle() || this.menuSvc.titleForRoute('/curriculum/plans', 'Course'));
   courseTitle = computed(() => {
@@ -307,9 +374,22 @@ export class CoursePlanBuilderComponent implements OnInit {
 
   ngOnInit() {
     this.menuSvc.ensureLoaded().subscribe();
+    this.welcome.set(this.route.snapshot.queryParamMap.get('welcome') === '1');
     const id = Number(this.route.snapshot.paramMap.get('id'));
-    if (!id) { this.router.navigate(['/curriculum/plans']); return; }
+    if (!id) { this.router.navigate([this.coursesBackLink()]); return; }
     this.reload(id);
+  }
+
+  isBlankHtml(html?: string | null) {
+    return isEmptyRichHtml(html);
+  }
+
+  private focusSheetInput(kind: 'chapter' | 'topic') {
+    setTimeout(() => {
+      const el = kind === 'chapter' ? this.chapterInput?.nativeElement : this.topicInput?.nativeElement;
+      el?.focus();
+      el?.select();
+    }, 50);
   }
 
   @HostListener('document:click')
@@ -330,10 +410,11 @@ export class CoursePlanBuilderComponent implements OnInit {
     });
   }
 
-  reload(id?: number) {
+  reload(id?: number, after?: () => void) {
     const planId = id ?? this.plan()?.coursePlanId;
     if (!planId) return;
-    this.loading.set(true);
+    const soft = !!this.plan() && !id;
+    if (!soft) this.loading.set(true);
     this.curriculum.getPlan(planId).subscribe({
       next: p => {
         for (const ch of p.chapters) {
@@ -343,13 +424,13 @@ export class CoursePlanBuilderComponent implements OnInit {
           }
         }
         this.plan.set(p);
-        // Expand all chapters by default on first load
         if (this.expanded().size === 0 && p.chapters.length) {
           this.expanded.set(new Set(p.chapters.map(c => c.courseChapterId)));
         }
         this.loading.set(false);
+        after?.();
       },
-      error: () => { this.loading.set(false); this.error.set('Failed to load course.'); }
+      error: () => { this.loading.set(false); this.error.set('Could not load this course.'); }
     });
   }
 
@@ -359,6 +440,7 @@ export class CoursePlanBuilderComponent implements OnInit {
     this.sheetError.set('');
     this.openMenu.set(null);
     this.chapterSheet.set(true);
+    this.focusSheetInput('chapter');
   }
 
   startRenameChapter(ch: CourseChapterDto) {
@@ -367,12 +449,13 @@ export class CoursePlanBuilderComponent implements OnInit {
     this.sheetError.set('');
     this.openMenu.set(null);
     this.chapterSheet.set(true);
+    this.focusSheetInput('chapter');
   }
 
   saveChapterSheet() {
     const p = this.plan();
     if (!p || !this.chapterTitle.trim()) {
-      this.sheetError.set('Title is required.');
+      this.sheetError.set('Please enter a chapter name.');
       return;
     }
     this.busy.set(true);
@@ -381,7 +464,7 @@ export class CoursePlanBuilderComponent implements OnInit {
     if (renameId) {
       this.curriculum.updateChapter(renameId, { title: this.chapterTitle.trim() }).subscribe({
         next: () => { this.busy.set(false); this.chapterSheet.set(false); this.reload(); },
-        error: err => { this.busy.set(false); this.sheetError.set(err?.error?.error || 'Failed.'); }
+        error: err => { this.busy.set(false); this.sheetError.set(err?.error?.error || 'Could not save.'); }
       });
     } else {
       this.curriculum.createChapter({ coursePlanId: p.coursePlanId, title: this.chapterTitle.trim() }).subscribe({
@@ -389,9 +472,16 @@ export class CoursePlanBuilderComponent implements OnInit {
           this.busy.set(false);
           this.chapterSheet.set(false);
           this.expanded.update(s => new Set([...s, ch.courseChapterId]));
-          this.reload();
+          this.pendingTopicAfterChapter = true;
+          this.reload(undefined, () => {
+            if (this.pendingTopicAfterChapter) {
+              this.pendingTopicAfterChapter = false;
+              const latest = this.plan()?.chapters.find(c => c.courseChapterId === ch.courseChapterId);
+              if (latest) this.openAddTopic(latest);
+            }
+          });
         },
-        error: err => { this.busy.set(false); this.sheetError.set(err?.error?.error || 'Failed.'); }
+        error: err => { this.busy.set(false); this.sheetError.set(err?.error?.error || 'Could not add chapter.'); }
       });
     }
   }
@@ -403,11 +493,12 @@ export class CoursePlanBuilderComponent implements OnInit {
     this.openMenu.set(null);
     this.expanded.update(s => new Set([...s, ch.courseChapterId]));
     this.topicSheet.set(true);
+    this.focusSheetInput('topic');
   }
 
   saveTopicSheet() {
     if (!this.addTopicChapterId || !this.topicTitle.trim()) {
-      this.sheetError.set('Title is required.');
+      this.sheetError.set('Please enter a topic name.');
       return;
     }
     const planId = this.plan()?.coursePlanId;
@@ -422,7 +513,7 @@ export class CoursePlanBuilderComponent implements OnInit {
           this.reload();
         }
       },
-      error: err => { this.busy.set(false); this.sheetError.set(err?.error?.error || 'Failed.'); }
+      error: err => { this.busy.set(false); this.sheetError.set(err?.error?.error || 'Could not add topic.'); }
     });
   }
 

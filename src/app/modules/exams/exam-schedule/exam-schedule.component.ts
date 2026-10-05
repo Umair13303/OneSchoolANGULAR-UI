@@ -19,86 +19,88 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
   imports: [CommonModule, ReactiveFormsModule, FormsModule, ConfirmDeleteComponent, DatePickerComponent, PageHeaderComponent, OsSelectComponent, LoadingComponent, EmptyStateComponent],
   template: `
     <div class="os-page compact exam-schedule-page">
-    <app-page-header [dense]="true" [title]="pageTitle()">
+    <app-page-header [dense]="true" [title]="pageTitle()" routeUrl="/exams/schedule">
       <button class="btn-primary" (click)="openForm()">
         <span class="material-icons-round">add</span> Schedule Exam
       </button>
     </app-page-header>
 
-    <div class="os-toolbar">
-      <div class="os-toolbar-group">
-        <div class="os-field inline grow">
-          <label class="os-field-label">Class</label>
-          <app-os-select
-            icon="school"
-            placeholder="All classes"
-            [searchable]="classFilterOptions().length > 6"
-            [options]="classFilterOptions()"
-            [value]="filterClass"
-            (valueChange)="filterClass = $event ?? ''; load()" />
-        </div>
-        <div class="os-field inline">
-          <label class="os-field-label">From</label>
-          <div class="os-date-wrap"><app-date-picker [(ngModel)]="filterFrom" (dateChange)="load()" [ngModelOptions]="{standalone:true}" /></div>
-        </div>
-        <div class="os-field inline">
-          <label class="os-field-label">To</label>
-          <div class="os-date-wrap"><app-date-picker [(ngModel)]="filterTo" (dateChange)="load()" [ngModelOptions]="{standalone:true}" /></div>
+    <div class="os-stage">
+      <div class="os-stage-bar">
+        <div class="os-toolbar-group">
+          <div class="os-field inline grow">
+            <label class="os-field-label">Class</label>
+            <app-os-select
+              icon="school"
+              placeholder="All classes"
+              [searchable]="classFilterOptions().length > 6"
+              [options]="classFilterOptions()"
+              [value]="filterClass"
+              (valueChange)="filterClass = $event ?? ''; load()" />
+          </div>
+          <div class="os-field inline">
+            <label class="os-field-label">From</label>
+            <div class="os-date-wrap"><app-date-picker [(ngModel)]="filterFrom" (dateChange)="load()" [ngModelOptions]="{standalone:true}" /></div>
+          </div>
+          <div class="os-field inline">
+            <label class="os-field-label">To</label>
+            <div class="os-date-wrap"><app-date-picker [(ngModel)]="filterTo" (dateChange)="load()" [ngModelOptions]="{standalone:true}" /></div>
+          </div>
         </div>
       </div>
-    </div>
 
-    @if (loading()) {
-      <app-loading />
-    } @else if (schedules().length === 0) {
-      <div class="os-panel">
-        <app-empty-state title="No exams scheduled" message="No exams scheduled yet." icon="calendar_month" />
-      </div>
-    } @else {
-      <div class="schedule-table-wrap os-panel">
-        <table class="schedule-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Time</th>
-              <th>Paper / Subject</th>
-              <th>Class</th>
-              <th>Type</th>
-              <th>Room</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (s of schedules(); track s.examScheduleId) {
+      @if (loading()) {
+        <div class="os-stage-body pad"><app-loading /></div>
+      } @else if (schedules().length === 0) {
+        <div class="os-stage-body pad">
+          <app-empty-state title="No exams scheduled" message="No exams scheduled yet." icon="calendar_month" />
+        </div>
+      } @else {
+        <div class="os-stage-body schedule-table-wrap">
+          <table class="schedule-table">
+            <thead>
               <tr>
-                <td class="date-cell">
-                  <span class="material-icons-round">event</span>
-                  {{ s.examDate | date:'dd MMM yyyy' }}
-                </td>
-                <td>{{ s.startTime }}{{ s.endTime ? ' – ' + s.endTime : '' }}</td>
-                <td>
-                  <div class="paper-info">
-                    <span class="paper-name">{{ s.paperTitle }}</span>
-                    <span class="subject-name">{{ s.subjectName }}</span>
-                  </div>
-                </td>
-                <td>{{ s.className }}</td>
-                <td><span class="type-badge">{{ s.examType }}</span></td>
-                <td>{{ s.roomOrHall || '—' }}</td>
-                <td><span class="status-badge" [ngClass]="statusClass(s.status)">{{ s.status }}</span></td>
-                <td>
-                  <div class="row-actions">
-                    <button class="btn-sm btn-outline" (click)="openForm(s)" title="Edit"><span class="material-icons-round">edit</span></button>
-                    <button class="btn-sm btn-danger"  (click)="deleteSchedule(s)" title="Delete"><span class="material-icons-round">delete</span></button>
-                  </div>
-                </td>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Paper / Subject</th>
+                <th>Class</th>
+                <th>Type</th>
+                <th>Room</th>
+                <th>Status</th>
+                <th>Actions</th>
               </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    }
+            </thead>
+            <tbody>
+              @for (s of schedules(); track s.examScheduleId) {
+                <tr>
+                  <td class="date-cell">
+                    <span class="material-icons-round">event</span>
+                    {{ s.examDate | date:'dd MMM yyyy' }}
+                  </td>
+                  <td>{{ s.startTime }}{{ s.endTime ? ' – ' + s.endTime : '' }}</td>
+                  <td>
+                    <div class="paper-info">
+                      <span class="paper-name">{{ s.paperTitle }}</span>
+                      <span class="subject-name">{{ s.subjectName }}</span>
+                    </div>
+                  </td>
+                  <td>{{ s.className }}</td>
+                  <td><span class="type-badge">{{ s.examType }}</span></td>
+                  <td>{{ s.roomOrHall || '—' }}</td>
+                  <td><span class="status-badge" [ngClass]="statusClass(s.status)">{{ s.status }}</span></td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="btn-sm btn-outline" (click)="openForm(s)" title="Edit"><span class="material-icons-round">edit</span></button>
+                      <button class="btn-sm btn-danger"  (click)="deleteSchedule(s)" title="Delete"><span class="material-icons-round">delete</span></button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
 
     <!-- Form Modal -->
     @if (showForm()) {
@@ -169,9 +171,7 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
     </div>
   `,
   styles: [`
-    :host { display:block; min-width:0; margin-top:-16px; }
-    @media (max-width:900px) { :host { margin-top:-6px; } }
-    @media (max-width:640px) { :host { margin-top:-4px; } }
+    :host { display:block; min-width:0; }
     .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
     .ph-left { display:flex; align-items:center; gap:12px; }
     .ph-icon { width:44px; height:44px; border-radius:12px; background:var(--accent-s); display:flex; align-items:center; justify-content:center; }

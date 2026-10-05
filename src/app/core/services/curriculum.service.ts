@@ -16,7 +16,8 @@ import {
   CreateTeachingLogDto,
   TeachingLogDto,
   LinkHomeworkDto,
-  CurriculumProgressSummaryDto
+  CurriculumProgressSummaryDto,
+  TeacherCourseSlotDto
 } from '../models/curriculum.model';
 
 @Injectable({ providedIn: 'root' })
@@ -124,6 +125,10 @@ export class CurriculumService {
 
   getMyCourses() {
     return this.http.get<CoursePlanListDto[]>(`${this.url}/my-courses`);
+  }
+
+  getMyCourseSlots() {
+    return this.http.get<TeacherCourseSlotDto[]>(`${this.url}/my-course-slots`);
   }
 
   getWorkspace(planId: number) {

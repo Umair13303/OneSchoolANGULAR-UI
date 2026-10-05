@@ -5,15 +5,18 @@ import { Router, RouterModule } from '@angular/router';
 import { Subscription, merge } from 'rxjs';
 import { ExamService }     from '../../../core/services/exam.service';
 import { AcademicService } from '../../../core/services/academic.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { AssessmentService } from '../../../core/services/assessment.service';
 import { CurriculumService } from '../../../core/services/curriculum.service';
 import { ExamPaperDto, EXAM_TYPES, CLASS_GROUPS } from '../../../core/models/exam.model';
 import { CourseChapterDto } from '../../../core/models/curriculum.model';
+import { ClassDto } from '../../../core/models/academic.model';
 import { ConfirmDeleteComponent } from '../../../shared/components/confirm-delete/confirm-delete.component';
 import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/confirm-delete.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
 import { MenuService } from '../../../core/services/menu.service';
+import Swal from 'sweetalert2';
 
 const SECTION_TYPES = [
   { value: 'Objective',   label: 'Objective / MCQs'  },
@@ -31,10 +34,16 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
   imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterModule, ConfirmDeleteComponent, PageHeaderComponent, OsSelectComponent],
   template: `
     <div class="os-page compact exam-papers-page">
-    <app-page-header [dense]="true" [title]="pageTitle()">
+    <app-page-header [dense]="true" [title]="pageTitle()" routeUrl="/exams/papers">
       <a class="btn-secondary" routerLink="/exams/question-bank">
         <span class="material-icons-round">library_books</span> Question Bank
       </a>
+      <button type="button" class="btn-secondary" (click)="openFiftyMarksPaper()" title="Create paper with 50 total marks and A/B/C sections">
+        <span class="material-icons-round">score</span> 50 Marks Paper
+      </button>
+      <button type="button" class="btn-secondary" (click)="openHundredMarksPaper()" title="Create paper with 100 total marks and A/B/C sections">
+        <span class="material-icons-round">score</span> 100 Marks Paper
+      </button>
       <button class="btn-primary" (click)="openForm()">
         <span class="material-icons-round">add</span> New Paper
       </button>
@@ -248,7 +257,15 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
               @if (sections.length === 0) {
                 <div class="no-sections">
                   <span class="material-icons-round">segment</span>
-                  <p>No sections yet — click <strong>+ Add Section</strong> below.</p>
+                  <p>No sections yet — add manually or apply a marks template.</p>
+                  <div class="tpl-btns">
+                    <button type="button" class="btn-secondary" (click)="applyFiftyMarksTemplate()">
+                      <span class="material-icons-round">score</span> 50-mark template
+                    </button>
+                    <button type="button" class="btn-secondary" (click)="applyHundredMarksTemplate()">
+                      <span class="material-icons-round">score</span> 100-mark template
+                    </button>
+                  </div>
                 </div>
               }
 
@@ -392,6 +409,9 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
               <button class="btn-sm btn-questions" (click)="designQuestions(p)">
                 <span class="material-icons-round">quiz</span> Questions
               </button>
+              <button class="btn-sm btn-outline" (click)="downloadPdf(p)" title="Download paper PDF">
+                <span class="material-icons-round">picture_as_pdf</span> PDF
+              </button>
               @if (p.isDraft) {
                 <button class="btn-sm btn-success" (click)="publish(p)">
                   <span class="material-icons-round">publish</span> Publish
@@ -413,9 +433,7 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
     </div>
   `,
   styles: [`
-    :host { display:block; min-width:0; margin-top:-16px; }
-    @media (max-width:900px) { :host { margin-top:-6px; } }
-    @media (max-width:640px) { :host { margin-top:-4px; } }
+    :host { display:block; min-width:0; }
     .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
     .ph-left { display:flex; align-items:center; gap:12px; }
     .ph-icon { width:44px; height:44px; border-radius:12px; background:var(--accent-s); display:flex; align-items:center; justify-content:center; }
@@ -515,6 +533,7 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
     .no-sections .material-icons-round { font-size:32px; opacity:.4; }
     .no-sections p { font-size:13px; margin:0; }
     .no-sections strong { color:var(--t2); }
+    .tpl-btns { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
 
     /* Section card */
     .sec-card { display:flex; border:1.5px solid var(--border); border-radius:10px; overflow:hidden; margin-bottom:10px; background:var(--surface); }
@@ -562,6 +581,7 @@ export class ExamPapersComponent implements OnInit, OnDestroy {
   private curriculumSvc = inject(CurriculumService);
   private confirmDelete = inject(ConfirmDeleteService);
   private acSvc   = inject(AcademicService);
+  private auth    = inject(AuthService);
   private router  = inject(Router);
   private fb      = inject(FormBuilder);
   private menuSvc = inject(MenuService);
@@ -587,6 +607,9 @@ export class ExamPapersComponent implements OnInit, OnDestroy {
   filterType  = '';
   private titleManuallyEdited = false;
   private titleSub?: Subscription;
+  /** Teacher ClassSubject pairs for UI list/dropdowns (not a security boundary). */
+  private allowedPairs = new Set<string>();
+  private isTeacherOnly = false;
 
   readonly examTypes    = EXAM_TYPES;
   readonly classGroups  = CLASS_GROUPS;
@@ -635,11 +658,42 @@ export class ExamPapersComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.menuSvc.ensureLoaded().subscribe();
-    this.loadDropdowns();
-    this.load();
+    const user = this.auth.currentUser();
+    this.isTeacherOnly = this.auth.hasRole('teacher')
+      && !this.auth.hasRole('admin', 'principal', 'superadmin');
+    if (this.isTeacherOnly && user) {
+      this.acSvc.getAssignmentsByTeacher(user.userId).subscribe({
+        next: assigns => {
+          const active = (assigns || []).filter(a => a.isActive);
+          this.allowedPairs = new Set(active.map(a => `${a.classId}:${a.subjectId}`));
+          const classMap = new Map<number, ClassDto>();
+          const subjectMap = new Map<number, { subjectId: number; subjectName: string }>();
+          active.forEach(a => {
+            classMap.set(a.classId, {
+              classId: a.classId,
+              className: `${a.className}${a.classSection ? ' — ' + a.classSection : ''}`,
+              section: a.classSection ?? ''
+            } as ClassDto);
+            subjectMap.set(a.subjectId, { subjectId: a.subjectId, subjectName: a.subjectName });
+          });
+          this.classes.set([...classMap.values()]);
+          this.subjects.set([...subjectMap.values()]);
+          this.acSvc.getYears().subscribe({ next: y => this.years.set(y), error: () => {} });
+          this.load();
+        },
+        error: () => {
+          this.loadDropdowns();
+          this.load();
+        }
+      });
+    } else {
+      this.loadDropdowns();
+      this.load();
+    }
   }
 
   loadDropdowns() {
+    if (this.isTeacherOnly && this.allowedPairs.size) return;
     this.acSvc.getClasses().subscribe({
       next: c => this.classes.set(c),
       error: e => console.error('Failed to load classes', e)
@@ -661,7 +715,14 @@ export class ExamPapersComponent implements OnInit, OnDestroy {
       undefined, undefined,
       this.filterType || undefined
     ).subscribe({
-      next:  p => { this.papers.set(p.map(x => ({ ...x, sections: x.sections ?? [] }))); this.loading.set(false); },
+      next:  p => {
+        let list = p.map(x => ({ ...x, sections: x.sections ?? [] }));
+        if (this.allowedPairs.size) {
+          list = list.filter(x => this.allowedPairs.has(`${x.classId}:${x.subjectId}`));
+        }
+        this.papers.set(list);
+        this.loading.set(false);
+      },
       error: () => this.loading.set(false)
     });
   }
@@ -768,6 +829,118 @@ export class ExamPapersComponent implements OnInit, OnDestroy {
       totalQuestions:   null, attemptQuestions: null, marksPerQuestion: null,
       sectionNote: '', sortOrder: i + 1,
     }));
+  }
+
+  /** Opens new paper form prefilled as a standard 50-mark A/B/C paper. */
+  openFiftyMarksPaper() {
+    this.openForm();
+    this.applyFiftyMarksTemplate();
+  }
+
+  /** Opens new paper form prefilled as a standard 100-mark A/B/C paper. */
+  openHundredMarksPaper() {
+    this.openForm();
+    this.applyHundredMarksTemplate();
+  }
+
+  /**
+   * Compact 50-mark layout:
+   * A Objective 10 · B Short 20 · C Long 20
+   */
+  applyFiftyMarksTemplate() {
+    this.applyMarksTemplate(50, 20, 90, [
+      {
+        sectionName: 'Section A',
+        sectionType: 'Objective',
+        allocatedMarks: 10,
+        totalQuestions: 10,
+        attemptQuestions: null,
+        marksPerQuestion: 1,
+        sectionNote: 'All MCQs compulsory',
+        sortOrder: 1,
+      },
+      {
+        sectionName: 'Section B',
+        sectionType: 'ShortAnswer',
+        allocatedMarks: 20,
+        totalQuestions: 8,
+        attemptQuestions: 5,
+        marksPerQuestion: 4,
+        sectionNote: 'Attempt any 5 questions',
+        sortOrder: 2,
+      },
+      {
+        sectionName: 'Section C',
+        sectionType: 'LongAnswer',
+        allocatedMarks: 20,
+        totalQuestions: 4,
+        attemptQuestions: 2,
+        marksPerQuestion: 10,
+        sectionNote: 'Attempt any 2 questions',
+        sortOrder: 3,
+      },
+    ]);
+  }
+
+  /**
+   * Pakistan-style 100-mark layout:
+   * A Objective 20 · B Short 40 · C Long 40
+   */
+  applyHundredMarksTemplate() {
+    this.applyMarksTemplate(100, 40, 180, [
+      {
+        sectionName: 'Section A',
+        sectionType: 'Objective',
+        allocatedMarks: 20,
+        totalQuestions: 20,
+        attemptQuestions: null,
+        marksPerQuestion: 1,
+        sectionNote: 'All MCQs compulsory',
+        sortOrder: 1,
+      },
+      {
+        sectionName: 'Section B',
+        sectionType: 'ShortAnswer',
+        allocatedMarks: 40,
+        totalQuestions: 12,
+        attemptQuestions: 8,
+        marksPerQuestion: 5,
+        sectionNote: 'Attempt any 8 questions',
+        sortOrder: 2,
+      },
+      {
+        sectionName: 'Section C',
+        sectionType: 'LongAnswer',
+        allocatedMarks: 40,
+        totalQuestions: 5,
+        attemptQuestions: 4,
+        marksPerQuestion: 10,
+        sectionNote: 'Attempt any 4 questions',
+        sortOrder: 3,
+      },
+    ]);
+  }
+
+  private applyMarksTemplate(
+    totalMarks: number,
+    passMarks: number,
+    durationMinutes: number,
+    sections: Array<{
+      sectionName: string;
+      sectionType: string;
+      allocatedMarks: number;
+      totalQuestions: number | null;
+      attemptQuestions: number | null;
+      marksPerQuestion: number | null;
+      sectionNote: string;
+      sortOrder: number;
+    }>
+  ) {
+    this.form.patchValue({ totalMarks, passMarks, durationMinutes });
+    while (this.sections.length) this.sections.removeAt(0);
+    sections.forEach(s => this.sections.push(this.newSectionGroup(s)));
+    this.activeTab.set(1);
+    this.formError.set('');
   }
 
   removeSection(i: number) { this.sections.removeAt(i); }
@@ -896,8 +1069,84 @@ export class ExamPapersComponent implements OnInit, OnDestroy {
   }
 
   publish(paper: ExamPaperDto) {
-    if (!confirm(`Publish "${paper.title}"? This cannot be undone.`)) return;
-    this.examSvc.publishPaper(paper.examPaperId).subscribe({ next: () => this.load() });
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const colors = isDark
+      ? { bg: '#161922', t1: '#f1f5f9', t3: '#94a3b8' }
+      : { bg: '#ffffff', t1: '#0f172a', t3: '#475569' };
+    const safeTitle = paper.title
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+
+    Swal.fire({
+      html: `
+        <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:8px 0 4px">
+          <div style="width:58px;height:58px;border-radius:16px;background:#dcfce7;display:flex;align-items:center;justify-content:center">
+            <span class="material-icons-round" style="font-size:27px;color:#16a34a;font-variation-settings:'FILL' 1">publish</span>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:17px;font-weight:800;color:${colors.t1};margin-bottom:6px">Publish Exam Paper?</div>
+            <div style="font-size:13.5px;color:${colors.t3};line-height:1.6">
+              Publish <b>${safeTitle}</b>?<br>
+              Once published, this cannot be undone.
+            </div>
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Publish',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+      focusCancel: true,
+      customClass: {
+        popup: 'swal-app-popup',
+        confirmButton: 'swal-btn-success',
+        cancelButton: 'swal-btn-cancel',
+        actions: 'swal-actions'
+      },
+      buttonsStyling: false,
+      background: colors.bg,
+      showClass: { popup: 'swal-show' },
+      hideClass: { popup: 'swal-hide' },
+    }).then(result => {
+      if (!result.isConfirmed) return;
+      this.examSvc.publishPaper(paper.examPaperId).subscribe({
+        next: () => {
+          this.load();
+          Swal.fire({
+            html: `<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:8px 0">
+              <div style="width:50px;height:50px;border-radius:14px;background:#dcfce7;display:flex;align-items:center;justify-content:center">
+                <span class="material-icons-round" style="font-size:24px;color:#16a34a;font-variation-settings:'FILL' 1">check_circle</span>
+              </div>
+              <div style="font-size:15px;font-weight:700;color:${colors.t1}">Paper Published</div>
+            </div>`,
+            background: colors.bg,
+            timer: 1600,
+            showConfirmButton: false,
+            customClass: { popup: 'swal-app-popup', timerProgressBar: 'swal-progress-green' },
+            timerProgressBar: true,
+            buttonsStyling: false,
+            showClass: { popup: 'swal-show' },
+            hideClass: { popup: 'swal-hide' },
+          });
+        },
+        error: (e: any) => {
+          const status = e?.status as number | undefined;
+          const text = e?.error?.error
+            || (status === 403 ? 'You do not have permission to publish this paper.' : null)
+            || (status === 404 ? 'Paper not found.' : null)
+            || 'Please try again.';
+          Swal.fire({
+            icon: 'error',
+            title: 'Publish failed',
+            text,
+            customClass: { popup: 'swal-app-popup', confirmButton: 'swal-btn-primary', actions: 'swal-actions' },
+            buttonsStyling: false,
+          });
+        }
+      });
+    });
   }
 
   deletePaper(paper: ExamPaperDto) {
@@ -911,5 +1160,32 @@ export class ExamPapersComponent implements OnInit, OnDestroy {
 
   designQuestions(paper: ExamPaperDto) {
     this.router.navigate(['/exams/papers', paper.examPaperId, 'questions']);
+  }
+
+  downloadPdf(paper: ExamPaperDto, answerKey = false) {
+    this.examSvc.downloadPaperPdf(paper.examPaperId, answerKey).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        const safe = (paper.title || `Paper-${paper.examPaperId}`).replace(/[\\/:*?"<>|]+/g, '-');
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${safe}${answerKey ? '-AnswerKey' : ''}.pdf`;
+        a.click();
+        const win = window.open(url, '_blank');
+        if (!win) {
+          // popup blocked — download still saved via <a>
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      },
+      error: () => {
+        Swal.fire({
+          icon: 'error',
+          title: 'PDF failed',
+          text: 'Could not generate the exam paper PDF. Try again.',
+          customClass: { popup: 'swal-app-popup', confirmButton: 'swal-btn-primary', actions: 'swal-actions' },
+          buttonsStyling: false,
+        });
+      }
+    });
   }
 }

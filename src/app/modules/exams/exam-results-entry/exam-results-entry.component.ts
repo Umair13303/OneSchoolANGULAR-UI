@@ -1,14 +1,21 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import { ExamService } from '../../../core/services/exam.service';
 import { AcademicService } from '../../../core/services/academic.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { MenuService } from '../../../core/services/menu.service';
 import { ExamPaperDto, ExamResultDto } from '../../../core/models/exam.model';
+import { ClassDto } from '../../../core/models/academic.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import {
+  classroomReturnQueryFromParamMap,
+  isFromClassroom
+} from '../../classroom/classroom-context.util';
 
 interface ResultRow {
   studentId:    number;
@@ -23,10 +30,14 @@ interface ResultRow {
 @Component({
   selector: 'app-exam-results-entry',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent, OsSelectComponent, LoadingComponent, EmptyStateComponent],
+  imports: [CommonModule, FormsModule, RouterModule, PageHeaderComponent, OsSelectComponent, LoadingComponent, EmptyStateComponent],
   template: `
     <div class="os-page compact exam-results-entry-page">
-    <app-page-header [dense]="true" [title]="pageTitle()" />
+    <app-page-header [dense]="true" [title]="pageTitle()" routeUrl="/exams/results/enter">
+      @if (fromClassroom()) {
+        <a class="btn-secondary" [routerLink]="['/classroom/today']" [queryParams]="classroomReturnQp()">Back to class</a>
+      }
+    </app-page-header>
 
     <div class="os-toolbar">
       <div class="os-toolbar-group">
@@ -129,9 +140,7 @@ interface ResultRow {
     </div>
   `,
   styles: [`
-    :host { display:block; min-width:0; margin-top:-16px; }
-    @media (max-width:900px) { :host { margin-top:-6px; } }
-    @media (max-width:640px) { :host { margin-top:-4px; } }
+    :host { display:block; min-width:0; }
 
     .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
     .ph-left { display:flex; align-items:center; gap:12px; }
@@ -193,7 +202,9 @@ interface ResultRow {
 export class ExamResultsEntryComponent implements OnInit {
   private examSvc = inject(ExamService);
   private acSvc   = inject(AcademicService);
+  private auth    = inject(AuthService);
   private menuSvc = inject(MenuService);
+  private route   = inject(ActivatedRoute);
 
   classes       = signal<any[]>([]);
   papers        = signal<ExamPaperDto[]>([]);
@@ -206,6 +217,13 @@ export class ExamResultsEntryComponent implements OnInit {
 
   selectedClass = '';
   selectedPaper = '';
+  fromClassroom = signal(false);
+  private classroomReturn: Record<string, string | number> | null = null;
+  /** Teacher ClassSubject pairs — UI scope only (API still school-wide). */
+  private allowedPairs = new Set<string>();
+  private prefSubjectId: number | null = null;
+
+  classroomReturnQp() { return this.classroomReturn; }
 
   pageTitle = computed(() =>
     this.menuSvc.titleForRoute('/exams/results/enter', 'Enter Results')
@@ -224,8 +242,46 @@ export class ExamResultsEntryComponent implements OnInit {
 
   ngOnInit() {
     this.menuSvc.ensureLoaded().subscribe();
-    this.acSvc.getClasses().subscribe(c => this.classes.set(c));
-    this.examSvc.getPapers().subscribe(p => this.papers.set(p));
+    const qp = this.route.snapshot.queryParamMap;
+    this.fromClassroom.set(isFromClassroom(qp));
+    this.classroomReturn = classroomReturnQueryFromParamMap(qp);
+    const prefClassId = Number(qp.get('classId')) || null;
+    this.prefSubjectId = Number(qp.get('subjectId')) || null;
+    const user = this.auth.currentUser();
+    const isTeacher = this.auth.hasRole('teacher');
+
+    const loadPapers = (classList: any[]) => {
+      this.classes.set(classList);
+      if (prefClassId && classList.some((x: any) => x.classId === prefClassId)) {
+        this.selectedClass = String(prefClassId);
+      }
+      this.examSvc.getPapers().subscribe(p => {
+        const scoped = this.scopePapers(p);
+        this.papers.set(scoped);
+        if (this.selectedClass) this.onClassChange();
+      });
+    };
+
+    if (isTeacher && user) {
+      this.acSvc.getAssignmentsByTeacher(user.userId).subscribe(assigns => {
+        const active = (assigns || []).filter(a => a.isActive);
+        this.allowedPairs = new Set(active.map(a => `${a.classId}:${a.subjectId}`));
+        const unique = new Map<number, ClassDto>();
+        active.forEach(a => unique.set(a.classId, {
+          classId: a.classId,
+          className: `${a.className}${a.classSection ? ' — ' + a.classSection : ''}`,
+          section: a.classSection ?? ''
+        } as ClassDto));
+        loadPapers([...unique.values()]);
+      });
+    } else {
+      this.acSvc.getClasses().subscribe(c => loadPapers(c));
+    }
+  }
+
+  private scopePapers(papers: ExamPaperDto[]): ExamPaperDto[] {
+    if (!this.allowedPairs.size) return papers;
+    return papers.filter(p => this.allowedPairs.has(`${p.classId}:${p.subjectId}`));
   }
 
   onClassChange() {
@@ -233,7 +289,12 @@ export class ExamResultsEntryComponent implements OnInit {
     this.activePaper.set(null);
     this.rows.set([]);
     const id = +this.selectedClass;
-    this.filteredPapers.set(this.papers().filter(p => !id || p.classId === id));
+    let list = this.papers().filter(p => !id || p.classId === id);
+    if (this.prefSubjectId) {
+      const bySub = list.filter(p => p.subjectId === this.prefSubjectId);
+      if (bySub.length) list = bySub;
+    }
+    this.filteredPapers.set(list);
   }
 
   onPaperChange() {

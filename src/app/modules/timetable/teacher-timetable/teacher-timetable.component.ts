@@ -1,5 +1,6 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { TimetableService } from '../../../core/services/timetable.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { SettingsService } from '../../../core/services/settings.service';
@@ -10,7 +11,7 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
 @Component({
   selector: 'app-teacher-timetable',
   standalone: true,
-  imports: [CommonModule, PageHeaderComponent, LoadingComponent],
+  imports: [CommonModule, RouterModule, PageHeaderComponent, LoadingComponent],
   template: `
     <app-page-header
       title="My Timetable"
@@ -133,8 +134,11 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
                 <!-- Right: Content card -->
                 <div class="t-content">
                   @if (entry) {
-                    <!-- Scheduled Subject Card -->
-                    <div class="card schedule-card subject-card" [style.border-left-color]="meta?.color">
+                    <!-- Scheduled Subject Card → Classroom session -->
+                    <a class="card schedule-card subject-card classroom-link"
+                       [style.border-left-color]="meta?.color"
+                       [routerLink]="['/classroom/today']"
+                       [queryParams]="classroomParams(entry)">
                       <div class="card-icon-wrap" [style.color]="meta?.color" [style.background]="meta?.bg">
                         <span class="material-icons-round">{{ meta?.icon }}</span>
                       </div>
@@ -155,7 +159,7 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
                           </span>
                         </div>
                       </div>
-                    </div>
+                    </a>
                   } @else {
                     <!-- Free Period Card -->
                     <div class="card schedule-card free-card">
@@ -226,7 +230,10 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
 
                       @if (entry) {
                         <td class="entry-cell">
-                          <div class="table-entry-card" [style.border-left-color]="meta?.color">
+                          <a class="table-entry-card classroom-link"
+                             [style.border-left-color]="meta?.color"
+                             [routerLink]="['/classroom/today']"
+                             [queryParams]="classroomParams(entry)">
                             <div class="te-subject">
                               <span class="material-icons-round te-icon" [style.color]="meta?.color">{{ meta?.icon }}</span>
                               <span class="te-name">{{ entry.subjectName }}</span>
@@ -235,7 +242,7 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
                               <span class="material-icons-round te-t-icon">meeting_room</span>
                               <span>{{ entry.className }}{{ entry.section ? ' – ' + entry.section : '' }}</span>
                             </div>
-                          </div>
+                          </a>
                         </td>
                       } @else {
                         <td class="empty-cell">
@@ -573,6 +580,12 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
     .card-desc { font-size: 12px; color: var(--t4); margin-top: 3px; }
 
     .subject-card { border-left: 4px solid var(--accent); }
+    .classroom-link {
+      text-decoration: none; color: inherit; cursor: pointer;
+    }
+    a.schedule-card.classroom-link:hover {
+      border-color: var(--accent);
+    }
     .free-card { background: var(--surface-2); border: 1px dashed var(--border-2); }
     .free-icon-bg { background: var(--surface-3); color: var(--t4); }
     .free-title { color: var(--t3); }
@@ -670,10 +683,15 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
     .entry-cell { padding: 10px 14px; text-align: left; }
     .table-entry-card {
       border-left: 3.5px solid var(--accent);
-      padding: 4px 0 4px 10px;
+      padding: 6px 8px 6px 10px;
       display: flex;
       flex-direction: column;
       gap: 3px;
+      border-radius: 8px;
+      transition: background .12s ease;
+    }
+    a.table-entry-card:hover {
+      background: var(--surface-2);
     }
     .te-subject { display: flex; align-items: center; gap: 6px; }
     .te-icon { font-size: 16px; flex-shrink: 0; }
@@ -794,6 +812,21 @@ export class TeacherTimetableComponent implements OnInit {
 
   getEntry(periodNo: number, dayOfWeek: number): TimetableEntryDto | undefined {
     return this.allEntries().find(e => e.periodNo === periodNo && e.dayOfWeek === dayOfWeek);
+  }
+
+  classroomParams(e: TimetableEntryDto) {
+    return {
+      classId: e.classId,
+      subjectId: e.subjectId,
+      periodId: e.periodId,
+      periodNo: e.periodNo,
+      academicYearId: e.academicYearId,
+      className: e.className,
+      section: e.section,
+      subjectName: e.subjectName,
+      startTime: e.startTime,
+      endTime: e.endTime
+    };
   }
 
   fmt(t: string): string { return t ? t.slice(0, 5) : ''; }

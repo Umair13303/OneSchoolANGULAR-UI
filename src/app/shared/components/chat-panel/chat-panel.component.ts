@@ -13,6 +13,10 @@ import { environment } from '../../../../environments/environment';
   selector: 'app-chat-panel',
   standalone: true,
   imports: [CommonModule, FormsModule],
+  // Reflects the existing panelOpen() signal onto the host so the layering
+  // ladder can treat the collapsed button and the open panel differently.
+  // Presentation only — no change to chat behaviour or state.
+  host: { '[class.chat-open]': 'panelOpen()' },
   template: `
     <!-- FAB Floating Action Button -->
     <button class="chat-fab" (click)="togglePanel()" [class.has-unread]="chatSvc.totalUnread() > 0" [class.open]="panelOpen()" aria-label="Toggle chat">
@@ -393,7 +397,12 @@ import { environment } from '../../../../environments/environment';
     }
   `,
   styles: [`
-    :host { position: fixed; bottom: 24px; right: 24px; z-index: 1200; }
+    /* The collapsed button sits BELOW dialogs (--z-fab 500 vs --z-modal 1000):
+       it was at 1200 and floated over every dialog in the app. When the panel
+       is actually open the host rises above dialogs, since the chat is then a
+       primary surface the user deliberately opened. */
+    :host { position: fixed; bottom: 24px; right: 24px; z-index: var(--z-fab); }
+    :host(.chat-open) { z-index: var(--z-chat); }
 
     /* FAB */
     .chat-fab {

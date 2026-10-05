@@ -18,7 +18,7 @@ import { classDisplay, courseHeading, progressDisplay } from '../curriculum-ui.u
   imports: [CommonModule, RouterModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, OsSelectComponent],
   template: `
     <div class="os-page compact">
-      <app-page-header [dense]="true" [title]="pageTitle()" />
+      <app-page-header [dense]="true" [title]="pageTitle()" routeUrl="/curriculum/progress" />
       <div class="os-toolbar">
         <div class="os-toolbar-group">
           <div class="os-field inline grow">

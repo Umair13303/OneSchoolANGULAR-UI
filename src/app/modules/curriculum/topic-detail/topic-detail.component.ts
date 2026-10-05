@@ -27,6 +27,10 @@ import {
   teachingHistoryLine
 } from '../curriculum-ui.util';
 import { environment } from '../../../../environments/environment';
+import {
+  classroomReturnQueryFromParamMap,
+  isFromClassroom
+} from '../../classroom/classroom-context.util';
 
 type Tab = 'content' | 'materials' | 'activities' | 'history';
 type Panel = null | 'teaching' | 'homework' | 'quiz' | 'quizResults' | 'sabaq';
@@ -63,7 +67,11 @@ interface SabaqRow {
   template: `
     <div class="os-page compact">
       <app-page-header [dense]="true" [title]="pageTitle()">
-        <button type="button" class="btn-secondary" (click)="goBack()">Back</button>
+        @if (fromClassroom()) {
+          <a class="btn-secondary" [routerLink]="['/classroom/today']" [queryParams]="classroomReturnQp()">Back to class</a>
+        } @else {
+          <button type="button" class="btn-secondary" (click)="goBack()">Back</button>
+        }
       </app-page-header>
 
       @if (loading()) { <app-loading /> }
@@ -327,7 +335,7 @@ interface SabaqRow {
         <div class="sheet sheet-sm" (click)="$event.stopPropagation()" role="dialog" aria-label="Record Quiz">
           <div class="sheet-head">
             <h3>Quiz / Class Test</h3>
-            <p class="ctx-line">{{ topicContext() }}</p>
+            <p class="ctx-line">In-class assessment · {{ topicContext() }}</p>
           </div>
 
           <div class="os-field tight">
@@ -387,7 +395,7 @@ interface SabaqRow {
         <div class="sheet sheet-wide entry-sheet" (click)="$event.stopPropagation()" role="dialog" aria-label="Enter results">
           <div class="sheet-head row-head">
             <div>
-              <h3>Enter Results</h3>
+              <h3>Enter quiz marks</h3>
               <p class="ctx-line">{{ activeAssessment()?.title }}
                 @if (activeAssessment()?.totalMarks != null) {
                   · <strong>Max {{ activeAssessment()?.totalMarks }}</strong>
@@ -704,8 +712,13 @@ interface SabaqRow {
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; }
     .sheet-actions { display: flex; gap: .5rem; justify-content: flex-end; flex-wrap: wrap; padding-top: .15rem; }
     .sticky-actions {
-      position: sticky; bottom: 0; background: #fff; padding: .55rem 0 .1rem;
-      border-top: 1px solid #f1f5f9; margin-top: .2rem;
+      position: sticky;
+      bottom: var(--fab-sticky-bottom);
+      background: #fff;
+      padding: .55rem var(--fab-padding-right) .1rem 0;
+      border-top: 1px solid #f1f5f9;
+      margin-top: .2rem;
+      z-index: 1;
     }
     .more-toggle {
       background: none; border: none; color: #2563eb; font: inherit; font-size: .8rem;
@@ -1031,7 +1044,20 @@ export class TopicDetailComponent implements OnInit {
     this.assessmentsApi.getResultLookups().subscribe({ next: l => this.lookups.set(l), error: () => {} });
     const id = Number(this.route.snapshot.paramMap.get('topicId'));
     if (!id) { this.router.navigate(['/curriculum/my-courses']); return; }
-    this.reload(id);
+    const qp = this.route.snapshot.queryParamMap;
+    this.fromClassroom.set(isFromClassroom(qp));
+    this.classroomReturn = classroomReturnQueryFromParamMap(qp);
+    const panelQ = qp.get('panel');
+    const tabQ = qp.get('tab');
+    this.reload(id, () => {
+      if (tabQ === 'activities' || tabQ === 'materials' || tabQ === 'history' || tabQ === 'content') {
+        this.tab.set(tabQ as any);
+      }
+      if (panelQ === 'teaching') this.openTeaching();
+      else if (panelQ === 'homework') this.openHomework();
+      else if (panelQ === 'quiz') this.openQuiz();
+      else if (panelQ === 'sabaq') this.openSabaq();
+    });
   }
 
   closePanel() { this.panel.set(null); }
@@ -1458,6 +1484,10 @@ export class TopicDetailComponent implements OnInit {
   }
 
   goBack() { history.back(); }
+
+  fromClassroom = signal(false);
+  private classroomReturn: Record<string, string | number> | null = null;
+  classroomReturnQp() { return this.classroomReturn; }
 
   private flash(msg: string) {
     this.saveFlash.set(msg);

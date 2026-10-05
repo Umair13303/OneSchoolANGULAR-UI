@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import {
   MenuItemTree,
   MenuItemAdmin,
+  MenuCrumb,
   CreateMenuItemRequest,
   UpdateMenuItemRequest,
 } from '../models/menu.model';
@@ -46,10 +47,37 @@ export class MenuService {
     return match?.title?.trim() || fallback;
   }
 
+  /**
+   * Full menu path for a route, e.g. Academic → Timetable → View Timetable.
+   * Falls back to a single leaf crumb when the menu tree is not loaded yet.
+   */
+  breadcrumbForRoute(routeUrl: string, fallbackLeaf = ''): MenuCrumb[] {
+    const path = this.findPath(routeUrl);
+    if (path.length) {
+      return path.map(n => ({
+        title: n.title.trim(),
+        routeUrl: n.routeUrl ? this.normalize(n.routeUrl) : null,
+        icon: n.icon || null,
+      }));
+    }
+    const leaf = fallbackLeaf.trim();
+    if (!leaf) return [];
+    return [{ title: leaf, routeUrl: routeUrl ? this.normalize(routeUrl) : null }];
+  }
+
   findByRoute(routeUrl: string): MenuItemTree | null {
     const target = this.normalize(routeUrl);
     if (!target) return null;
     return this.walk(this.items(), target);
+  }
+
+  /** Ancestor chain (root → leaf) for a route, or [] if not found. */
+  findPath(routeUrl: string): MenuItemTree[] {
+    const target = this.normalize(routeUrl);
+    if (!target) return [];
+    const trail: MenuItemTree[] = [];
+    const found = this.walkPath(this.items(), target, trail);
+    return found ? trail : [];
   }
 
   // ── SuperAdmin management ──────────────────────────────────────────────
@@ -76,12 +104,24 @@ export class MenuService {
 
   private fetch() {
     return this.http.get<MenuItemTree[]>(this.url).pipe(
-      tap(m => this.items.set(m ?? [])),
+      tap(m => this.items.set(this.stripDeadRoutes(m ?? []))),
       catchError(() => {
         this.items.set([]);
         return of([] as MenuItemTree[]);
       })
     );
+  }
+
+  /** Hide menu entries whose routes are not implemented yet (e.g. /files). */
+  private stripDeadRoutes(nodes: MenuItemTree[]): MenuItemTree[] {
+    const dead = new Set(['/files']);
+    return nodes
+      .filter(n => !(n.routeUrl && dead.has(this.normalize(n.routeUrl))))
+      .map(n => ({
+        ...n,
+        children: this.stripDeadRoutes(n.children ?? [])
+      }))
+      .filter(n => n.routeUrl || (n.children?.length ?? 0) > 0);
   }
 
   private walk(nodes: MenuItemTree[], target: string): MenuItemTree | null {
@@ -93,6 +133,20 @@ export class MenuService {
       if (child) return child;
     }
     return null;
+  }
+
+  private walkPath(nodes: MenuItemTree[], target: string, trail: MenuItemTree[]): boolean {
+    for (const node of nodes) {
+      trail.push(node);
+      if (node.routeUrl && this.normalize(node.routeUrl) === target) {
+        return true;
+      }
+      if (this.walkPath(node.children ?? [], target, trail)) {
+        return true;
+      }
+      trail.pop();
+    }
+    return false;
   }
 
   private normalize(url: string): string {

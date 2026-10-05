@@ -4,8 +4,9 @@
    LIGHT THEME
 ═══════════════════════════════════════════════════ */
 :root, [data-theme="light"] {
-  /* Backgrounds */
-  --bg:          #f0f2f5;
+  /* Backgrounds — cool mist so elevated white stages read as the hero surface */
+  --bg:          #e9eef5;
+  --bg-glow:     #f5f8fc;
   --surface:     #ffffff;
   --surface-2:   #f7f8fa;
   --surface-3:   #eef0f3;
@@ -41,6 +42,49 @@
   --t3:          #475569;
   --t4:          #94a3b8;
   --t5:          #cbd5e1;
+
+  /* ── Compatibility aliases ───────────────────────────
+     These names were already in use across module components but were
+     never defined, so `var(--name)` resolved to nothing and the property
+     fell back to its initial value (e.g. transparent backgrounds on the
+     staff list, currentColor borders in Settings). Defined once here:
+     var() resolves against the active theme, so dark mode is covered too.
+     DO NOT use these in new code — use the canonical token named after
+     each arrow instead. */
+  --hover:         var(--surface-2);
+  --primary:       var(--accent);
+  --primary-h:     var(--accent-h);
+  --primary-light: var(--accent-s);
+  --primary-rgb:   var(--accent-rgb);
+  --brand:         var(--accent);
+  --r-md:          var(--r);
+  --text-muted:    var(--t3);
+  --surface2:      var(--surface-2);
+  --sp-4:          16px;
+  --sp-6:          24px;
+
+  /* ── Layering ladder ─────────────────────────────────
+     One source of truth for stacking. Raised in step with each other so
+     a dialog always covers the shell, and the floating chat never covers
+     a dialog. Keep these in order; do not hardcode competing z-indexes. */
+  --z-content:        1;
+  --z-sticky-footer:  50;
+  --z-topbar:         100;
+  --z-sidebar:        300;
+  --z-fab:            500;
+  --z-modal:          1000;
+  --z-chat:           1100;
+  --z-popover:        1300;
+  --z-toast:          1500;
+
+  /* Chat FAB — keep in sync with chat-panel.component.ts */
+  --fab-size:           58px;
+  --fab-inset-bottom:   24px;
+  --fab-inset-right:    24px;
+  --fab-gap:            12px;
+  --fab-sticky-bottom:  calc(var(--fab-inset-bottom) + var(--fab-size) + var(--fab-gap));
+  --fab-padding-right:  calc(var(--fab-inset-right) + var(--fab-size) + var(--fab-gap));
+  --fab-page-pad:       calc(var(--fab-inset-bottom) + var(--fab-size) + 22px);
 
   /* Radius */
   --r:           8px;
@@ -85,6 +129,7 @@
 ═══════════════════════════════════════════════════ */
 [data-theme="dark"] {
   --bg:          #0d0f14;
+  --bg-glow:     #141824;
   --surface:     #161922;
   --surface-2:   #1e2130;
   --surface-3:   #252840;
@@ -158,6 +203,10 @@ html { font-size: 14px; }
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: var(--bg);
+  background-image:
+    radial-gradient(1200px 600px at 12% -10%, var(--bg-glow, #f5f8fc) 0%, transparent 55%),
+    radial-gradient(900px 480px at 100% 0%, color-mix(in srgb, var(--accent) 6%, transparent) 0%, transparent 50%);
+  background-attachment: fixed;
   color: var(--t1);
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
@@ -165,6 +214,17 @@ body {
 }
 
 a { text-decoration: none; color: inherit; }
+
+/* ── Body scroll lock ────────────────────────────────
+   Toggled by the app shell while the mobile navigation drawer is open, so
+   the page no longer scrolls underneath the scrim. `position: fixed` plus
+   a restored scroll offset is used rather than `overflow: hidden`, which
+   iOS Safari ignores on <body>. The shell owns the offset bookkeeping. */
+body.os-scroll-locked {
+  position: fixed;
+  width: 100%;
+  overflow: hidden;
+}
 
 /* Keep icon ligature names clipped when Google Fonts is slow or blocked */
 .material-icons-round {
@@ -329,7 +389,11 @@ a { text-decoration: none; color: inherit; }
   font-size: 13px; font-weight: 600; font-family: inherit;
   cursor: pointer; transition: all 0.15s;
 }
-.btn-secondary:hover { background: var(--surface-2); border-color: var(--t4); color: var(--t1); }
+.btn-secondary:hover:not(:disabled) { background: var(--surface-2); border-color: var(--t4); color: var(--t1); }
+/* Previously absent: a disabled secondary button was pixel-identical to an
+   enabled one, so users clicked buttons that did nothing. Matches the
+   .btn-primary:disabled treatment above. */
+.btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; background: var(--surface); border-color: var(--border); color: var(--t3); }
 
 .btn-sm {
   height: var(--btn-h-sm, 36px);
@@ -338,8 +402,87 @@ a { text-decoration: none; color: inherit; }
 }
 
 /* ═══════════════════════════════════════════════════
-   ONE SCHOOL PAGE PATTERNS (master reference)
-   Introduced with /timetable/view — reuse on later screens.
+   ACTION ICON BUTTON
+   Had no global definition at all: 106 usages across 18 files each
+   re-declared it locally, drifting between 28px and 32px, none with a
+   focus style. Component styles out-specify this block, so a page that
+   already sets its own size keeps it — adopting costs nothing visually
+   and only supplies the missing size floor, hover and focus treatment.
+   Aliases cover the three names that grew up alongside `.icon-btn`.
+═══════════════════════════════════════════════════ */
+.icon-btn, .icon-act, .act-btn, .btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 32px on desktop deliberately: it matches the largest size the local
+     copies already used, so table row heights do not change. The mobile
+     block raises this to 36px for touch. */
+  min-width: 32px;
+  min-height: 32px;
+  padding: 6px;
+  border: none;
+  background: transparent;
+  border-radius: var(--r-input);
+  color: var(--t3);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.icon-btn:hover:not(:disabled),
+.icon-act:hover:not(:disabled),
+.act-btn:hover:not(:disabled),
+.btn-icon:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--t1);
+}
+
+.icon-btn:disabled, .icon-act:disabled, .act-btn:disabled, .btn-icon:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.icon-btn.danger { color: var(--red); }
+.icon-btn.danger:hover:not(:disabled) { background: var(--red-s); color: var(--red); }
+
+/* ═══════════════════════════════════════════════════
+   KEYBOARD FOCUS
+   There was no :focus-visible rule anywhere in the app, against four
+   `outline: none` declarations here plus more in components, so keyboard
+   and screen-reader users had no indication of position. `!important` is
+   deliberate and narrow: it is the only reliable way to outrank the
+   existing `outline: none` rules without editing every component, and it
+   is scoped to :focus-visible so pointer users never see a ring.
+═══════════════════════════════════════════════════ */
+a:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 2px;
+}
+
+/* Screen-reader-only text: lets a page supply an accessible name or a
+   live-region announcement without any visual change. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ═══════════════════════════════════════════════════
+   ONE SCHOOL PAGE PATTERNS (v2 — stage composition)
+   Breadcrumb header outside · one elevated stage for
+   filters + content. Prefer .os-stage over stacked cards.
 ═══════════════════════════════════════════════════ */
 .os-page {
   display: flex;
@@ -348,22 +491,119 @@ a { text-decoration: none; color: inherit; }
   min-width: 0;
 }
 
-/** Dense ERP pages — match /timetable/view vertical rhythm */
+/**
+ * Retained as a no-op alias. The two rhythms (10px / 8px) were the reason
+ * the gap under a page header differed between modules; there is now one
+ * value. Kept so the pages already using `.compact` need no edit, but it
+ * no longer means anything — do not add it to new pages.
+ */
 .os-page.compact {
-  gap: 6px;
+  gap: 12px;
 }
 
+/**
+ * Primary surface: toolbar(s) + body in one elevated shell.
+ * Use instead of separate .os-toolbar + .os-panel stacks.
+ */
+.os-stage {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+  /* Sharp corners — table/stage reads cleaner than soft cards */
+  border-radius: 0 !important;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04), 0 2px 8px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+}
+
+.os-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--accent) 75%, #60a5fa),
+    color-mix(in srgb, var(--accent) 35%, transparent) 55%,
+    transparent
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+.os-stage-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-2) 70%, #fff) 0%,
+    var(--surface) 100%
+  );
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
+}
+
+.os-stage-bar + .os-stage-bar {
+  background: var(--surface);
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.os-stage-body {
+  min-height: 0;
+}
+
+.os-stage-body.pad {
+  padding: 16px;
+}
+
+.os-stage-body.pad-sm {
+  padding: 12px;
+}
+
+/**
+ * Closing bar of a stage — row count, pagination, totals.
+ * Deliberately NOT a mirrored .os-stage-bar: it takes only the stage's
+ * padding language and a top divider. No gradient, no bottom border, no
+ * background of its own (it reads on the stage surface), so it cannot
+ * be mistaken for a second header. .os-stage-bar is unchanged.
+ */
+.os-stage-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
+}
+
+/** Standalone toolbar (legacy / when stage is not used) */
 .os-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  padding: 8px 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg, 12px);
-  box-shadow: var(--sh-xs);
+  padding: 12px 14px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-2) 70%, #fff) 0%,
+    var(--surface) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+  border-radius: 0 !important;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+}
+
+/** Inside a stage, toolbar becomes a flush bar */
+.os-stage > .os-toolbar,
+.os-stage > .os-stage-bar {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .os-toolbar-group {
@@ -437,10 +677,10 @@ a { text-decoration: none; color: inherit; }
   appearance: none;
   -webkit-appearance: none;
   width: 100%;
-  height: 32px;
+  height: 34px;
   padding: 0 28px 0 10px;
   border: 1px solid var(--border);
-  border-radius: var(--r-input, 8px);
+  border-radius: 0;
   background: var(--surface);
   color: var(--t1);
   font: inherit;
@@ -470,29 +710,31 @@ a { text-decoration: none; color: inherit; }
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
+  height: 30px;
+  padding: 0 11px;
+  border-radius: 0;
+  border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 80%, #fff);
   color: var(--t2);
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .os-seg {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  padding: 3px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface-2);
+  padding: 2px;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  border-radius: 0;
+  background: color-mix(in srgb, var(--surface-2) 88%, #e2e8f0);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
 .os-seg.square {
-  border-radius: var(--r-input, 8px);
+  border-radius: 0;
 }
 
 .os-seg-btn {
@@ -500,10 +742,10 @@ a { text-decoration: none; color: inherit; }
   align-items: center;
   justify-content: center;
   gap: 4px;
-  min-height: 30px;
-  padding: 0 10px;
+  min-height: 32px;
+  padding: 0 11px;
   border: none;
-  border-radius: 999px;
+  border-radius: 0;
   background: transparent;
   color: var(--t3);
   font: inherit;
@@ -515,7 +757,7 @@ a { text-decoration: none; color: inherit; }
 }
 
 .os-seg.square .os-seg-btn {
-  border-radius: 6px;
+  border-radius: 0;
 }
 
 .os-seg-btn:hover {
@@ -526,13 +768,13 @@ a { text-decoration: none; color: inherit; }
 .os-seg-btn.active {
   background: var(--accent);
   color: #fff;
-  box-shadow: 0 1px 4px rgba(var(--accent-rgb), 0.28);
+  box-shadow: none;
 }
 
 .os-seg.square .os-seg-btn.active {
-  background: var(--surface);
+  background: color-mix(in srgb, var(--accent-s) 80%, #fff);
   color: var(--accent);
-  box-shadow: var(--sh-xs);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 .os-seg-btn .material-icons-round {
@@ -541,29 +783,42 @@ a { text-decoration: none; color: inherit; }
 
 .os-panel {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg, 12px);
-  box-shadow: var(--sh-xs);
+  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+  border-radius: 0 !important;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04), 0 2px 8px rgba(15, 23, 42, 0.04);
   overflow: hidden;
 }
 
-.os-toolbar app-os-select {
+/** Panel nested inside a stage — flush, no double chrome */
+.os-stage .os-panel {
+  border: none;
+  border-radius: 0 !important;
+  box-shadow: none;
+}
+
+.os-toolbar app-os-select,
+.os-stage-bar app-os-select {
   min-width: 160px;
   width: 200px;
   max-width: 100%;
 }
 
-.os-toolbar .os-field {
+.os-toolbar .os-field,
+.os-stage-bar .os-field {
   flex: 0 1 auto;
 }
 
-.os-toolbar .os-field.grow {
+.os-toolbar .os-field.grow,
+.os-stage-bar .os-field.grow {
   flex: 1 1 160px;
 }
 
 .os-toolbar .os-field.grow app-os-select,
 .os-toolbar .os-field.grow .os-select-wrap,
-.os-toolbar .os-field.grow app-date-picker {
+.os-toolbar .os-field.grow app-date-picker,
+.os-stage-bar .os-field.grow app-os-select,
+.os-stage-bar .os-field.grow .os-select-wrap,
+.os-stage-bar .os-field.grow app-date-picker {
   width: 100%;
   min-width: 0;
 }
@@ -574,7 +829,10 @@ a { text-decoration: none; color: inherit; }
 
 .os-toolbar .btn-primary,
 .os-toolbar .btn-secondary,
-.os-toolbar .search-btn {
+.os-toolbar .search-btn,
+.os-stage-bar .btn-primary,
+.os-stage-bar .btn-secondary,
+.os-stage-bar .search-btn {
   height: 34px;
   min-height: 34px;
   padding: 0 14px;
@@ -583,7 +841,8 @@ a { text-decoration: none; color: inherit; }
 }
 
 @media (max-width: 900px) {
-  .os-toolbar {
+  .os-toolbar,
+  .os-stage-bar {
     align-items: stretch;
   }
   .os-toolbar-group,
@@ -592,7 +851,8 @@ a { text-decoration: none; color: inherit; }
     margin-left: 0;
   }
   .os-select-wrap,
-  .os-toolbar app-os-select {
+  .os-toolbar app-os-select,
+  .os-stage-bar app-os-select {
     min-width: 0;
     width: 100%;
     flex: 1;
@@ -600,6 +860,9 @@ a { text-decoration: none; color: inherit; }
   .os-seg {
     max-width: 100%;
     overflow-x: auto;
+  }
+  .os-stage {
+    border-radius: 0 !important;
   }
 }
 
@@ -846,29 +1109,68 @@ input.ng-invalid.ng-touched:focus {
   width: 100%;
 }
 
+/* Right inset keeps primary actions clear of the chat FAB on all viewports */
+.fab-sticky-foot,
+.form-actions-sticky,
+.save-footer {
+  padding-right: var(--fab-padding-right);
+}
+
 .form-actions-sticky, .save-footer {
   position: sticky;
-  bottom: 20px;
-  z-index: 100;
-  background: var(--surface);
+  bottom: var(--fab-sticky-bottom);
+  z-index: var(--z-sticky-footer);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
   border: 1px solid var(--border);
   border-radius: var(--r-card, 16px);
   box-shadow: var(--sh-lg);
-  padding: 14px 22px;
+  padding: 14px var(--fab-padding-right) 14px 22px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  backdrop-filter: blur(10px);
+}
+
+/* Stage / form foot — sticky above FAB on phone/tablet */
+@media (max-width: 900px) {
+  .fab-sticky-foot {
+    position: sticky;
+    bottom: var(--fab-sticky-bottom);
+    z-index: var(--z-sticky-footer);
+    backdrop-filter: blur(10px);
+  }
+  .os-stage-foot.fab-sticky-foot {
+    border-top: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    box-shadow: 0 -6px 20px rgba(15, 23, 42, .08);
+  }
+  .form-footer.fab-sticky-foot {
+    border-top: 1px solid var(--border);
+    background: color-mix(in srgb, var(--surface-2) 94%, transparent);
+    box-shadow: 0 -4px 16px rgba(15, 23, 42, .06);
+  }
 }
 
 /* ═══════════════════════════════════════════════════
    MODAL FOUNDATION
 ═══════════════════════════════════════════════════ */
+/* `overscroll-behavior: contain` stops scroll chaining: once the dialog's
+   own content reaches its end, the wheel/touch gesture no longer scrolls
+   the page behind it. Paired with the body scroll lock in the app shell. */
 .modal-overlay {
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.45);
   display: flex; align-items: center; justify-content: center;
-  z-index: 1000; animation: fadeIn 0.15s;
+  z-index: var(--z-modal); animation: fadeIn 0.15s;
+  overscroll-behavior: contain;
+}
+/* The same containment for the other backdrop names already in use, so
+   dialogs on pages this phase does not touch stop scrolling the page
+   behind them. Appearance is untouched — these pages keep their own
+   backdrop styling; this adds scroll behaviour only. */
+.overlay, .sheet-backdrop, .modal-backdrop, .panel-overlay, .fs-overlay, .sw-backdrop, .mm-backdrop {
+  overscroll-behavior: contain;
 }
 .modal {
   background: var(--surface);
@@ -968,6 +1270,15 @@ input.ng-invalid.ng-touched:focus {
 .page-header {
   display: flex; align-items: center; justify-content: space-between;
   flex-wrap: wrap; gap: 12px; margin-bottom: 24px;
+}
+
+/* Chat FAB moves up on small screens — chat-panel.component.ts */
+@media (max-width: 640px) {
+  :root {
+    --fab-size: 52px;
+    --fab-inset-bottom: 76px;
+    --fab-inset-right: 16px;
+  }
 }
 
 /* Tablet & Mobile Breakpoint (<= 768px) */
@@ -1072,15 +1383,34 @@ input.ng-invalid.ng-touched:focus {
     min-width: 0 !important;
   }
 
-  /* Touch-friendly inputs with 16px to prevent mobile iOS/Android auto-zoom */
+  /* Touch-friendly inputs with 16px to prevent mobile iOS/Android auto-zoom.
+     The bare `input/select/textarea` catch-all is what closes the auto-zoom
+     gap app-wide, so it stays — but it was also rewriting the flat-stage
+     controls (`.os-select` is 34px with square corners) into 42px rounded
+     ones, so a stage toolbar changed identity at 768px. Excluded below so
+     the approved flat-stage standard holds at every width. Height now reads
+     --input-h-mobile, which was defined but never consumed. */
   .field input, .field select, .field textarea,
   .fi-content input, .fi-content select, .fi-content textarea,
-  .f-input, input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+  .f-input,
+  input:not([type="checkbox"]):not([type="radio"]):not(.os-select),
+  select:not(.os-select):not(.filter-select),
+  textarea {
     font-size: 16px !important;
-    min-height: 42px !important;
+    min-height: var(--input-h-mobile, 44px) !important;
     box-sizing: border-box !important;
     width: 100% !important;
     border-radius: 8px !important;
+  }
+
+  /* Flat-stage controls keep their own geometry on mobile; only the font
+     size is raised, which is all the iOS auto-zoom guard requires. */
+  .os-toolbar .os-select,
+  .os-stage-bar .os-select,
+  .os-toolbar input,
+  .os-stage-bar input {
+    font-size: 16px !important;
+    border-radius: 0 !important;
   }
 
   /* Checkboxes and Radios */
@@ -1148,8 +1478,36 @@ input.ng-invalid.ng-touched:focus {
   .table th { padding: 8px 10px; font-size: 10px; }
   .table td { padding: 10px 10px; font-size: 12.5px; }
 
-  /* Action icon buttons — bigger touch targets */
-  .icon-act, .act-btn { min-width: 36px !important; min-height: 36px !important; }
+  /* The comment above promised horizontal scroll but no overflow rule was
+     ever shipped, and `.table-scroll` is applied on only 2 of 26 table
+     pages. Because `.table th` is `white-space: nowrap`, a wide table
+     always overflows; where its container sets `overflow: hidden` the
+     right-hand columns — normally the edit/delete actions — were clipped
+     and unreachable rather than scrollable.
+
+     Fixed by making the container scroll on the X axis only. Y stays as the
+     container had it, so nothing that was visible becomes clipped. Scoped
+     with :has() to containers that actually hold a table, and excluding any
+     that hold an `app-os-select`, whose dropdown panel is absolutely
+     positioned and would be trapped by a new scroll container.
+     (`app-date-picker` is position:fixed, so it is unaffected.) */
+  .table-scroll,
+  .card:has(> .table):not(:has(app-os-select)),
+  .os-stage-body:has(> .table):not(:has(app-os-select)) {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Action icon buttons — bigger touch targets.
+     This rule existed but targeted only `.icon-act, .act-btn`, which appear
+     ~7 times in total, so it missed all 106 `.icon-btn` instances — i.e. the
+     actual row-action button used across the app. Selector corrected.
+     36px satisfies WCAG 2.5.8 (AA); 44px for 2.5.5 (AAA) would raise mobile
+     table row height and is flagged as a separate decision. */
+  .icon-btn, .icon-act, .act-btn, .btn-icon {
+    min-width: 36px !important;
+    min-height: 36px !important;
+  }
 
   /* Page headers stack */
   .page-header {
@@ -1211,8 +1569,11 @@ input.ng-invalid.ng-touched:focus {
     gap: 8px !important;
   }
 
-  /* Safe scrolling area on mobile so FAB buttons don't block bottom actions */
-  .page-content { padding-bottom: 72px !important; }
+  /* `.page-content` is owned by the app shell (layout.component.ts), which
+     sets its own mobile padding-bottom to clear the floating chat button.
+     This rule used `!important` to set 72px, silently overriding the
+     shell's 80px and making the shell's value dead code. Removed so there
+     is one owner; the shell now also adds the iOS safe-area inset. */
 }
 
 /* Extra Small Mobile (<= 480px) */
@@ -1254,6 +1615,14 @@ input.ng-invalid.ng-touched:focus {
 /* ═══════════════════════════════════════════════════
    SWEETALERT2 — APP THEME
 ═══════════════════════════════════════════════════ */
+/* SweetAlert kept its library default z-index of 1060, which sits above a
+   desktop dialog (1000) but BELOW the mobile bottom-sheet override (2000),
+   so a confirmation fired from inside a sheet rendered behind it. Pinned to
+   the top of the ladder: a confirmation must always cover what triggered it. */
+.swal2-container {
+  z-index: var(--z-toast) !important;
+}
+
 .swal2-container:not(.swal2-top-end):not(.swal2-top-right) {
   background: rgba(0,0,0,0.4) !important;
 }
@@ -1331,6 +1700,23 @@ input.ng-invalid.ng-touched:focus {
   &:hover { background: var(--accent-h) !important; }
 }
 
+.swal-btn-success.swal2-confirm {
+  display: inline-flex; align-items: center;
+  padding: 9px 20px !important;
+  background: #16a34a !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  font-family: inherit !important;
+  cursor: pointer !important;
+  box-shadow: 0 1px 4px rgba(22, 163, 74, 0.35) !important;
+  transition: background 0.15s, transform 0.1s !important;
+  &:hover { background: #15803d !important; transform: translateY(-1px) !important; }
+  &:active { transform: translateY(0) !important; }
+}
+
 .swal-btn-cancel.swal2-cancel {
   display: inline-flex; align-items: center;
   padding: 9px 20px !important;
@@ -1401,3 +1787,34 @@ input.ng-invalid.ng-touched:focus {
 [data-theme="dark"] .swal-toast-popup .swal2-title { color: #f1f5f9 !important; }
 [data-theme="dark"] .swal-toast-popup .swal2-html-container { color: #94a3b8 !important; }
 [data-theme="dark"] .swal-toast-popup .swal2-close { color: #64748b !important; }
+
+/* ═══ Print: hide app chrome so documents print cleanly ═══ */
+@media print {
+  @page { margin: 10mm; }
+
+  .sidebar,
+  .topbar,
+  .mob-backdrop,
+  .mob-menu-btn,
+  app-chat-panel,
+  app-page-header,
+  .no-print {
+    display: none !important;
+  }
+
+  .shell,
+  .main,
+  .page-content {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  body {
+    background: #fff !important;
+  }
+}

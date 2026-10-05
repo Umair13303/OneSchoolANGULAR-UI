@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
@@ -37,17 +37,26 @@ import { forkJoin, map } from 'rxjs';
 
       @if (isTeacher()) {
         <div class="hero-actions">
-          <a routerLink="/attendance/mark" class="hero-cta hero-cta-primary">
+          @if (focusClass(); as focus) {
+            <a class="hero-cta hero-cta-primary"
+               [routerLink]="['/classroom/today']"
+               [queryParams]="classroomQp(focus)">
+              <span class="material-icons-round">play_lesson</span>
+              {{ currentClass() ? 'Start current class' : 'Start next class' }}
+            </a>
+          } @else {
+            <a routerLink="/classroom/today" class="hero-cta hero-cta-primary">
+              <span class="material-icons-round">play_lesson</span>
+              Today's Classroom
+            </a>
+          }
+          <a routerLink="/attendance/mark" class="hero-cta">
             <span class="material-icons-round">how_to_reg</span>
             Mark Attendance
           </a>
-          <a routerLink="/homework/assign" class="hero-cta">
-            <span class="material-icons-round">assignment</span>
-            Assign Homework
-          </a>
-          <a routerLink="/timetable/view" class="hero-cta">
-            <span class="material-icons-round">calendar_view_week</span>
-            Timetable
+          <a routerLink="/homework/list" class="hero-cta">
+            <span class="material-icons-round">fact_check</span>
+            Homework Diary
           </a>
         </div>
       } @else {
@@ -101,6 +110,26 @@ import { forkJoin, map } from 'rxjs';
           </div>
 
           <div class="td-shortcuts">
+            <a routerLink="/classroom/today" class="td-shortcut">
+              <span class="td-shortcut-icon" style="--ic:#4f6ef7">
+                <span class="material-icons-round">play_lesson</span>
+              </span>
+              <span class="td-shortcut-body">
+                <strong>Today's Classroom</strong>
+                <span>Run the full class workflow from one place</span>
+              </span>
+              <span class="material-icons-round td-shortcut-arrow">arrow_forward</span>
+            </a>
+            <a routerLink="/curriculum/my-courses" class="td-shortcut">
+              <span class="td-shortcut-icon" style="--ic:#7c3aed">
+                <span class="material-icons-round">auto_stories</span>
+              </span>
+              <span class="td-shortcut-body">
+                <strong>My Courses</strong>
+                <span>Teach topics, oral, quiz &amp; logs</span>
+              </span>
+              <span class="material-icons-round td-shortcut-arrow">arrow_forward</span>
+            </a>
             <a routerLink="/attendance/mark" class="td-shortcut">
               <span class="td-shortcut-icon" style="--ic:#0891b2">
                 <span class="material-icons-round">how_to_reg</span>
@@ -164,6 +193,68 @@ import { forkJoin, map } from 'rxjs';
           </div>
         </div>
       } @else {
+
+        <!-- TODAY: Now / Next — clock-aware, no new API -->
+        <section class="td-today-focus" aria-label="Today's focus">
+          <div class="td-focus-hd">
+            <h2>Today</h2>
+            <p>{{ dayNames[todayDow] }} · {{ todayClasses().length }} class{{ todayClasses().length === 1 ? '' : 'es' }}</p>
+          </div>
+          <div class="td-focus-grid">
+            <article class="td-focus-card" [class.is-live]="!!currentClass()" [class.is-empty]="!currentClass()">
+              <span class="td-focus-label">{{ currentClass() ? 'Now' : 'Now' }}</span>
+              @if (currentClass(); as cur) {
+                <strong>{{ cur.subjectName }}</strong>
+                <span class="td-focus-meta">
+                  {{ cur.className }}{{ cur.section ? ' · ' + cur.section : '' }}
+                  · {{ fmt(cur.startTime) }}–{{ fmt(cur.endTime) }}
+                </span>
+                <a class="td-focus-cta" [routerLink]="['/classroom/today']" [queryParams]="classroomQp(cur)">
+                  Start class →
+                </a>
+              } @else {
+                <strong class="muted">No class right now</strong>
+                <span class="td-focus-meta">{{ nextClass() ? 'See what is next' : 'Free period' }}</span>
+              }
+            </article>
+            <article class="td-focus-card next" [class.is-empty]="!nextClass()">
+              <span class="td-focus-label">Next</span>
+              @if (nextClass(); as nxt) {
+                <strong>{{ nxt.subjectName }}</strong>
+                <span class="td-focus-meta">
+                  {{ nxt.className }}{{ nxt.section ? ' · ' + nxt.section : '' }}
+                  · {{ fmt(nxt.startTime) }}–{{ fmt(nxt.endTime) }}
+                </span>
+                <a class="td-focus-cta" [routerLink]="['/classroom/today']" [queryParams]="classroomQp(nxt)">
+                  Start class →
+                </a>
+              } @else if (currentClass()) {
+                <strong class="muted">Last class of the day</strong>
+                <span class="td-focus-meta">Finish this period, then you’re done</span>
+              } @else {
+                <strong class="muted">No more classes today</strong>
+                <span class="td-focus-meta">Use shortcuts below for prep work</span>
+              }
+            </article>
+            <article class="td-focus-card tasks">
+              <span class="td-focus-label">Quick tasks</span>
+              <div class="td-focus-tasks">
+                <a routerLink="/attendance/mark" [queryParams]="focusTaskQp('attendance')">
+                  <span class="material-icons-round">how_to_reg</span> Attendance
+                </a>
+                <a routerLink="/homework/list" [queryParams]="focusTaskQp('homework')">
+                  <span class="material-icons-round">fact_check</span> Check homework
+                </a>
+                <a routerLink="/classroom/today" [queryParams]="focusClass() ? classroomQp(focusClass()!) : null">
+                  <span class="material-icons-round">play_lesson</span> Teach
+                </a>
+                <a routerLink="/homework/assign" [queryParams]="focusTaskQp('assign')">
+                  <span class="material-icons-round">assignment</span> Assign homework
+                </a>
+              </div>
+            </article>
+          </div>
+        </section>
 
         <!-- Stat row -->
         <div class="t-stats-row">
@@ -276,16 +367,31 @@ import { forkJoin, map } from 'rxjs';
                           </td>
                           @if (entry) {
                             <td class="t-td-filled t-td-today" [style.--subj-clr]="subjectColor(entry.subjectName)">
-                              <div class="t-entry">
-                                <div class="t-entry-dot"></div>
-                                <div class="t-entry-text">
-                                  <span class="t-entry-subject">{{ entry.subjectName }}</span>
-                                  <span class="t-entry-class">
-                                    <span class="material-icons-round" style="font-size:10px;vertical-align:middle">group</span>
-                                    {{ entry.className }}{{ entry.section ? ' · ' + entry.section : '' }}
-                                  </span>
+                              <a class="t-entry-link"
+                                 [routerLink]="['/classroom/today']"
+                                 [queryParams]="{
+                                   classId: entry.classId,
+                                   subjectId: entry.subjectId,
+                                   periodId: entry.periodId,
+                                   periodNo: entry.periodNo,
+                                   academicYearId: entry.academicYearId,
+                                   className: entry.className,
+                                   section: entry.section,
+                                   subjectName: entry.subjectName,
+                                   startTime: entry.startTime,
+                                   endTime: entry.endTime
+                                 }">
+                                <div class="t-entry">
+                                  <div class="t-entry-dot"></div>
+                                  <div class="t-entry-text">
+                                    <span class="t-entry-subject">{{ entry.subjectName }}</span>
+                                    <span class="t-entry-class">
+                                      <span class="material-icons-round" style="font-size:10px;vertical-align:middle">group</span>
+                                      {{ entry.className }}{{ entry.section ? ' · ' + entry.section : '' }}
+                                    </span>
+                                  </div>
                                 </div>
-                              </div>
+                              </a>
                             </td>
                           } @else {
                             <td class="t-td-free t-td-today"><span class="t-free-label">Free</span></td>
@@ -327,16 +433,31 @@ import { forkJoin, map } from 'rxjs';
                           @let entry = ttEntry(slot.periodNo, d);
                           @if (entry) {
                             <td class="t-td-filled" [class.t-td-today]="d === todayDow" [style.--subj-clr]="subjectColor(entry.subjectName)">
-                              <div class="t-entry">
-                                <div class="t-entry-dot"></div>
-                                <div class="t-entry-text">
-                                  <span class="t-entry-subject">{{ entry.subjectName }}</span>
-                                  <span class="t-entry-class">
-                                    <span class="material-icons-round" style="font-size:10px;vertical-align:middle">group</span>
-                                    {{ entry.className }}{{ entry.section ? ' · ' + entry.section : '' }}
-                                  </span>
+                              <a class="t-entry-link"
+                                 [routerLink]="['/classroom/today']"
+                                 [queryParams]="{
+                                   classId: entry.classId,
+                                   subjectId: entry.subjectId,
+                                   periodId: entry.periodId,
+                                   periodNo: entry.periodNo,
+                                   academicYearId: entry.academicYearId,
+                                   className: entry.className,
+                                   section: entry.section,
+                                   subjectName: entry.subjectName,
+                                   startTime: entry.startTime,
+                                   endTime: entry.endTime
+                                 }">
+                                <div class="t-entry">
+                                  <div class="t-entry-dot"></div>
+                                  <div class="t-entry-text">
+                                    <span class="t-entry-subject">{{ entry.subjectName }}</span>
+                                    <span class="t-entry-class">
+                                      <span class="material-icons-round" style="font-size:10px;vertical-align:middle">group</span>
+                                      {{ entry.className }}{{ entry.section ? ' · ' + entry.section : '' }}
+                                    </span>
+                                  </div>
                                 </div>
-                              </div>
+                              </a>
                             </td>
                           } @else {
                             <td class="t-td-free" [class.t-td-today]="d === todayDow"><span class="t-free-label">Free</span></td>
@@ -368,16 +489,28 @@ import { forkJoin, map } from 'rxjs';
                 <div class="t-today-free-title">No classes today</div>
                 <div class="t-today-free-sub">Enjoy your free day!</div>
               </div>
-            } @else {
+            }             @else {
               <div class="t-today-list">
                 @for (e of todayClasses(); track e.timetableId; let i = $index) {
-                  <div class="t-today-item" [style.--item-clr]="subjectColor(e.subjectName)">
+                  <a class="t-today-item t-today-link"
+                     [class.is-now]="currentClass()?.timetableId === e.timetableId"
+                     [class.is-next]="!currentClass() && nextClass()?.timetableId === e.timetableId"
+                     [style.--item-clr]="subjectColor(e.subjectName)"
+                     [routerLink]="['/classroom/today']"
+                     [queryParams]="classroomQp(e)">
                     <div class="t-today-timeline">
                       <div class="t-today-num">{{ e.periodNo }}</div>
                       @if (!$last) { <div class="t-today-line"></div> }
                     </div>
                     <div class="t-today-info">
-                      <div class="t-today-subject">{{ e.subjectName }}</div>
+                      <div class="t-today-subject">
+                        {{ e.subjectName }}
+                        @if (currentClass()?.timetableId === e.timetableId) {
+                          <span class="t-live-pill">Now</span>
+                        } @else if (!currentClass() && nextClass()?.timetableId === e.timetableId) {
+                          <span class="t-next-pill">Next</span>
+                        }
+                      </div>
                       <div class="t-today-meta">
                         <span class="material-icons-round" style="font-size:11px;vertical-align:middle">group</span>
                         {{ e.className }}{{ e.section ? ' · ' + e.section : '' }}
@@ -386,8 +519,9 @@ import { forkJoin, map } from 'rxjs';
                         <span class="material-icons-round" style="font-size:11px;vertical-align:middle">schedule</span>
                         {{ e.startTime }} – {{ e.endTime }}
                       </div>
+                      <div class="t-today-start">{{ currentClass()?.timetableId === e.timetableId ? 'Continue →' : 'Start class →' }}</div>
                     </div>
-                  </div>
+                  </a>
                 }
               </div>
             }
@@ -800,6 +934,83 @@ import { forkJoin, map } from 'rxjs';
       font-size: 18px; color: var(--t4); transition: color .15s, transform .15s;
     }
 
+    /* ── Today focus: Now / Next / Quick tasks ─────────────────────── */
+    .td-today-focus { margin-bottom: 18px; animation: td-rise .4s ease both; }
+    .td-focus-hd { margin-bottom: 10px; }
+    .td-focus-hd h2 {
+      margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--t1); letter-spacing: -0.02em;
+    }
+    .td-focus-hd p { margin: 2px 0 0; font-size: .82rem; color: var(--t3); }
+    .td-focus-grid {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(3, 1fr);
+    }
+    @media (max-width: 900px) {
+      .td-focus-grid { grid-template-columns: 1fr 1fr; }
+      .td-focus-card.tasks { grid-column: 1 / -1; }
+    }
+    @media (max-width: 560px) {
+      .td-focus-grid { grid-template-columns: 1fr; }
+    }
+    .td-focus-card {
+      display: flex; flex-direction: column; gap: 6px;
+      padding: 14px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--sh);
+      min-height: 118px;
+    }
+    .td-focus-card.is-live {
+      border-color: rgba(22, 163, 74, .45);
+      background: linear-gradient(165deg, #f0fdf4 0%, var(--surface) 55%);
+    }
+    .td-focus-card.next {
+      border-color: rgba(37, 99, 235, .28);
+      background: linear-gradient(165deg, #eff6ff 0%, var(--surface) 55%);
+    }
+    .td-focus-label {
+      font-size: .68rem; font-weight: 800; letter-spacing: .06em;
+      text-transform: uppercase; color: var(--t4);
+    }
+    .td-focus-card.is-live .td-focus-label { color: #15803d; }
+    .td-focus-card.next .td-focus-label { color: #1d4ed8; }
+    .td-focus-card strong { font-size: 1.02rem; font-weight: 800; color: var(--t1); line-height: 1.25; }
+    .td-focus-card strong.muted { color: var(--t3); font-weight: 700; font-size: .95rem; }
+    .td-focus-meta { font-size: .8rem; color: var(--t3); line-height: 1.35; }
+    .td-focus-cta {
+      margin-top: auto; padding-top: 8px;
+      font-size: .84rem; font-weight: 800; color: #1d4ed8; text-decoration: none;
+    }
+    .td-focus-card.is-live .td-focus-cta { color: #15803d; }
+    .td-focus-tasks {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 4px;
+    }
+    .td-focus-tasks a {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 8px 10px; border-radius: 10px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      font-size: .78rem; font-weight: 700; color: var(--t2); text-decoration: none;
+    }
+    .td-focus-tasks a:hover { border-color: var(--accent); color: var(--accent); }
+    .td-focus-tasks .material-icons-round { font-size: 16px; }
+
+    .t-today-item.is-now {
+      border-color: rgba(22, 163, 74, .4);
+      background: linear-gradient(90deg, #f0fdf4, transparent 70%);
+    }
+    .t-today-item.is-next {
+      border-color: rgba(37, 99, 235, .35);
+      background: linear-gradient(90deg, #eff6ff, transparent 70%);
+    }
+    .t-live-pill, .t-next-pill {
+      display: inline-block; margin-left: 6px; vertical-align: middle;
+      font-size: .65rem; font-weight: 800; letter-spacing: .03em;
+      padding: .12rem .4rem; border-radius: 999px;
+    }
+    .t-live-pill { background: #dcfce7; color: #166534; }
+    .t-next-pill { background: #dbeafe; color: #1d4ed8; }
+
     /* ── Stat row ──────────────────────────────────────────────────── */
     .t-stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:18px; animation: td-rise .45s ease both; }
     @media(max-width:900px){ .t-stats-row { grid-template-columns:repeat(2,1fr); } }
@@ -900,12 +1111,24 @@ import { forkJoin, map } from 'rxjs';
     .t-time-end   { font-size:11px; font-weight:500; color:var(--t3); }
 
     .t-td-filled {
-      padding:10px 12px; cursor:default;
+      padding:0; cursor:pointer;
       background:color-mix(in srgb, var(--subj-clr, #4f6ef7) 8%, white);
+      transition: background .12s ease, filter .12s ease;
+    }
+    .t-td-filled:hover {
+      background:color-mix(in srgb, var(--subj-clr, #4f6ef7) 18%, white);
+      filter: brightness(0.99);
     }
     .t-td-filled.t-td-today {
       background:color-mix(in srgb, var(--subj-clr, #4f6ef7) 14%, white);
       border-left:3px solid var(--subj-clr, #4f6ef7) !important;
+    }
+    .t-td-filled.t-td-today:hover {
+      background:color-mix(in srgb, var(--subj-clr, #4f6ef7) 22%, white);
+    }
+    .t-entry-link {
+      display:block; height:100%; padding:10px 12px;
+      text-decoration:none; color:inherit; cursor:pointer;
     }
     .t-entry { display:flex; align-items:flex-start; gap:8px; }
     .t-entry-dot {
@@ -945,6 +1168,10 @@ import { forkJoin, map } from 'rxjs';
     .t-today-list { display:flex; flex-direction:column; padding:8px 0; }
     .t-today-item { display:flex; align-items:flex-start; gap:0; padding:8px 16px; }
     .t-today-item:hover { background:var(--surface-2,#f8fafc); }
+    a.t-today-link { text-decoration: none; color: inherit; cursor: pointer; }
+    .t-today-start {
+      margin-top: 5px; font-size: 11px; font-weight: 800; color: var(--accent);
+    }
 
     .t-today-timeline { display:flex; flex-direction:column; align-items:center; margin-right:14px; flex-shrink:0; }
     .t-today-num {
@@ -993,7 +1220,7 @@ import { forkJoin, map } from 'rxjs';
     }
   `]
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   auth        = inject(AuthService);
   private userSvc      = inject(UserService);
   private stuSvc       = inject(StudentService);
@@ -1071,6 +1298,80 @@ export class DashboardComponent implements OnInit {
       .sort((a, b) => a.periodNo - b.periodNo)
   );
 
+  /** Ticks so Now/Next update as the period changes. */
+  private nowTick = signal(Date.now());
+  private clockTimer: ReturnType<typeof setInterval> | null = null;
+
+  readonly todayIso = (() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  })();
+
+  currentClass = computed(() => {
+    this.nowTick();
+    const mins = this.nowMinutes();
+    return this.todayClasses().find(e => {
+      const s = this.timeToMinutes(e.startTime);
+      const en = this.timeToMinutes(e.endTime);
+      return s >= 0 && en >= 0 && s <= mins && mins < en;
+    }) ?? null;
+  });
+
+  nextClass = computed(() => {
+    this.nowTick();
+    const mins = this.nowMinutes();
+    const curId = this.currentClass()?.timetableId;
+    return this.todayClasses().find(e => {
+      if (curId && e.timetableId === curId) return false;
+      return this.timeToMinutes(e.startTime) > mins;
+    }) ?? null;
+  });
+
+  /** Prefer current class; otherwise next — for hero CTA and quick tasks. */
+  focusClass = computed(() => this.currentClass() ?? this.nextClass());
+
+  classroomQp(e: TimetableEntryDto) {
+    return {
+      classId: e.classId,
+      subjectId: e.subjectId,
+      periodId: e.periodId,
+      periodNo: e.periodNo,
+      academicYearId: e.academicYearId,
+      className: e.className,
+      section: e.section || '',
+      subjectName: e.subjectName,
+      startTime: e.startTime,
+      endTime: e.endTime
+    };
+  }
+
+  /** Dashboard quick tasks → leaf pages with Classroom return context. */
+  focusTaskQp(kind: 'attendance' | 'homework' | 'assign'): Record<string, string | number> | null {
+    const e = this.focusClass();
+    if (!e) return null;
+    const base: Record<string, string | number> = {
+      from: 'classroom',
+      ...this.classroomQp(e)
+    };
+    if (kind === 'attendance') base['date'] = this.todayIso;
+    return base;
+  }
+
+  private nowMinutes(): number {
+    const d = new Date(this.nowTick());
+    return d.getHours() * 60 + d.getMinutes();
+  }
+
+  private timeToMinutes(t: string): number {
+    if (!t) return -1;
+    const [h, m] = t.slice(0, 5).split(':').map(Number);
+    if (Number.isNaN(h) || Number.isNaN(m)) return -1;
+    return h * 60 + m;
+  }
+
   loading = signal(true);
   stats   = signal({ students: 0, teachers: 0, classes: 0, subjects: 0, male: 0, female: 0 });
   classStats    = signal<{ name: string; count: number; pct: number }[]>([]);
@@ -1119,6 +1420,7 @@ export class DashboardComponent implements OnInit {
   ngOnInit() {
     if (this.isTeacher()) {
       this.loadTeacherSchedule();
+      this.clockTimer = setInterval(() => this.nowTick.set(Date.now()), 30_000);
       // Load working days for correct day columns
       this.settingsSvc.getWorkingDays().subscribe({
         next: wd => {
@@ -1189,5 +1491,12 @@ export class DashboardComponent implements OnInit {
       },
       error: () => this.loading.set(false)
     });
+  }
+
+  ngOnDestroy() {
+    if (this.clockTimer) {
+      clearInterval(this.clockTimer);
+      this.clockTimer = null;
+    }
   }
 }
