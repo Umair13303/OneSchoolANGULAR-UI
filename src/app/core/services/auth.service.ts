@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, Injector, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, throwError } from 'rxjs';
@@ -6,6 +6,11 @@ import { catchError, finalize, shareReplay, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { LoginRequest, LoginResponse, RefreshTokenRequest, UserInfo } from '../models/auth.model';
 import { MenuService } from './menu.service';
+import { AcademicService } from './academic.service';
+import { UserService } from './user.service';
+import { StudentService } from './student.service';
+import { FeeService } from './fee.service';
+import { SetupNotificationService } from './setup-notification.service';
 
 const TOKEN_KEY = 'access_token';
 const REFRESH_KEY = 'refresh_token';
@@ -15,6 +20,11 @@ const USER_KEY = 'auth_user';
 export class AuthService {
   private apiUrl = environment.apiUrl;
   private menuSvc = inject(MenuService);
+  private academicSvc = inject(AcademicService);
+  private userSvc = inject(UserService);
+  private studentSvc = inject(StudentService);
+  private feeSvc = inject(FeeService);
+  private injector = inject(Injector);
   currentUser = signal<UserInfo | null>(this.getStoredUser());
   private refreshInFlight$: Observable<LoginResponse> | null = null;
 
@@ -29,8 +39,8 @@ export class AuthService {
   login(request: LoginRequest) {
     return this.http.post<LoginResponse>(`${this.apiUrl}/auth/login`, request).pipe(
       tap(res => {
-        // Always drop prior role's menu before storing the new session.
-        this.menuSvc.clear();
+        // Always drop prior role's menu / reference caches before storing the new session.
+        this.clearReferenceCaches();
         this.storeSession(res);
       })
     );
@@ -121,7 +131,18 @@ export class AuthService {
     localStorage.removeItem(REFRESH_KEY);
     localStorage.removeItem(USER_KEY);
     this.currentUser.set(null);
+    this.clearReferenceCaches();
+  }
+
+  /** Menu + stable reference data — never keep across auth boundaries. */
+  private clearReferenceCaches() {
     this.menuSvc.clear();
+    this.academicSvc.clearCaches();
+    this.userSvc.clearCaches();
+    this.studentSvc.clearCaches();
+    this.feeSvc.clearCaches();
+    // Lazy get avoids constructing SetupNotification during Auth construction.
+    this.injector.get(SetupNotificationService).clear();
   }
 
   private getStoredUser(): UserInfo | null {

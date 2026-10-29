@@ -1,5 +1,6 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, Injector, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable, tap, shareReplay } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   FeeTypeDto, CreateFeeTypeDto,
@@ -11,28 +12,68 @@ import {
   FeePaymentDto, RecordPaymentDto,
   FeeReportRowDto
 } from '../models/fee.model';
+import { SetupNotificationService } from './setup-notification.service';
 
 @Injectable({ providedIn: 'root' })
 export class FeeService {
   private http = inject(HttpClient);
+  private injector = inject(Injector);
   private base = `${environment.apiUrl}/fees`;
+  private feeTypes$?: Observable<FeeTypeDto[]>;
+  private structuresCache = new Map<string, Observable<FeeStructureDto[]>>();
+
+  /** Drop session caches (login/logout / after fee mutations). */
+  clearCaches() {
+    this.feeTypes$ = undefined;
+    this.structuresCache.clear();
+    this.injector.get(SetupNotificationService).invalidate();
+  }
 
   // ── Fee Types ──────────────────────────────────────────────────────────────
-  getFeeTypes()                                          { return this.http.get<FeeTypeDto[]>(`${this.base}/types`); }
-  createFeeType(dto: CreateFeeTypeDto)                   { return this.http.post<FeeTypeDto>(`${this.base}/types`, dto); }
-  updateFeeType(id: number, dto: any)                    { return this.http.put<FeeTypeDto>(`${this.base}/types/${id}`, dto); }
-  deleteFeeType(id: number)                              { return this.http.delete(`${this.base}/types/${id}`); }
+  getFeeTypes() {
+    if (!this.feeTypes$) {
+      this.feeTypes$ = this.http.get<FeeTypeDto[]>(`${this.base}/types`).pipe(
+        tap({ error: () => { this.feeTypes$ = undefined; } }),
+        shareReplay({ bufferSize: 1, refCount: false })
+      );
+    }
+    return this.feeTypes$;
+  }
+  createFeeType(dto: CreateFeeTypeDto) {
+    return this.http.post<FeeTypeDto>(`${this.base}/types`, dto).pipe(tap(() => this.clearCaches()));
+  }
+  updateFeeType(id: number, dto: any) {
+    return this.http.put<FeeTypeDto>(`${this.base}/types/${id}`, dto).pipe(tap(() => this.clearCaches()));
+  }
+  deleteFeeType(id: number) {
+    return this.http.delete(`${this.base}/types/${id}`).pipe(tap(() => this.clearCaches()));
+  }
 
   // ── Fee Structures ─────────────────────────────────────────────────────────
   getFeeStructures(academicYearId?: number, classId?: number) {
-    let p = new HttpParams();
-    if (academicYearId) p = p.set('academicYearId', academicYearId);
-    if (classId)        p = p.set('classId', classId);
-    return this.http.get<FeeStructureDto[]>(`${this.base}/structures`, { params: p });
+    const key = `${academicYearId ?? ''}|${classId ?? ''}`;
+    let cached = this.structuresCache.get(key);
+    if (!cached) {
+      let p = new HttpParams();
+      if (academicYearId) p = p.set('academicYearId', academicYearId);
+      if (classId)        p = p.set('classId', classId);
+      cached = this.http.get<FeeStructureDto[]>(`${this.base}/structures`, { params: p }).pipe(
+        tap({ error: () => this.structuresCache.delete(key) }),
+        shareReplay({ bufferSize: 1, refCount: false })
+      );
+      this.structuresCache.set(key, cached);
+    }
+    return cached;
   }
-  createFeeStructure(dto: CreateFeeStructureDto)         { return this.http.post<FeeStructureDto>(`${this.base}/structures`, dto); }
-  updateFeeStructure(id: number, dto: any)               { return this.http.put<FeeStructureDto>(`${this.base}/structures/${id}`, dto); }
-  deleteFeeStructure(id: number)                         { return this.http.delete(`${this.base}/structures/${id}`); }
+  createFeeStructure(dto: CreateFeeStructureDto) {
+    return this.http.post<FeeStructureDto>(`${this.base}/structures`, dto).pipe(tap(() => this.clearCaches()));
+  }
+  updateFeeStructure(id: number, dto: any) {
+    return this.http.put<FeeStructureDto>(`${this.base}/structures/${id}`, dto).pipe(tap(() => this.clearCaches()));
+  }
+  deleteFeeStructure(id: number) {
+    return this.http.delete(`${this.base}/structures/${id}`).pipe(tap(() => this.clearCaches()));
+  }
 
   // ── Discount Policies ──────────────────────────────────────────────────────
   getDiscountPolicies()                                  { return this.http.get<DiscountPolicyDto[]>(`${this.base}/discount-policies`); }

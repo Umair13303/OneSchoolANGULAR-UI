@@ -29,8 +29,21 @@ export class SetupNotificationService {
   count         = computed(() => this.notifications().length);
 
   private activeUserId: number | null = null;
+  private loadedForUserId: number | null = null;
 
-  load() {
+  /** Drop cached setup checklist (login/logout / forced refresh). */
+  clear() {
+    this.notifications.set([]);
+    this.loading.set(false);
+    this.activeUserId = null;
+    this.loadedForUserId = null;
+  }
+
+  /**
+   * Load setup checklist for admin/principal.
+   * @param force when true, drop reference caches and refetch even if already loaded.
+   */
+  load(force = false) {
     const user = this.auth.currentUser();
     if (!user) return;
 
@@ -40,12 +53,24 @@ export class SetupNotificationService {
     // Reset if a different user logs in (institute switch)
     if (this.activeUserId !== null && this.activeUserId !== user.userId) {
       this.notifications.set([]);
+      this.loadedForUserId = null;
     }
     this.activeUserId = user.userId;
 
-    // Prevent overlapping requests
+    if (!force && this.loadedForUserId === user.userId) return;
+
+    // Prevent overlapping requests (including force while in-flight).
     if (this.loading()) return;
     this.loading.set(true);
+
+    // Force must hit the network — session shareReplay would otherwise reuse stale GETs.
+    if (force) {
+      this.loadedForUserId = null;
+      this.academicSvc.clearCaches();
+      this.userSvc.clearCaches();
+      this.studentSvc.clearCaches();
+      this.feeSvc.clearCaches();
+    }
 
     forkJoin({
       years:         this.academicSvc.getYears().pipe(catchError(() => of(null))),
@@ -56,6 +81,12 @@ export class SetupNotificationService {
       feeStructures: this.feeSvc.getFeeStructures().pipe(catchError(() => of(null))),
     }).subscribe({
       next: r => {
+        // Session may have ended while the checklist was in flight.
+        if (!this.auth.currentUser() || this.auth.currentUser()?.userId !== user.userId) {
+          this.loading.set(false);
+          return;
+        }
+
         const items: SetupNotification[] = [];
 
         if (r.years !== null && r.years.length === 0)
@@ -111,10 +142,22 @@ export class SetupNotificationService {
           });
 
         this.notifications.set(items);
+        // Only mark complete when every check returned data; null = HTTP failure → allow retry.
+        const allOk = r.years !== null && r.classes !== null && r.students !== null
+          && r.users !== null && r.feeTypes !== null && r.feeStructures !== null;
+        this.loadedForUserId = allOk ? user.userId : null;
         this.loading.set(false);
       },
-      error: () => this.loading.set(false)
+      error: () => {
+        this.loadedForUserId = null;
+        this.loading.set(false);
+      }
     });
+  }
+
+  /** Invalidate checklist so the next load() refetches (after CUD that affects setup). */
+  invalidate() {
+    this.loadedForUserId = null;
   }
 
   dismiss(id: string) {

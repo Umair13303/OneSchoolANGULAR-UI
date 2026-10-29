@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&display=swap');
+/* Self-hosted — avoid blank icons/text while Google Fonts CDN is slow or blocked */
+@import '@fontsource-variable/inter/wght.css';
+@import '@fontsource-variable/material-symbols-rounded/fill.css';
 
 /* ═══════════════════════════════════════════════════
    LIGHT THEME
@@ -201,7 +203,7 @@
 html { font-size: 14px; }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Inter Variable', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: var(--bg);
   background-image:
     radial-gradient(1200px 600px at 12% -10%, var(--bg-glow, #f5f8fc) 0%, transparent 55%),
@@ -1639,7 +1641,7 @@ input.ng-invalid.ng-touched:focus {
 }
 
 .swal-app-popup.swal2-popup {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-family: 'Inter Variable', Inter, -apple-system, BlinkMacSystemFont, sans-serif !important;
   border-radius: 20px !important;
   border: 1px solid var(--border) !important;
   box-shadow: var(--sh-xl) !important;

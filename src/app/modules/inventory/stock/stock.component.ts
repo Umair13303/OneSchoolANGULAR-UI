@@ -16,21 +16,32 @@ type Tab = 'current' | 'ledger' | 'adjustments' | 'transfers';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, PageHeaderComponent, DatePickerComponent],
   template: `
-    <app-page-header title="Stock Management" subtitle="Current balances, movement history, adjustments and transfers" />
+    <div class="os-page compact">
+    <app-page-header [dense]="true" title="Stock Management" subtitle="Current balances, movement history, adjustments and transfers" routeUrl="/inventory/stock" />
 
-    <div class="tabs">
-      <button class="tab" [class.active]="tab()==='current'" (click)="tab.set('current')">Current Stock</button>
-      <button class="tab" [class.active]="tab()==='ledger'" (click)="tab.set('ledger'); loadLedger()">Stock Ledger</button>
-      <button class="tab" [class.active]="tab()==='adjustments'" (click)="tab.set('adjustments')">Adjustments</button>
-      <button class="tab" [class.active]="tab()==='transfers'" (click)="tab.set('transfers')">Transfers</button>
-    </div>
+    <div class="os-stage">
+      <div class="os-stage-bar">
+        <div class="os-seg" role="tablist" aria-label="Stock view">
+          <button type="button" class="os-seg-btn" [class.active]="tab()==='current'" (click)="tab.set('current')">Current Stock</button>
+          <button type="button" class="os-seg-btn" [class.active]="tab()==='ledger'" (click)="tab.set('ledger'); loadLedger()">Stock Ledger</button>
+          <button type="button" class="os-seg-btn" [class.active]="tab()==='adjustments'" (click)="tab.set('adjustments')">Adjustments</button>
+          <button type="button" class="os-seg-btn" [class.active]="tab()==='transfers'" (click)="tab.set('transfers')">Transfers</button>
+        </div>
+      </div>
 
     @if (tab() === 'current') {
-      <div class="filters">
-        <input class="search" placeholder="Search item…" [value]="search()" (input)="onSearch($any($event.target).value)" />
-        <label class="chk"><input type="checkbox" [checked]="lowOnly()" (change)="toggleLowOnly()" /> Low / reorder only</label>
+      <div class="os-stage-bar">
+        <div class="os-toolbar-group">
+          <div class="os-field grow">
+            <div class="search-wrap">
+              <span class="material-icons-round search-icon">search</span>
+              <input class="search-input" placeholder="Search item…" [value]="search()" (input)="onSearch($any($event.target).value)" />
+            </div>
+          </div>
+          <label class="chk"><input type="checkbox" [checked]="lowOnly()" (change)="toggleLowOnly()" /> Low / reorder only</label>
+        </div>
       </div>
-      <div class="card">
+      <div class="os-stage-body">
         <table class="table">
           <thead><tr><th>Code</th><th>Item</th><th>Category</th><th>On Hand</th><th>Reorder Lvl</th><th>Avg Cost</th><th>Stock Value</th></tr></thead>
           <tbody>
@@ -52,13 +63,15 @@ type Tab = 'current' | 'ledger' | 'adjustments' | 'transfers';
     }
 
     @if (tab() === 'ledger') {
-      <div class="filters">
-        <select [value]="ledgerItemId()" (change)="ledgerItemId.set($any($event.target).value); loadLedger()">
-          <option value="">All Items</option>
-          @for (i of allItems(); track i.itemId) { <option [value]="i.itemId">{{ i.itemName }}</option> }
-        </select>
+      <div class="os-stage-bar">
+        <div class="os-toolbar-group">
+          <select [value]="ledgerItemId()" (change)="ledgerItemId.set($any($event.target).value); loadLedger()">
+            <option value="">All Items</option>
+            @for (i of allItems(); track i.itemId) { <option [value]="i.itemId">{{ i.itemName }}</option> }
+          </select>
+        </div>
       </div>
-      <div class="card">
+      <div class="os-stage-body">
         <table class="table">
           <thead><tr><th>Date</th><th>Voucher</th><th>No</th><th>Item</th><th>Qty In</th><th>Qty Out</th><th>Balance</th><th>Cost</th><th>User</th></tr></thead>
           <tbody>
@@ -77,8 +90,12 @@ type Tab = 'current' | 'ledger' | 'adjustments' | 'transfers';
     }
 
     @if (tab() === 'adjustments') {
-      <div class="toolbar"><button class="btn-primary" (click)="openAdj()"><span class="material-icons-round">add</span> New Adjustment</button></div>
-      <div class="card">
+      <div class="os-stage-bar">
+        <div class="os-toolbar-group end">
+          <button class="btn-primary" (click)="openAdj()"><span class="material-icons-round">add</span> New Adjustment</button>
+        </div>
+      </div>
+      <div class="os-stage-body">
         <table class="table">
           <thead><tr><th>No</th><th>Date</th><th>Type</th><th>Lines</th><th>Remarks</th></tr></thead>
           <tbody>
@@ -92,8 +109,12 @@ type Tab = 'current' | 'ledger' | 'adjustments' | 'transfers';
     }
 
     @if (tab() === 'transfers') {
-      <div class="toolbar"><button class="btn-primary" (click)="openTrf()"><span class="material-icons-round">add</span> New Transfer</button></div>
-      <div class="card">
+      <div class="os-stage-bar">
+        <div class="os-toolbar-group end">
+          <button class="btn-primary" (click)="openTrf()"><span class="material-icons-round">add</span> New Transfer</button>
+        </div>
+      </div>
+      <div class="os-stage-body">
         <table class="table">
           <thead><tr><th>No</th><th>Date</th><th>From</th><th>To</th><th>Lines</th></tr></thead>
           <tbody>
@@ -106,9 +127,12 @@ type Tab = 'current' | 'ledger' | 'adjustments' | 'transfers';
       </div>
     }
 
+    </div>
+    </div>
+
     <!-- Adjustment Modal -->
     @if (showAdj()) {
-      <div class="overlay" (click)="showAdj.set(false)">
+      <div class="modal-overlay" (click)="showAdj.set(false)">
         <div class="modal" (click)="$event.stopPropagation()">
           <div class="modal-hd"><h3>New Stock Adjustment</h3><button class="close-btn" (click)="showAdj.set(false)"><span class="material-icons-round">close</span></button></div>
           <form [formGroup]="adjForm" (ngSubmit)="saveAdj()" class="modal-body">
@@ -148,7 +172,7 @@ type Tab = 'current' | 'ledger' | 'adjustments' | 'transfers';
 
     <!-- Transfer Modal -->
     @if (showTrf()) {
-      <div class="overlay" (click)="showTrf.set(false)">
+      <div class="modal-overlay" (click)="showTrf.set(false)">
         <div class="modal" (click)="$event.stopPropagation()">
           <div class="modal-hd"><h3>New Stock Transfer</h3><button class="close-btn" (click)="showTrf.set(false)"><span class="material-icons-round">close</span></button></div>
           <form [formGroup]="trfForm" (ngSubmit)="saveTrf()" class="modal-body">
@@ -185,20 +209,20 @@ type Tab = 'current' | 'ledger' | 'adjustments' | 'transfers';
     }
   `,
   styles: [`
-    .tabs { display:flex; gap:6px; margin-bottom:16px; border-bottom:1px solid var(--border); }
-    .tab { padding:10px 16px; border:none; background:transparent; cursor:pointer; font-size:13px; font-weight:600; color:var(--t4); border-bottom:2px solid transparent; }
-    .tab.active { color:var(--accent); border-bottom-color:var(--accent); }
-    .filters { display:flex; gap:12px; align-items:center; margin-bottom:14px; }
-    .search { flex:1; max-width:300px; padding:9px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; background:var(--surface); color:var(--t1); }
-    .filters select { padding:9px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; background:var(--surface); color:var(--t1); }
-    .chk { display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--t3); }
-    .toolbar { margin-bottom:14px; }
-    .card { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+    /* Removed by the migration: .tabs/.tab/.tab.active (now the global
+       .os-seg segmented control), .filters (now .os-stage-bar), .search (now
+       the global search-wrap and search-input), .toolbar (the Add buttons now
+       sit in a stage bar end group), and .card (now .os-stage).
+       The ledger filter keeps a local rule because nothing global styles a
+       bare select inside a stage bar; declarations are unchanged apart from
+       square corners to match the flat stage. */
+    .os-stage-bar select { padding:9px 12px; border:1.5px solid var(--border); border-radius:0; font-size:13px; background:var(--surface); color:var(--t1); width:auto; }
+    .chk { display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--t3); white-space:nowrap; }
     td.low { color:#dc2626; font-weight:700; }
     td.in { color:#059669; font-weight:600; }
     td.out { color:#dc2626; font-weight:600; }
     .empty { text-align:center; color:var(--t4); padding:32px 0; font-size:13px; }
-    .overlay { position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; padding:16px; overflow-y:auto; }
+    /* .overlay removed: both modals now use the global .modal-overlay. */
     .modal { background:var(--surface); border-radius:16px; width:100%; max-width:560px; margin:auto; }
     .modal-hd { display:flex; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid var(--border); background:var(--surface-2); }
     .modal-hd h3 { font-size:15px; font-weight:700; margin:0; }
@@ -208,7 +232,11 @@ type Tab = 'current' | 'ledger' | 'adjustments' | 'transfers';
     .field { display:flex; flex-direction:column; gap:5px; margin-bottom:14px; }
     label { font-size:11px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.5px; }
     .req { color:var(--red); }
-    input, select { padding:9px 11px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; background:var(--surface); color:var(--t1); width:100%; }
+    /* Scoped to the modal. Unscoped it out-specified the global search-input
+       on the new stage-bar search box, and it was also stretching the
+       low-stock filter checkbox to width 100% with input padding. Modal and
+       lines-table fields are unchanged. */
+    .modal-body input, .modal-body select { padding:9px 11px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; background:var(--surface); color:var(--t1); width:100%; }
     .lines-table { width:100%; border-collapse:collapse; margin:10px 0; }
     .lines-table th { text-align:left; font-size:11px; text-transform:uppercase; color:var(--t4); padding:6px 8px; border-bottom:1px solid var(--border); }
     .lines-table td { padding:5px 8px; }

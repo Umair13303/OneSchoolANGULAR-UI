@@ -1755,8 +1755,14 @@ interface SelectedFee {
       .tab-pane {
         padding: 16px 16px;
       }
+      /* !important is required here, not stylistic: the global mobile block
+         in styles.scss sets .adm-tabs { display: flex !important } for the
+         four other wizards that rely on its scrolling strip, which beat this
+         rule and rendered BOTH steppers on a phone. This page has its own
+         compact .adm-stepper-mobile, so it alone opts out. The global rule is
+         deliberately left intact for those other wizards. */
       .adm-tabs {
-        display: none;
+        display: none !important;
       }
       .adm-stepper-mobile {
         display: flex;

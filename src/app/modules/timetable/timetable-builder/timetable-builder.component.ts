@@ -12,6 +12,7 @@ import { ClassDto, ClassSubjectDto } from '../../../core/models/academic.model';
 import { UserListDto } from '../../../core/models/user.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
+import Swal from 'sweetalert2';
 
 const DEFAULT_DAYS = [1, 2, 3, 4, 5];
 
@@ -30,7 +31,7 @@ interface CellState {
   standalone: true,
   imports: [CommonModule, FormsModule, PageHeaderComponent, LoadingComponent],
   template: `
-    <app-page-header title="Timetable"
+    <app-page-header title="Timetable" routeUrl="/timetable"
       [subtitle]="activeProfileName() ? 'Schedule: ' + activeProfileName() + ' · Assign subjects & teachers to each period' : 'Assign subjects & teachers to each period'" />
 
     <!-- ── Top bar ── -->
@@ -546,16 +547,86 @@ export class TimetableBuilderComponent implements OnInit {
 
   deleteCell(cell: CellState, event: Event) {
     event.stopPropagation();
-    if (!cell.timetableId || !confirm('Remove this assignment?')) return;
-    const id = cell.timetableId;
-    this.ttSvc.delete(id).subscribe({
-      next: () => {
-        cell.timetableId = null; cell.subjectId = null; cell.teacherId = null;
-        cell.subjectName = ''; cell.teacherName = '';
-        this.entries.update(e => e.filter(x => x.timetableId !== id));
+    if (!cell.timetableId) return;
+
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const colors = isDark
+      ? { bg: '#161922', t1: '#f1f5f9', t3: '#94a3b8' }
+      : { bg: '#ffffff', t1: '#0f172a', t3: '#475569' };
+    const subject = this.escapeHtml(cell.subjectName || 'this subject');
+    const teacher = this.escapeHtml(cell.teacherName || '');
+
+    Swal.fire({
+      html: `
+        <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:8px 0 4px">
+          <div style="width:58px;height:58px;border-radius:16px;background:#fee2e2;display:flex;align-items:center;justify-content:center">
+            <span class="material-icons-round" style="font-size:27px;color:#dc2626;font-variation-settings:'FILL' 1">delete_outline</span>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:17px;font-weight:800;color:${colors.t1};margin-bottom:6px">Remove Assignment?</div>
+            <div style="font-size:13.5px;color:${colors.t3};line-height:1.6">
+              Remove <b>${subject}</b>${teacher ? `<br>with <b>${teacher}</b>` : ''} from this period?
+            </div>
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Remove',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+      focusCancel: true,
+      customClass: {
+        popup: 'swal-app-popup',
+        confirmButton: 'swal-btn-danger',
+        cancelButton: 'swal-btn-cancel',
+        actions: 'swal-actions'
       },
-      error: (e) => alert(e?.error?.error ?? 'Failed to delete.')
+      buttonsStyling: false,
+      background: colors.bg,
+      showClass: { popup: 'swal-show' },
+      hideClass: { popup: 'swal-hide' },
+    }).then(result => {
+      if (!result.isConfirmed) return;
+      const id = cell.timetableId!;
+      this.ttSvc.delete(id).subscribe({
+        next: () => {
+          cell.timetableId = null; cell.subjectId = null; cell.teacherId = null;
+          cell.subjectName = ''; cell.teacherName = '';
+          this.entries.update(e => e.filter(x => x.timetableId !== id));
+          Swal.fire({
+            html: `<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:8px 0">
+              <div style="width:50px;height:50px;border-radius:14px;background:#dcfce7;display:flex;align-items:center;justify-content:center">
+                <span class="material-icons-round" style="font-size:24px;color:#16a34a;font-variation-settings:'FILL' 1">check_circle</span>
+              </div>
+              <div style="font-size:15px;font-weight:700;color:${colors.t1}">Assignment Removed</div>
+            </div>`,
+            background: colors.bg,
+            timer: 1400,
+            showConfirmButton: false,
+            customClass: { popup: 'swal-app-popup', timerProgressBar: 'swal-progress-green' },
+            timerProgressBar: true,
+            buttonsStyling: false,
+            showClass: { popup: 'swal-show' },
+            hideClass: { popup: 'swal-hide' },
+          });
+        },
+        error: (e) => Swal.fire({
+          icon: 'error',
+          title: 'Remove failed',
+          text: e?.error?.error ?? 'Failed to delete.',
+          customClass: { popup: 'swal-app-popup', confirmButton: 'swal-btn-primary', actions: 'swal-actions' },
+          buttonsStyling: false,
+        })
+      });
     });
+  }
+
+  private escapeHtml(value: string): string {
+    return (value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
   copyMondayToAllDays() {

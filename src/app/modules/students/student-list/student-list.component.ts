@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -12,57 +12,58 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { StudentLeavingComponent } from '../student-leaving/student-leaving.component';
+import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
 
 @Component({
   selector: 'app-student-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, StudentLeavingComponent],
+  imports: [CommonModule, RouterModule, FormsModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, StudentLeavingComponent, OsSelectComponent],
   template: `
-    <app-page-header title="Students" subtitle="All enrolled students">
+    <div class="os-page compact">
+    <app-page-header [dense]="true" title="Student List" routeUrl="/students/list">
       <a routerLink="/students/new" class="btn-primary">
-        <span class="material-icons-round" style="font-size:17px">person_add</span>
+        <span class="material-icons-round">person_add</span>
         New Admission
       </a>
     </app-page-header>
 
-    <div class="filter-bar">
-      <div class="search-wrap">
-        <span class="material-icons-round search-icon">search</span>
-        <input class="search-input" placeholder="Search name or admission no..." [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
+    <div class="os-stage">
+      <div class="os-stage-bar">
+        <div class="os-toolbar-group">
+          <div class="os-field grow">
+            <div class="search-wrap">
+              <span class="material-icons-round search-icon">search</span>
+              <input class="search-input" placeholder="Search name or admission no..." [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
+            </div>
+          </div>
+          <app-os-select
+            [options]="yearOptions()"
+            [value]="selectedYear"
+            (valueChange)="selectedYear = $event; onYearChange()"
+            placeholder="All Years"
+            icon="event"
+            ariaLabel="Academic year" />
+          <app-os-select
+            [options]="classOptions()"
+            [value]="selectedClass"
+            (valueChange)="selectedClass = $event; onFilterChange()"
+            placeholder="All Classes"
+            icon="class"
+            ariaLabel="Class"
+            [searchable]="classOptions().length > 6" />
+        </div>
       </div>
-      <select class="filter-select" [(ngModel)]="selectedYear" (change)="onYearChange()">
-        <option [ngValue]="null">All Years</option>
-        @for (y of years(); track y.academicYearId) {
-          <option [ngValue]="y.academicYearId">{{ y.yearLabel }}</option>
-        }
-      </select>
-      <select class="filter-select" [(ngModel)]="selectedClass" (change)="onFilterChange()">
-        <option [ngValue]="null">All Classes</option>
-        @for (c of classes(); track c.classId) {
-          <option [ngValue]="c.classId">{{ c.className }} {{ c.section }}</option>
-        }
-      </select>
-    </div>
-
-    @if (leavingStudent()) {
-      <app-student-leaving
-        [studentId]="leavingStudent()!.studentId"
-        [studentName]="leavingStudent()!.fullName"
-        [admissionNo]="leavingStudent()!.admissionNo"
-        (closed)="onLeavingClosed($event)" />
-    }
 
     @if (loading()) {
-      <div class="card"><app-loading /></div>
+      <div class="os-stage-body pad"><app-loading /></div>
     } @else if (students().length === 0) {
-      <div class="card">
+      <div class="os-stage-body pad">
         <app-empty-state icon="groups" title="No students found" message="Adjust your filters or add a new admission." />
       </div>
     } @else {
-      <div class="card">
-        <div class="tbl-meta">
-          <span class="tbl-count">{{ totalCount() }} students</span>
-        </div>
+      <!-- No pad modifier: the table spans the stage and its own cell
+           padding supplies the inset, so rows read edge to edge. -->
+      <div class="os-stage-body">
         <table class="table">
           <thead>
             <tr>
@@ -93,50 +94,59 @@ import { StudentLeavingComponent } from '../student-leaving/student-leaving.comp
                     {{ s.isActive ? 'Active' : 'Inactive' }}
                   </span>
                 </td>
-                <td class="actions-cell">
-                  <a [routerLink]="['/students/edit', s.studentId]" class="btn-edit" title="Edit student">
-                    <span class="material-icons-round">edit</span>
-                  </a>
-                  @if (s.isActive) {
-                    <button class="btn-leave" title="Mark as Leaving" (click)="openLeave(s)">
-                      <span class="material-icons-round">exit_to_app</span>
-                    </button>
-                  }
-                  @if (!s.isActive) {
-                    <button class="btn-cert" title="Print Leaving Certificate" (click)="printCertificate(s.studentId)" [disabled]="printingId() === s.studentId">
-                      <span class="material-icons-round">{{ printingId() === s.studentId ? 'refresh' : 'print' }}</span>
-                    </button>
-                  }
+                <td>
+                  <div class="actions">
+                    <a [routerLink]="['/students/edit', s.studentId]" class="icon-btn" title="Edit student">
+                      <span class="material-icons-round">edit</span>
+                    </a>
+                    @if (s.isActive) {
+                      <button class="icon-btn act-leave" title="Mark as Leaving" (click)="openLeave(s)">
+                        <span class="material-icons-round">exit_to_app</span>
+                      </button>
+                    }
+                    @if (!s.isActive) {
+                      <button class="icon-btn act-cert" title="Print Leaving Certificate" (click)="printCertificate(s.studentId)" [disabled]="printingId() === s.studentId">
+                        <span class="material-icons-round">{{ printingId() === s.studentId ? 'refresh' : 'print' }}</span>
+                      </button>
+                    }
+                  </div>
                 </td>
               </tr>
             }
           </tbody>
         </table>
-        <div class="pager">
-          <span class="pager-info">
-            Page {{ page() }} of {{ totalPages() }} &middot; {{ totalCount() }} total
-          </span>
-          <div class="pager-btns">
-            <button class="pager-btn" (click)="goToPage(page() - 1)" [disabled]="page() <= 1">
-              <span class="material-icons-round">chevron_left</span>
-            </button>
-            <button class="pager-btn" (click)="goToPage(page() + 1)" [disabled]="page() >= totalPages()">
-              <span class="material-icons-round">chevron_right</span>
-            </button>
-          </div>
+      </div>
+
+      <div class="os-stage-foot">
+        <span class="tbl-count">{{ totalCount() }} students</span>
+        <div class="pager-btns">
+          <span class="pager-info">Page {{ page() }} of {{ totalPages() }}</span>
+          <button class="pager-btn" (click)="goToPage(page() - 1)" [disabled]="page() <= 1">
+            <span class="material-icons-round">chevron_left</span>
+          </button>
+          <button class="pager-btn" (click)="goToPage(page() + 1)" [disabled]="page() >= totalPages()">
+            <span class="material-icons-round">chevron_right</span>
+          </button>
         </div>
       </div>
     }
+    </div>
+    </div>
+
+    @if (leavingStudent()) {
+      <app-student-leaving
+        [studentId]="leavingStudent()!.studentId"
+        [studentName]="leavingStudent()!.fullName"
+        [admissionNo]="leavingStudent()!.admissionNo"
+        (closed)="onLeavingClosed($event)" />
+    }
   `,
   styles: [`
-    .tbl-meta { padding: 14px 18px 0; display: flex; justify-content: flex-end; }
+    /* .tbl-meta and .pager removed: .os-stage-foot now provides the row
+       and its top divider. The count/pager contents keep their own styles. */
     .tbl-count { font-size: 11px; font-weight: 600; color: var(--t4); text-transform: uppercase; letter-spacing: 0.6px; }
-    .pager {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 18px; border-top: 1px solid var(--border);
-    }
     .pager-info { font-size: 12px; color: var(--t4); }
-    .pager-btns { display: flex; gap: 6px; }
+    .pager-btns { display: flex; align-items: center; gap: 6px; }
     .pager-btn {
       display: inline-flex; align-items: center; justify-content: center;
       width: 32px; height: 32px; border-radius: 8px;
@@ -154,36 +164,28 @@ import { StudentLeavingComponent } from '../student-leaving/student-leaving.comp
       font-size: 11px; font-weight: 800; flex-shrink: 0; text-transform: uppercase;
     }
     .s-name { font-weight: 600; color: var(--t1); font-size: 13.5px; }
-    .actions-cell { display: flex; align-items: center; gap: 6px; }
-    .btn-edit {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 30px; height: 30px; border-radius: 8px;
-      background: var(--surface-2); border: 1px solid var(--border);
-      color: var(--t3); text-decoration: none; transition: all .15s;
-    }
-    .btn-edit:hover { background: var(--accent-s); color: var(--accent); border-color: var(--accent-g); }
-    .btn-edit .material-icons-round { font-size: 15px; }
-    .btn-leave {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 30px; height: 30px; border-radius: 8px;
-      background: var(--surface-2); border: 1px solid var(--border);
-      color: var(--t3); cursor: pointer; transition: all .15s;
-    }
-    .btn-leave:hover { background: #fef3c7; color: #d97706; border-color: #fde68a; }
-    .btn-leave .material-icons-round { font-size: 15px; }
-    .btn-cert {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 30px; height: 30px; border-radius: 8px;
-      background: var(--surface-2); border: 1px solid var(--border);
-      color: var(--t3); cursor: pointer; transition: all .15s;
-    }
-    .btn-cert:hover:not(:disabled) { background: var(--green-s); color: var(--green); border-color: var(--green-b); }
-    .btn-cert:disabled { opacity: .5; cursor: not-allowed; }
-    .btn-cert .material-icons-round { font-size: 15px; }
+
+    /* .btn-edit / .btn-leave / .btn-cert removed — the global .icon-btn now
+       supplies size, hover, disabled and focus. Only the two semantic hover
+       tints are kept, because losing them would make "mark as leaving" and
+       "print certificate" read as the same neutral action. Now token-based:
+       the old rules hardcoded #fef3c7 / #d97706 / #fde68a, which did not
+       respond to dark mode. */
+    .icon-btn.act-leave:hover:not(:disabled) { background: var(--amber-s); color: var(--amber); }
+    .icon-btn.act-cert:hover:not(:disabled)  { background: var(--green-s); color: var(--green); }
+
+    /* Scoped to this screen's action column only. The global .icon-btn sets no
+       icon size, so icons fall back to the 20px base in index.html, which fills
+       a 32px button edge to edge. 17px restores visual weight closer to the
+       15px the removed .btn-edit/.btn-leave/.btn-cert rules used. Deliberately
+       NOT changed globally — other screens may want the 20px size. Button box
+       stays 32px (min-width/min-height come from the global rule). */
+    td .actions .icon-btn .material-icons-round { font-size: 17px; }
+
     .adm-pill {
       font-family: 'Courier New', monospace; font-size: 11.5px; font-weight: 700;
       color: var(--accent);
-      background: var(--accent-s); border: 1px solid #bfdbfe;
+      background: var(--accent-s); border: 1px solid var(--accent-g);
       padding: 2px 9px; border-radius: 5px;
     }
   `]
@@ -208,6 +210,22 @@ export class StudentListComponent implements OnInit {
   selectedYear:  number | null = null;
   selectedClass: number | null = null;
   search = '';
+
+  // Option lists for app-os-select, which takes `options` + `value` +
+  // `valueChange` (it is not a ControlValueAccessor, so no ngModel).
+  // Derived only — the filter values themselves are unchanged.
+  yearOptions = computed<OsSelectOption<number | null>[]>(() => [
+    { value: null, label: 'All Years' },
+    ...this.years().map(y => ({ value: y.academicYearId as number | null, label: y.yearLabel }))
+  ]);
+
+  classOptions = computed<OsSelectOption<number | null>[]>(() => [
+    { value: null, label: 'All Classes' },
+    ...this.classes().map(c => ({
+      value: c.classId as number | null,
+      label: `${c.className} ${c.section ?? ''}`.trim()
+    }))
+  ]);
   private searchDebounce: ReturnType<typeof setTimeout> | null = null;
 
   openLeave(s: StudentListDto) { this.leavingStudent.set(s); }

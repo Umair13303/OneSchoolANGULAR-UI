@@ -14,20 +14,28 @@ type Tab = 'categories' | 'units' | 'taxes';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, PageHeaderComponent, ConfirmDeleteComponent],
   template: `
-    <app-page-header title="Categories, Units &amp; Tax" subtitle="Shared lookup data used by Item Master and POS" />
+    <div class="os-page compact">
+    <app-page-header [dense]="true" title="Categories, Units &amp; Tax" subtitle="Shared lookup data used by Item Master and POS" routeUrl="/inventory/masters" />
 
-    <div class="tabs">
-      <button class="tab" [class.active]="tab()==='categories'" (click)="tab.set('categories')">Categories</button>
-      <button class="tab" [class.active]="tab()==='units'" (click)="tab.set('units')">Units</button>
-      <button class="tab" [class.active]="tab()==='taxes'" (click)="tab.set('taxes')">Tax Rates</button>
-    </div>
+    <div class="os-stage">
+      <div class="os-stage-bar">
+        <div class="os-seg" role="tablist" aria-label="Master data">
+          <button type="button" class="os-seg-btn" [class.active]="tab()==='categories'" (click)="tab.set('categories')">Categories</button>
+          <button type="button" class="os-seg-btn" [class.active]="tab()==='units'" (click)="tab.set('units')">Units</button>
+          <button type="button" class="os-seg-btn" [class.active]="tab()==='taxes'" (click)="tab.set('taxes')">Tax Rates</button>
+        </div>
+      </div>
 
     @if (tab() === 'categories') {
-      <div class="card">
-        <div class="card-head">
-          <div><h3>Item Categories</h3><p>{{ categories().length }} categories</p></div>
+      <div class="os-stage-bar">
+        <div class="os-toolbar-group">
+          <div class="tab-head"><h3>Item Categories</h3><p>{{ categories().length }} categories</p></div>
+        </div>
+        <div class="os-toolbar-group end">
           <button class="btn-primary" (click)="openCat()"><span class="material-icons-round">add</span> Add Category</button>
         </div>
+      </div>
+      <div class="os-stage-body">
         <table class="table">
           <thead><tr><th>Name</th><th>Items</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody>
@@ -49,11 +57,15 @@ type Tab = 'categories' | 'units' | 'taxes';
     }
 
     @if (tab() === 'units') {
-      <div class="card">
-        <div class="card-head">
-          <div><h3>Units of Measure</h3><p>{{ units().length }} units</p></div>
+      <div class="os-stage-bar">
+        <div class="os-toolbar-group">
+          <div class="tab-head"><h3>Units of Measure</h3><p>{{ units().length }} units</p></div>
+        </div>
+        <div class="os-toolbar-group end">
           <button class="btn-primary" (click)="openUnit()"><span class="material-icons-round">add</span> Add Unit</button>
         </div>
+      </div>
+      <div class="os-stage-body">
         <table class="table">
           <thead><tr><th>Name</th><th>Short</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody>
@@ -75,11 +87,15 @@ type Tab = 'categories' | 'units' | 'taxes';
     }
 
     @if (tab() === 'taxes') {
-      <div class="card">
-        <div class="card-head">
-          <div><h3>Tax Rates</h3><p>{{ taxes().length }} rates</p></div>
+      <div class="os-stage-bar">
+        <div class="os-toolbar-group">
+          <div class="tab-head"><h3>Tax Rates</h3><p>{{ taxes().length }} rates</p></div>
+        </div>
+        <div class="os-toolbar-group end">
           <button class="btn-primary" (click)="openTax()"><span class="material-icons-round">add</span> Add Tax Rate</button>
         </div>
+      </div>
+      <div class="os-stage-body">
         <table class="table">
           <thead><tr><th>Name</th><th>Percentage</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody>
@@ -101,8 +117,11 @@ type Tab = 'categories' | 'units' | 'taxes';
     }
 
     <!-- Category Modal -->
+    </div>
+    </div>
+
     @if (showCat()) {
-      <div class="overlay" (click)="showCat.set(false)">
+      <div class="modal-overlay" (click)="showCat.set(false)">
         <div class="modal" (click)="$event.stopPropagation()">
           <div class="modal-hd"><h3>{{ editingId() ? 'Edit' : 'Add' }} Category</h3><button class="close-btn" (click)="showCat.set(false)"><span class="material-icons-round">close</span></button></div>
           <form [formGroup]="catForm" (ngSubmit)="saveCat()" class="modal-body">
@@ -117,7 +136,7 @@ type Tab = 'categories' | 'units' | 'taxes';
 
     <!-- Unit Modal -->
     @if (showUnit()) {
-      <div class="overlay" (click)="showUnit.set(false)">
+      <div class="modal-overlay" (click)="showUnit.set(false)">
         <div class="modal" (click)="$event.stopPropagation()">
           <div class="modal-hd"><h3>{{ editingId() ? 'Edit' : 'Add' }} Unit</h3><button class="close-btn" (click)="showUnit.set(false)"><span class="material-icons-round">close</span></button></div>
           <form [formGroup]="unitForm" (ngSubmit)="saveUnit()" class="modal-body">
@@ -133,7 +152,7 @@ type Tab = 'categories' | 'units' | 'taxes';
 
     <!-- Tax Modal -->
     @if (showTax()) {
-      <div class="overlay" (click)="showTax.set(false)">
+      <div class="modal-overlay" (click)="showTax.set(false)">
         <div class="modal" (click)="$event.stopPropagation()">
           <div class="modal-hd"><h3>{{ editingId() ? 'Edit' : 'Add' }} Tax Rate</h3><button class="close-btn" (click)="showTax.set(false)"><span class="material-icons-round">close</span></button></div>
           <form [formGroup]="taxForm" (ngSubmit)="saveTax()" class="modal-body">
@@ -150,23 +169,22 @@ type Tab = 'categories' | 'units' | 'taxes';
     <app-confirm-delete />
   `,
   styles: [`
-    .tabs { display:flex; gap:6px; margin-bottom:16px; border-bottom:1px solid var(--border); }
-    .tab { padding:10px 16px; border:none; background:transparent; cursor:pointer; font-size:13px; font-weight:600; color:var(--t4); border-bottom:2px solid transparent; }
-    .tab.active { color:var(--accent); border-bottom-color:var(--accent); }
-    .card { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
-    .card-head { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid var(--border); background:var(--surface-2); }
-    .card-head h3 { font-size:15px; font-weight:700; color:var(--t1); margin:0; }
-    .card-head p { font-size:12px; color:var(--t4); margin:2px 0 0; }
+    /* Removed by the migration: .tabs/.tab/.tab.active (now the global
+       .os-seg segmented control), .card (now .os-stage), .card-head chrome
+       (padding, border and background now come from .os-stage-bar), .actions
+       and the three .icon-btn rules (the global .icon-btn supplies size,
+       hover, disabled and focus, and its .danger variant uses --red tokens
+       instead of the hardcoded #ef4444 these rules used).
+       The per-tab title and count are preserved: the same two declarations
+       now target .tab-head inside the second stage bar. */
+    .tab-head h3 { font-size:15px; font-weight:700; color:var(--t1); margin:0; }
+    .tab-head p { font-size:12px; color:var(--t4); margin:2px 0 0; }
     .btn-primary { display:inline-flex; align-items:center; gap:6px; }
-    .actions { display:flex; gap:2px; }
-    .icon-btn { border:none; background:transparent; cursor:pointer; padding:6px; color:var(--t3); border-radius:6px; }
-    .icon-btn:hover { color:var(--t1); background:var(--surface-2); }
-    .icon-btn.danger:hover { color:#ef4444; background:rgba(239,68,68,.08); }
     .badge { padding:3px 9px; border-radius:12px; font-size:11.5px; font-weight:600; }
     .badge-green { background:var(--green-s); color:var(--green); }
     .badge-gray { background:var(--surface-2); color:var(--t4); }
     .empty { text-align:center; color:var(--t4); padding:32px 0; font-size:13px; }
-    .overlay { position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; padding:16px; }
+    /* .overlay removed: the three modals now use the global .modal-overlay. */
     .modal { background:var(--surface); border-radius:16px; width:100%; max-width:420px; overflow:hidden; }
     .modal-hd { display:flex; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid var(--border); background:var(--surface-2); }
     .modal-hd h3 { font-size:15px; font-weight:700; margin:0; }

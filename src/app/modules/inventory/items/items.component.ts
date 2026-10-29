@@ -6,25 +6,38 @@ import { ItemDto, ItemCategoryDto, UnitDto } from '../../../core/models/inventor
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { ConfirmDeleteComponent } from '../../../shared/components/confirm-delete/confirm-delete.component';
 import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/confirm-delete.service';
+import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
 
 @Component({
   selector: 'app-items',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, PageHeaderComponent, ConfirmDeleteComponent],
+  imports: [CommonModule, ReactiveFormsModule, PageHeaderComponent, ConfirmDeleteComponent, OsSelectComponent],
   template: `
-    <app-page-header title="Item Master" subtitle="Books, stationery, uniforms and every other sellable item">
+    <div class="os-page compact">
+    <app-page-header [dense]="true" title="Item Master" subtitle="Books, stationery, uniforms and every other sellable item" routeUrl="/inventory/items">
       <button class="btn-primary" (click)="openAdd()"><span class="material-icons-round">add</span> Add Item</button>
     </app-page-header>
 
-    <div class="filters">
-      <input class="search" placeholder="Search by name, code or barcode…" [value]="search()" (input)="onSearch($any($event.target).value)" />
-      <select [value]="categoryFilter()" (change)="categoryFilter.set($any($event.target).value); load()">
-        <option value="">All Categories</option>
-        @for (c of categories(); track c.itemCategoryId) { <option [value]="c.itemCategoryId">{{ c.categoryName }}</option> }
-      </select>
-    </div>
+    <div class="os-stage">
+      <div class="os-stage-bar">
+        <div class="os-toolbar-group">
+          <div class="os-field grow">
+            <div class="search-wrap">
+              <span class="material-icons-round search-icon">search</span>
+              <input class="search-input" placeholder="Search by name, code or barcode…" [value]="search()" (input)="onSearch($any($event.target).value)" />
+            </div>
+          </div>
+          <app-os-select
+            [options]="categoryOptions()"
+            [value]="categoryFilter()"
+            (valueChange)="categoryFilter.set($event ?? ''); load()"
+            placeholder="All Categories"
+            icon="category"
+            ariaLabel="Category" />
+        </div>
+      </div>
 
-    <div class="card">
+      <div class="os-stage-body">
       <table class="table">
         <thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Unit</th><th>Stock</th><th>Sale Price</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
@@ -46,10 +59,12 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
           @if (!items().length) { <tr><td colspan="8" class="empty">No items found.</td></tr> }
         </tbody>
       </table>
+      </div>
+    </div>
     </div>
 
     @if (showModal()) {
-      <div class="overlay" (click)="showModal.set(false)">
+      <div class="modal-overlay" (click)="showModal.set(false)">
         <div class="modal" (click)="$event.stopPropagation()">
           <div class="modal-hd"><h3>{{ editingId() ? 'Edit' : 'Add' }} Item</h3><button class="close-btn" (click)="showModal.set(false)"><span class="material-icons-round">close</span></button></div>
           <form [formGroup]="form" (ngSubmit)="save()" class="modal-body">
@@ -98,21 +113,20 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
     <app-confirm-delete />
   `,
   styles: [`
-    .filters { display:flex; gap:10px; margin-bottom:14px; }
-    .search { flex:1; max-width:340px; padding:9px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; background:var(--surface); color:var(--t1); }
-    .filters select { padding:9px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; background:var(--surface); color:var(--t1); }
-    .card { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+    /* Removed by the canonical migration: .filters and .search (now the stage
+       bar + global .search-wrap/.search-input), .card (now .os-stage), .actions
+       and the three .icon-btn rules (the global .icon-btn supplies size, hover,
+       disabled and focus, and its .danger variant uses --red tokens instead of
+       the hardcoded #ef4444 these rules used). */
     .sub { font-size:11px; color:var(--t4); }
     td.low { color:#dc2626; font-weight:700; }
-    .actions { display:flex; gap:2px; }
-    .icon-btn { border:none; background:transparent; cursor:pointer; padding:6px; color:var(--t3); border-radius:6px; }
-    .icon-btn:hover { color:var(--t1); background:var(--surface-2); }
-    .icon-btn.danger:hover { color:#ef4444; background:rgba(239,68,68,.08); }
     .badge { padding:3px 9px; border-radius:12px; font-size:11.5px; font-weight:600; }
     .badge-green { background:var(--green-s); color:var(--green); }
     .badge-gray { background:var(--surface-2); color:var(--t4); }
     .empty { text-align:center; color:var(--t4); padding:32px 0; font-size:13px; }
-    .overlay { position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; padding:16px; overflow-y:auto; }
+    /* .overlay removed: the template now uses the global .modal-overlay, which
+       supplies the backdrop, centring, --z-modal and scroll containment, and
+       converts to a bottom sheet on mobile. */
     .modal { background:var(--surface); border-radius:16px; width:100%; max-width:640px; margin:auto; }
     .modal-hd { display:flex; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid var(--border); background:var(--surface-2); }
     .modal-hd h3 { font-size:15px; font-weight:700; margin:0; }
@@ -123,7 +137,11 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
     .field { display:flex; flex-direction:column; gap:5px; margin-bottom:14px; }
     label { font-size:11px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.5px; }
     .req { color:var(--red); }
-    input, select, textarea { padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13.5px; font-family:inherit; background:var(--surface); color:var(--t1); }
+    /* Scoped to the modal. Unscoped, this bare rule out-specified the global
+       .search-input on the stage-bar search box (a component-scoped element
+       selector beats a global class), giving it modal padding and an 8px
+       radius inside a square stage. Modal form fields are unchanged. */
+    .modal-body input, .modal-body select, .modal-body textarea { padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13.5px; font-family:inherit; background:var(--surface); color:var(--t1); }
     .alert-err { background:#fee2e2; color:#dc2626; border:1px solid #dc2626; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:10px; }
   `]
 })
@@ -141,6 +159,14 @@ export class ItemsComponent implements OnInit {
   editingId = signal<number | null>(null);
   saving = signal(false);
   modalError = signal('');
+
+  // Options for app-os-select. Values stay STRINGS so categoryFilter remains a
+  // string signal and load()'s existing `Number(...)` / falsy-'' handling is
+  // untouched. Derived from the same categories() signal the old select used.
+  categoryOptions = computed<OsSelectOption<string>[]>(() => [
+    { value: '', label: 'All Categories' },
+    ...this.categories().map(c => ({ value: String(c.itemCategoryId), label: c.categoryName }))
+  ]);
 
   form = this.fb.group({
     itemName: ['', Validators.required],

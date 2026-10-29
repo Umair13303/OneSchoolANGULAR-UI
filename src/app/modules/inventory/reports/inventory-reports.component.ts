@@ -54,28 +54,36 @@ const REPORTS: ReportDef[] = [
   standalone: true,
   imports: [CommonModule, FormsModule, PageHeaderComponent, DatePickerComponent],
   template: `
-    <app-page-header title="Reports" subtitle="Purchase, Sales, Inventory, Financial and Package reports" />
+    <div class="os-page compact">
+    <app-page-header [dense]="true" title="Reports" subtitle="Purchase, Sales, Inventory, Financial and Package reports" routeUrl="/inventory/reports" />
 
-    <div class="toolbar">
-      <select [(ngModel)]="reportKey" (ngModelChange)="run()">
-        @for (grp of groups; track grp) {
-          <optgroup [label]="grp">
-            @for (r of reportsIn(grp); track r.value) { <option [value]="r.value">{{ r.label }}</option> }
-          </optgroup>
-        }
-      </select>
-      <app-date-picker [(ngModel)]="from"/>
-      <app-date-picker [(ngModel)]="to"/>
-      <button class="btn-primary" (click)="run()">Run Report</button>
-      <div class="grow"></div>
-      @if (grossProfitSummary()) {
-        <div class="mini-summary">
-          Overall Profit: <strong>{{ grossProfitSummary()!.profit | number:'1.2-2' }}</strong> ({{ grossProfitSummary()!.marginPercent }}% margin)
+    <div class="os-stage">
+      <div class="os-stage-bar">
+        <div class="os-toolbar-group">
+          <!-- Native grouped select kept deliberately: app-os-select has no
+               optgroup support, so converting it would flatten the five report
+               families. Options, order, grouping and change handler untouched. -->
+          <select [(ngModel)]="reportKey" (ngModelChange)="run()">
+            @for (grp of groups; track grp) {
+              <optgroup [label]="grp">
+                @for (r of reportsIn(grp); track r.value) { <option [value]="r.value">{{ r.label }}</option> }
+              </optgroup>
+            }
+          </select>
+          <div class="os-field"><app-date-picker [(ngModel)]="from"/></div>
+          <div class="os-field"><app-date-picker [(ngModel)]="to"/></div>
+          <button class="btn-primary" (click)="run()">Run Report</button>
         </div>
-      }
-    </div>
+        @if (grossProfitSummary()) {
+          <div class="os-toolbar-group end">
+            <div class="mini-summary">
+              Overall Profit: <strong>{{ grossProfitSummary()!.profit | number:'1.2-2' }}</strong> ({{ grossProfitSummary()!.marginPercent }}% margin)
+            </div>
+          </div>
+        }
+      </div>
 
-    <div class="card">
+      <div class="os-stage-body">
       <table class="table">
         <thead><tr>@for (c of currentDef().columns; track c.key) { <th>{{ c.label }}</th> }</tr></thead>
         <tbody>
@@ -89,15 +97,22 @@ const REPORTS: ReportDef[] = [
           @if (!rows().length) { <tr><td [attr.colspan]="currentDef().columns.length" class="empty">{{ loading() ? 'Loading…' : 'No data for the selected filters.' }}</td></tr> }
         </tbody>
       </table>
+      </div>
+    </div>
     </div>
   `,
   styles: [`
-    .toolbar { display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
-    .toolbar select, .toolbar input { padding:9px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; background:var(--surface); color:var(--t1); }
-    .grow { flex:1; }
+    /* Removed by the canonical migration: .toolbar (now .os-stage-bar), .grow
+       (the bar's space-between plus .os-toolbar-group.end positions the summary),
+       .card (now .os-stage), and the dead ".toolbar input" half of the control
+       rule — app-date-picker is view-encapsulated, so that selector never
+       reached its internal input.
+       The native grouped select still needs local styling because nothing
+       global styles a bare <select> inside a stage bar. Declarations kept
+       as-is apart from square corners, to match the flat stage. */
+    .os-stage-bar select { padding:9px 12px; border:1.5px solid var(--border); border-radius:0; font-size:13px; background:var(--surface); color:var(--t1); }
     .mini-summary { font-size:13px; color:var(--t3); }
     .mini-summary strong { color:var(--t1); }
-    .card { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
     .empty { text-align:center; color:var(--t4); padding:32px 0; font-size:13px; }
   `]
 })

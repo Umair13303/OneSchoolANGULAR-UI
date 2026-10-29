@@ -49,7 +49,15 @@ export class ConfirmDeleteService {
         this.close();
       },
       error: (e: any) => {
-        const msg = e?.error?.error ?? e?.message ?? 'Something went wrong. Please try again.';
+        const status = e?.status as number | undefined;
+        const server = e?.error?.error as string | undefined;
+        let msg = server || 'Something went wrong. Please try again.';
+        if (!server) {
+          if (status === 403) msg = 'You do not have permission to delete this item.';
+          else if (status === 404) msg = 'This item was already removed.';
+          else if (status === 409) msg = e?.error?.error || 'This item cannot be deleted right now.';
+          else if (typeof e?.message === 'string' && !e.message.startsWith('Http failure')) msg = e.message;
+        }
         this.state.update(s => ({ ...s, loading: false, error: msg }));
       }
     });

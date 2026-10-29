@@ -1,8 +1,8 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { forkJoin, of } from 'rxjs';
+import { forkJoin, of, firstValueFrom } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { AssessmentService } from '../../../core/services/assessment.service';
 import { CurriculumService } from '../../../core/services/curriculum.service';
@@ -10,8 +10,11 @@ import { ExamService } from '../../../core/services/exam.service';
 import { MenuService } from '../../../core/services/menu.service';
 import { QuestionBankItemDto } from '../../../core/models/assessment.model';
 import { ExamPaperDto, QUESTION_TYPES } from '../../../core/models/exam.model';
+import { GenerateQuestionsResponse, GeneratedQuestionDraftDto } from '../../../core/models/ai.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { AiGeneratePanelComponent } from './ai-generate-panel.component';
+import { AiReviewPanelComponent } from './ai-review-panel.component';
 
 interface TopicOption {
   id: number;
@@ -34,14 +37,29 @@ interface BankForm {
 @Component({
   selector: 'app-question-bank',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PageHeaderComponent, EmptyStateComponent],
+  imports: [CommonModule, FormsModule, RouterModule, PageHeaderComponent, EmptyStateComponent, AiGeneratePanelComponent, AiReviewPanelComponent],
   template: `
     <div class="os-page compact qb-page">
       <app-page-header [dense]="true" [title]="pageTitle()" routeUrl="/exams/question-bank" subtitle="Reusable questions linked to course topics">
+        <button type="button" class="btn-ghost" (click)="openAiGenerate()" [disabled]="aiMode() === 'review'">
+          <span class="material-icons-round">auto_awesome</span> AI Generate
+        </button>
         <button type="button" class="btn-primary" (click)="openCreate()">
           <span class="material-icons-round">add</span> New Question
         </button>
       </app-page-header>
+
+      @if (aiMode() === 'generate') {
+        <app-ai-generate-panel
+          (generated)="onAiGenerated($event)"
+          (cancelled)="closeAi()" />
+      }
+      @if (aiMode() === 'review' && aiDraft()) {
+        <app-ai-review-panel
+          [draft]="aiDraft()"
+          (discard)="closeAi()"
+          (addSelectedRequest)="saveAiSelected($event)" />
+      }
 
       <div class="os-stage">
         <div class="os-stage-bar">
@@ -87,6 +105,9 @@ interface BankForm {
         <div class="os-stage-body">
           @if (error()) {
             <div class="banner error">{{ error() }}</div>
+          }
+          @if (aiSaveOk()) {
+            <div class="banner ok">{{ aiSaveOk() }}</div>
           }
 
           @if (loading()) {
@@ -403,6 +424,7 @@ export class QuestionBankComponent implements OnInit {
   private curriculum = inject(CurriculumService);
   private examSvc = inject(ExamService);
   private menuSvc = inject(MenuService);
+  private aiReview = viewChild(AiReviewPanelComponent);
 
   readonly questionTypes = QUESTION_TYPES;
 
@@ -420,6 +442,11 @@ export class QuestionBankComponent implements OnInit {
   editTopicTitle = signal('');
   copyItem = signal<QuestionBankItemDto | null>(null);
   copyPaperId: number | null = null;
+
+  /** none | generate | review — AI draft stays in memory only */
+  aiMode = signal<'none' | 'generate' | 'review'>('none');
+  aiDraft = signal<GenerateQuestionsResponse | null>(null);
+  aiSaveOk = signal('');
 
   search = '';
   filterTopicId: number | null = null;
@@ -443,6 +470,77 @@ export class QuestionBankComponent implements OnInit {
   ngOnInit() {
     this.menuSvc.ensureLoaded().subscribe();
     this.loadTopics();
+    this.load();
+  }
+
+  openAiGenerate() {
+    this.showForm.set(false);
+    this.aiDraft.set(null);
+    this.aiSaveOk.set('');
+    this.aiMode.set('generate');
+  }
+
+  onAiGenerated(res: GenerateQuestionsResponse) {
+    this.aiDraft.set(res);
+    this.aiMode.set('review');
+  }
+
+  closeAi() {
+    this.aiMode.set('none');
+    this.aiDraft.set(null);
+  }
+
+  async saveAiSelected(selected: GeneratedQuestionDraftDto[]) {
+    const review = this.aiReview();
+    if (!selected.length) return;
+    review?.setSaving(true);
+    review?.setError('');
+    review?.setOk('');
+
+    const failed = new Set<string>();
+    let saved = 0;
+    for (const q of selected) {
+      const typeId = q.questionTypeId || q.questionType;
+      try {
+        await firstValueFrom(this.assessment.createQuestionBankItem({
+          courseTopicId: q.courseTopicId,
+          questionType: typeId,
+          questionText: q.questionText,
+          language: q.language === 'ur-en' ? 'ur' : (q.language || 'en'),
+          marks: q.marks,
+          correctAnswer: typeId === 3 || typeId === 4 ? (q.correctAnswer ?? null) : null,
+          isTrue: typeId === 2 ? (q.isTrue ?? null) : null,
+          questionNote: q.questionNote ?? null,
+          options: typeId === 1
+            ? (q.options || []).map((o, i) => ({
+                optionLabel: o.optionLabel || String.fromCharCode(65 + i),
+                optionText: o.optionText,
+                isCorrect: !!o.isCorrect,
+                sortOrder: o.sortOrder || i + 1
+              }))
+            : []
+        }));
+        saved++;
+      } catch (err: any) {
+        failed.add(q.clientKey);
+        const msg = err?.error?.error || 'Save failed.';
+        review?.setError(`Failed on “${(q.questionText || '').slice(0, 40)}…”: ${msg}`);
+      }
+    }
+
+    review?.setSaving(false);
+    if (failed.size) {
+      review?.keepFailed(failed);
+      if (saved > 0) {
+        review?.setOk(`${saved} question(s) saved. ${failed.size} failed — still selected for retry.`);
+        this.load();
+      }
+      return;
+    }
+
+    review?.setOk(`${saved} question(s) added to the Question Bank.`);
+    this.aiSaveOk.set(`${saved} AI question(s) added to the Question Bank.`);
+    this.closeAi();
     this.load();
   }
 

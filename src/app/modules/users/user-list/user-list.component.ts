@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UserService } from '../../../core/services/user.service';
@@ -8,6 +8,7 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { environment } from '../../../../environments/environment';
+import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
 
 const ROLE_STYLE: Record<string, string> = {
   superadmin: 'color:#be123c;background:#fff1f4;border:1px solid #fecdd3',
@@ -21,37 +22,43 @@ const ROLE_STYLE: Record<string, string> = {
 @Component({
   selector: 'app-user-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent],
+  imports: [CommonModule, FormsModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, OsSelectComponent],
   template: `
-    <app-page-header title="Users" subtitle="Manage system users and roles">
+    <div class="os-page compact">
+    <app-page-header [dense]="true" title="Users" routeUrl="/users">
       <button class="btn-primary" (click)="showModal.set(true)">
-        <span class="material-icons-round" style="font-size:17px">person_add</span>
+        <span class="material-icons-round">person_add</span>
         Add User
       </button>
     </app-page-header>
 
-    <div class="filter-bar">
-      <div class="search-wrap">
-        <span class="material-icons-round search-icon">search</span>
-        <input class="search-input" placeholder="Search by name or email..." [(ngModel)]="search" />
+    <div class="os-stage">
+      <div class="os-stage-bar">
+        <div class="os-toolbar-group">
+          <div class="os-field grow">
+            <div class="search-wrap">
+              <span class="material-icons-round search-icon">search</span>
+              <input class="search-input" placeholder="Search by name or email..." [(ngModel)]="search" />
+            </div>
+          </div>
+          <app-os-select
+            [options]="roleFilterOptions()"
+            [value]="roleFilter"
+            (valueChange)="roleFilter = $event ?? ''"
+            placeholder="All Roles"
+            icon="badge"
+            ariaLabel="Role" />
+        </div>
       </div>
-      <select class="filter-select" [(ngModel)]="roleFilter">
-        <option value="">All Roles</option>
-        @for (r of roles; track r) { <option [value]="r">{{ r | titlecase }}</option> }
-      </select>
-    </div>
 
     @if (loading()) {
-      <div class="card"><app-loading /></div>
+      <div class="os-stage-body pad"><app-loading /></div>
     } @else if (filtered().length === 0) {
-      <div class="card">
+      <div class="os-stage-body pad">
         <app-empty-state icon="manage_accounts" title="No users found" message="Add a user or adjust filters." />
       </div>
     } @else {
-      <div class="card">
-        <div class="tbl-meta">
-          <span class="tbl-count">{{ filtered().length }} users</span>
-        </div>
+      <div class="os-stage-body">
         <table class="table">
           <thead>
             <tr>
@@ -110,7 +117,13 @@ const ROLE_STYLE: Record<string, string> = {
           </tbody>
         </table>
       </div>
+
+      <div class="os-stage-foot">
+        <span class="tbl-count">{{ filtered().length }} users</span>
+      </div>
     }
+    </div>
+    </div>
 
     <!-- Add User Modal -->
     @if (showModal()) {
@@ -181,7 +194,7 @@ const ROLE_STYLE: Record<string, string> = {
     }
   `,
   styles: [`
-    .tbl-meta { padding: 14px 18px 0; display: flex; justify-content: flex-end; }
+    /* .tbl-meta removed — .os-stage-foot now provides the row and divider. */
     .tbl-count { font-size: 11px; font-weight: 600; color: var(--t4); text-transform: uppercase; letter-spacing: 0.6px; }
     .u-cell { display: flex; align-items: center; gap: 10px; }
     .u-av {
@@ -237,6 +250,14 @@ export class UserListComponent implements OnInit {
   modalError      = signal('');
   search          = '';
   roleFilter      = '';
+
+  // Options for app-os-select (options + value + valueChange; it is not a
+  // ControlValueAccessor). Derived from the existing `roles` list; the
+  // roleFilter value and filtered() behaviour are unchanged.
+  roleFilterOptions = computed<OsSelectOption<string>[]>(() => [
+    { value: '', label: 'All Roles' },
+    ...this.roles.map(r => ({ value: r, label: r.charAt(0).toUpperCase() + r.slice(1) }))
+  ]);
   visiblePasswords = new Set<number>();
 
   // Signature upload state

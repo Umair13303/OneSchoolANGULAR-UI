@@ -12,13 +12,24 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, PageHeaderComponent, ConfirmDeleteComponent],
   template: `
-    <app-page-header title="Suppliers" subtitle="Manage vendors you purchase inventory from">
+    <div class="os-page compact">
+    <app-page-header [dense]="true" title="Suppliers" subtitle="Manage vendors you purchase inventory from" routeUrl="/inventory/suppliers">
       <button class="btn-primary" (click)="openAdd()"><span class="material-icons-round">add</span> Add Supplier</button>
     </app-page-header>
 
-    <input class="search" placeholder="Search suppliers…" [value]="search()" (input)="onSearch($any($event.target).value)" />
+    <div class="os-stage">
+      <div class="os-stage-bar">
+        <div class="os-toolbar-group">
+          <div class="os-field grow">
+            <div class="search-wrap">
+              <span class="material-icons-round search-icon">search</span>
+              <input class="search-input" placeholder="Search suppliers…" [value]="search()" (input)="onSearch($any($event.target).value)" />
+            </div>
+          </div>
+        </div>
+      </div>
 
-    <div class="card">
+      <div class="os-stage-body">
       <table class="table">
         <thead><tr><th>Name</th><th>Contact Person</th><th>Mobile</th><th>City</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
@@ -38,10 +49,12 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
           @if (!suppliers().length) { <tr><td colspan="6" class="empty">No suppliers found.</td></tr> }
         </tbody>
       </table>
+      </div>
+    </div>
     </div>
 
     @if (showModal()) {
-      <div class="overlay" (click)="showModal.set(false)">
+      <div class="modal-overlay" (click)="showModal.set(false)">
         <div class="modal" (click)="$event.stopPropagation()">
           <div class="modal-hd"><h3>{{ editingId() ? 'Edit' : 'Add' }} Supplier</h3><button class="close-btn" (click)="showModal.set(false)"><span class="material-icons-round">close</span></button></div>
           <form [formGroup]="form" (ngSubmit)="save()" class="modal-body">
@@ -63,17 +76,16 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
     <app-confirm-delete />
   `,
   styles: [`
-    .search { width:100%; max-width:340px; padding:9px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; margin-bottom:14px; background:var(--surface); color:var(--t1); }
-    .card { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
-    .actions { display:flex; gap:2px; }
-    .icon-btn { border:none; background:transparent; cursor:pointer; padding:6px; color:var(--t3); border-radius:6px; }
-    .icon-btn:hover { color:var(--t1); background:var(--surface-2); }
-    .icon-btn.danger:hover { color:#ef4444; background:rgba(239,68,68,.08); }
+    /* Removed by the canonical migration: .search (now the stage bar + global
+       .search-wrap/.search-input), .card (now .os-stage), .actions and the
+       three .icon-btn rules (the global .icon-btn supplies size, hover,
+       disabled and focus, and its .danger variant uses --red tokens instead of
+       the hardcoded #ef4444 these rules used). */
     .badge { padding:3px 9px; border-radius:12px; font-size:11.5px; font-weight:600; }
     .badge-green { background:var(--green-s); color:var(--green); }
     .badge-gray { background:var(--surface-2); color:var(--t4); }
     .empty { text-align:center; color:var(--t4); padding:32px 0; font-size:13px; }
-    .overlay { position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; padding:16px; }
+    /* .overlay removed: the template now uses the global .modal-overlay. */
     .modal { background:var(--surface); border-radius:16px; width:100%; max-width:460px; }
     .modal-hd { display:flex; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid var(--border); background:var(--surface-2); }
     .modal-hd h3 { font-size:15px; font-weight:700; margin:0; }
@@ -83,7 +95,9 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
     .field { display:flex; flex-direction:column; gap:5px; margin-bottom:14px; }
     label { font-size:11px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.5px; }
     .req { color:var(--red); }
-    input, select, textarea { padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13.5px; font-family:inherit; background:var(--surface); color:var(--t1); width:100%; }
+    /* Scoped to the modal so it no longer out-specifies the global
+       .search-input on the stage-bar search box. Modal fields are unchanged. */
+    .modal-body input, .modal-body select, .modal-body textarea { padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13.5px; font-family:inherit; background:var(--surface); color:var(--t1); width:100%; }
     .alert-err { background:#fee2e2; color:#dc2626; border:1px solid #dc2626; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:10px; }
   `]
 })

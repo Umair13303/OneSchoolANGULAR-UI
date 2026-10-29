@@ -3,13 +3,12 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { UserService } from '../../core/services/user.service';
-import { StudentService } from '../../core/services/student.service';
 import { AcademicService } from '../../core/services/academic.service';
-import { AttendanceService } from '../../core/services/attendance.service';
 import { TimetableService } from '../../core/services/timetable.service';
 import { SettingsService } from '../../core/services/settings.service';
+import { DashboardService } from '../../core/services/dashboard.service';
 import { TimetableEntryDto, DAY_NAMES } from '../../core/models/timetable.model';
-import { forkJoin, map } from 'rxjs';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-dashboard',
@@ -1223,8 +1222,8 @@ import { forkJoin, map } from 'rxjs';
 export class DashboardComponent implements OnInit, OnDestroy {
   auth        = inject(AuthService);
   private userSvc      = inject(UserService);
-  private stuSvc       = inject(StudentService);
   private acSvc        = inject(AcademicService);
+  private dashSvc      = inject(DashboardService);
   private ttSvc        = inject(TimetableService);
   private settingsSvc  = inject(SettingsService);
 
@@ -1434,48 +1433,43 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     forkJoin({
       users:    this.userSvc.getAll(),
-      students: this.stuSvc.getStudents(undefined, undefined, undefined, 1, 0).pipe(map(r => r.items)),
+      summary:  this.dashSvc.getSummary(),
       classes:  this.acSvc.getClasses(),
       subjects: this.acSvc.getSubjects(),
     }).subscribe({
-      next: ({ users, students, classes, subjects }) => {
+      next: ({ users, summary, classes, subjects }) => {
         const teachers = users.filter(u => u.roleName?.toLowerCase() === 'teacher' && u.isActive);
-        const male     = (students as any[]).filter(s => s.gender?.toLowerCase() === 'male').length;
-        const female   = (students as any[]).filter(s => s.gender?.toLowerCase() === 'female').length;
 
         this.stats.set({
-          students: (students as any[]).length,
+          students: summary.totalStudents,
           teachers: teachers.length,
           classes:  classes.length,
           subjects: subjects.length,
-          male, female
+          male: summary.maleCount,
+          female: summary.femaleCount
         });
 
-        // Class-wise enrollment from students
-        const classCounts = new Map<string, number>();
-        (students as any[]).forEach(s => {
-          const name = s.className || s.currentClass || 'Unknown';
-          classCounts.set(name, (classCounts.get(name) ?? 0) + 1);
-        });
+        // Class-wise enrollment from aggregate (same top-8 / pct behavior as before)
+        let classEntries = (summary.byClass ?? []).map(c => [c.name, c.count] as [string, number]);
 
-        // Fallback: use classes list if no enrollment data
-        if (classCounts.size === 0) {
-          classes.forEach(c => classCounts.set(
+        // Fallback: use classes list if no enrollment data (legacy client behavior)
+        if (classEntries.length === 0) {
+          classEntries = classes.map(c => [
             c.className + (c.section ? ' ' + c.section : ''),
             c.subjectCount ?? 0
-          ));
+          ] as [string, number]);
         }
 
-        const maxCount = Math.max(...Array.from(classCounts.values()), 1);
+        const maxCount = Math.max(...classEntries.map(([, count]) => count), 1);
         this.classStats.set(
-          Array.from(classCounts.entries())
+          classEntries
             .sort((a, b) => b[1] - a[1])
             .slice(0, 8)
             .map(([name, count]) => ({ name, count, pct: (count / maxCount) * 100 }))
         );
 
-        // Simulate weekly attendance from total students (replace with real API if available)
-        const total = (students as any[]).length;
+        // Simulate weekly attendance from total students (unchanged formula)
+        const total = summary.totalStudents;
         if (total > 0) {
           this.weeklyAttendance.set([
             { day: 'Mon', present: Math.round(total * 0.92), absent: Math.round(total * 0.08) },

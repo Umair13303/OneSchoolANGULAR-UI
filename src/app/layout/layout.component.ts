@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, IsActiveMatchOptions } from '@angular/router';
 import { AuthService } from '../core/services/auth.service';
@@ -25,6 +25,8 @@ import { environment } from '../../environments/environment';
       }
 
       <aside class="sidebar" [class.collapsed]="collapsed()" [class.mob-open]="mobileOpen()">
+        <div class="sidebar-glow" aria-hidden="true"></div>
+
         <div class="brand">
           <div class="brand-mark">
             @if (instituteLogo()) {
@@ -56,7 +58,7 @@ import { environment } from '../../environments/environment';
               <a [routerLink]="item.routeUrl" routerLinkActive="active"
                  class="nav-item" [title]="item.title"
                  (click)="mobileOpen.set(false)">
-                <span class="ni material-icons-round">{{ item.icon }}</span>
+                <span class="ni-well"><span class="ni material-icons-round">{{ item.icon }}</span></span>
                 @if (!collapsed()) { <span class="nl">{{ item.title }}</span> }
               </a>
             }
@@ -72,18 +74,18 @@ import { environment } from '../../environments/environment';
               <a [routerLink]="item.routeUrl || '/dashboard'" routerLinkActive="active"
                  class="nav-item" [title]="item.title"
                  (click)="onNavLeafClick()">
-                <span class="ni material-icons-round">{{ item.icon }}</span>
+                <span class="ni-well"><span class="ni material-icons-round">{{ item.icon }}</span></span>
                 @if (!collapsed()) { <span class="nl">{{ item.title }}</span> }
               </a>
             } @else {
-              <div class="nav-group">
+              <div class="nav-group" [class.open]="open().has(item.menuItemId)">
                 <button class="nav-item nav-parent"
                         type="button"
                         [class.open]="open().has(item.menuItemId)"
                         [class.active]="isGroupActive(item)"
                         [title]="item.title"
                         (click)="onParentClick(item)">
-                  <span class="ni material-icons-round">{{ item.icon }}</span>
+                  <span class="ni-well"><span class="ni material-icons-round">{{ item.icon }}</span></span>
                   @if (!collapsed()) {
                     <span class="nl">{{ item.title }}</span>
                     <span class="material-icons-round caret">expand_more</span>
@@ -96,7 +98,7 @@ import { environment } from '../../environments/environment';
                       <a [routerLink]="child.routeUrl" routerLinkActive="active"
                          class="nav-sub-item" (click)="onNavLeafClick()">
                         <span class="material-icons-round sub-icon">{{ child.icon }}</span>
-                        {{ child.title }}
+                        <span class="sub-label">{{ child.title }}</span>
                       </a>
                     }
                   </div>
@@ -106,9 +108,14 @@ import { environment } from '../../environments/environment';
           }
         </nav>
 
-        <button class="toggle-btn" type="button" (click)="toggleCollapsed()" title="{{ collapsed() ? 'Expand menu' : 'Collapse menu' }}">
-          <span class="material-icons-round">{{ collapsed() ? 'chevron_right' : 'chevron_left' }}</span>
-        </button>
+        <div class="sidebar-foot">
+          <button class="toggle-btn" type="button" (click)="toggleCollapsed()" title="{{ collapsed() ? 'Expand menu' : 'Collapse menu' }}">
+            <span class="material-icons-round">{{ collapsed() ? 'chevron_right' : 'chevron_left' }}</span>
+            @if (!collapsed()) {
+              <span class="toggle-label">Collapse</span>
+            }
+          </button>
+        </div>
       </aside>
 
       <div class="main">
@@ -192,7 +199,7 @@ import { environment } from '../../environments/environment';
                             {{ swalSvc.enabled() ? 'notifications_active' : 'notifications_off' }}
                           </span>
                         </button>
-                        <button class="np-refresh" (click)="notifSvc.load(); chatSvc.loadUsers()" title="Refresh">
+                        <button class="np-refresh" (click)="notifSvc.load(true); chatSvc.loadUsers()" title="Refresh">
                           <span class="material-icons-round" [class.spin]="notifSvc.loading()">refresh</span>
                         </button>
                       </div>
@@ -301,142 +308,301 @@ import { environment } from '../../environments/environment';
     <app-chat-panel />
   `,
   styles: [`
-    .shell { display: flex; min-height: 100vh; background: var(--bg); }
+    .shell {
+      display: flex;
+      min-height: 100vh;
+      background: transparent;
+    }
 
     /* ═══ SIDEBAR ═══════════════════════════════════════ */
     .sidebar {
-      width: 248px;
-      background: var(--surface);
-      border-right: 1px solid var(--border);
+      --sb-pad-x: 12px;
+      width: 260px;
+      background:
+        linear-gradient(180deg, color-mix(in srgb, var(--accent) 4%, var(--surface)) 0%, var(--surface) 28%, var(--surface-2) 100%);
+      border-right: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
       display: flex; flex-direction: column;
       flex-shrink: 0;
       transition: width 0.28s cubic-bezier(.4,0,.2,1);
-      position: relative; z-index: 20;
-      box-shadow: var(--sh);
-      overflow: visible;
+      position: relative; z-index: var(--z-sidebar);
+      box-shadow:
+        1px 0 0 color-mix(in srgb, var(--accent) 6%, transparent),
+        8px 0 28px rgba(15, 23, 42, 0.04);
+      overflow: hidden;
     }
-    .sidebar.collapsed { width: 72px; }
+    .sidebar-glow {
+      pointer-events: none;
+      position: absolute; inset: 0 auto auto 0;
+      width: 180px; height: 160px;
+      background: radial-gradient(circle at 20% 10%, rgba(var(--accent-rgb), 0.16), transparent 68%);
+      opacity: 0.9;
+    }
+    .sidebar.collapsed { width: 76px; }
     .sidebar.collapsed .brand {
       justify-content: center;
-      padding: 14px 12px;
+      padding: 18px 12px 14px;
     }
+    .sidebar.collapsed .brand-copy { display: none; }
     .sidebar.collapsed .nav {
-      padding: 10px 12px;
+      padding: 8px 10px 12px;
       align-items: stretch;
     }
     .sidebar.collapsed .nav-item {
       justify-content: center;
       padding: 10px 0;
+      gap: 0;
     }
-    .sidebar.collapsed .ni { width: auto; }
-    .sidebar.collapsed .toggle-btn { margin: 8px 12px 14px; }
+    .sidebar.collapsed .ni-well { margin: 0; }
+    .sidebar.collapsed .sidebar-foot { padding: 8px 10px 14px; }
+    .sidebar.collapsed .toggle-btn { justify-content: center; padding: 10px; }
 
     /* Brand */
     .brand {
-      display: flex; align-items: center; gap: 11px;
-      padding: 16px 14px 16px 16px;
-      border-bottom: 1px solid var(--border);
-      overflow: hidden; white-space: nowrap; min-height: 64px;
+      position: relative;
+      display: flex; align-items: center; gap: 12px;
+      padding: 18px 14px 16px 16px;
+      overflow: hidden; white-space: nowrap; min-height: 72px;
+      flex-shrink: 0;
+    }
+    .brand::after {
+      content: '';
+      position: absolute; left: 16px; right: 16px; bottom: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border) 18%, var(--border) 82%, transparent);
     }
     .brand-mark {
-      width: 36px; height: 36px; border-radius: 10px;
-      background: linear-gradient(135deg, var(--accent), var(--accent-h));
+      width: 40px; height: 40px; border-radius: 12px;
+      background:
+        linear-gradient(145deg, color-mix(in srgb, var(--accent) 18%, var(--surface)), color-mix(in srgb, var(--accent-h) 12%, var(--surface)));
+      border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
-      box-shadow: 0 3px 10px rgba(var(--accent-rgb), 0.4);
+      box-shadow:
+        0 1px 0 color-mix(in srgb, var(--surface) 70%, transparent) inset,
+        0 8px 18px rgba(var(--accent-rgb), 0.18);
+      transition: transform 0.22s ease, box-shadow 0.22s ease;
+    }
+    .sidebar:not(.collapsed) .brand:hover .brand-mark {
+      transform: translateY(-1px);
+      box-shadow:
+        0 1px 0 color-mix(in srgb, var(--surface) 75%, transparent) inset,
+        0 10px 22px rgba(var(--accent-rgb), 0.24);
     }
     .brand-mark .material-icons-round { font-size: 20px; color: #fff; font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; }
-    .brand-logo-img { width: 28px; height: 28px; object-fit: contain; border-radius: 6px; }
-    .brand-name { font-size: 15px; font-weight: 800; color: var(--t1); letter-spacing: -0.4px; display: block; line-height: 1.2; }
-    .brand-tag  { font-size: 9.5px; color: var(--t4); letter-spacing: 0.9px; text-transform: uppercase; display: block; margin-top: 2px; font-weight: 600; }
+    .brand-logo-img { width: 28px; height: 28px; object-fit: contain; border-radius: 7px; }
+    .brand-copy { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+    .brand-name {
+      font-size: 14.5px; font-weight: 700; color: var(--t1);
+      letter-spacing: -0.35px; display: block; line-height: 1.2;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    .brand-tag {
+      font-size: 9.5px; color: var(--t4); letter-spacing: 0.72px;
+      text-transform: uppercase; display: block; font-weight: 600;
+      overflow: hidden; text-overflow: ellipsis;
+    }
 
     /* Nav */
-    .nav { flex: 1; padding: 10px 10px; overflow-y: auto; overflow-x: visible; display: flex; flex-direction: column; gap: 2px; }
-    .nav-section { font-size: 9.5px; font-weight: 700; color: var(--t4); text-transform: uppercase; letter-spacing: 1px; padding: 12px 8px 4px; }
-    .nav-section-label { font-size: 9.5px; font-weight: 700; color: var(--t4); text-transform: uppercase; letter-spacing: 1px; padding: 10px 10px 4px; }
-    .nav-divider { height: 1px; background: var(--border); margin: 6px 10px; }
+    .nav {
+      position: relative;
+      flex: 1;
+      padding: 12px var(--sb-pad-x) 8px;
+      overflow-y: auto; overflow-x: hidden;
+      display: flex; flex-direction: column; gap: 3px;
+      scrollbar-width: thin;
+      scrollbar-color: color-mix(in srgb, var(--t5) 70%, transparent) transparent;
+    }
+    .nav::-webkit-scrollbar { width: 5px; }
+    .nav::-webkit-scrollbar-thumb {
+      background: color-mix(in srgb, var(--t5) 75%, transparent);
+      border-radius: 99px;
+    }
+    .nav-section-label {
+      font-size: 10px; font-weight: 700; color: var(--t4);
+      text-transform: uppercase; letter-spacing: 1.05px;
+      padding: 12px 10px 6px;
+    }
+    .nav-divider {
+      height: 1px; margin: 8px 8px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+    }
 
     .nav-item {
       display: flex; align-items: center; gap: 10px;
-      padding: 9px 10px;
+      padding: 8px 8px 8px 8px;
       color: var(--t3);
-      text-decoration: none; font-size: 13px; font-weight: 500;
-      border-radius: 10px; white-space: nowrap;
-      border: none; background: none; cursor: pointer; width: 100%; text-align: left;
-      transition: color 0.15s, background 0.15s;
+      text-decoration: none; font-size: 13.25px; font-weight: 500;
+      border-radius: 12px; white-space: nowrap;
+      border: 1px solid transparent; background: transparent;
+      cursor: pointer; width: 100%; text-align: left;
+      transition:
+        color 0.16s ease,
+        background 0.16s ease,
+        border-color 0.16s ease,
+        box-shadow 0.18s ease,
+        transform 0.16s ease;
       position: relative; font-family: inherit;
     }
-    .nav-item:hover { color: var(--t1); background: var(--surface-2); }
-    .nav-item.active {
-      color: var(--accent);
-      background: var(--accent-s);
-      font-weight: 600;
+    .nav-item:hover {
+      color: var(--t1);
+      background: color-mix(in srgb, var(--surface) 70%, transparent);
+      border-color: color-mix(in srgb, var(--border) 70%, transparent);
     }
-    .nav-item.active .ni { color: var(--accent); }
+    .nav-item.active {
+      color: var(--accent-d);
+      background: linear-gradient(135deg, var(--accent-s), color-mix(in srgb, var(--accent-s) 55%, var(--surface)));
+      border-color: color-mix(in srgb, var(--accent) 18%, transparent);
+      font-weight: 600;
+      box-shadow:
+        0 1px 0 color-mix(in srgb, var(--surface) 65%, transparent) inset,
+        0 6px 14px rgba(var(--accent-rgb), 0.10);
+    }
     .nav-item.active::before {
       content: '';
-      position: absolute; left: 0; top: 22%; bottom: 22%;
-      width: 3px; border-radius: 0 3px 3px 0;
-      background: var(--accent);
+      position: absolute; left: 0; top: 18%; bottom: 18%;
+      width: 3px; border-radius: 0 4px 4px 0;
+      background: linear-gradient(180deg, var(--accent), var(--accent-h));
+      box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.35);
     }
 
+    .ni-well {
+      width: 30px; height: 30px; border-radius: 9px;
+      display: inline-flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      background: color-mix(in srgb, var(--surface-3) 70%, transparent);
+      transition: background 0.16s ease, transform 0.16s ease;
+    }
+    .nav-item:hover .ni-well {
+      background: color-mix(in srgb, var(--accent) 10%, var(--surface-2));
+      transform: translateY(-0.5px);
+    }
+    .nav-item.active .ni-well {
+      background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+      box-shadow: 0 1px 0 color-mix(in srgb, var(--surface) 70%, transparent) inset;
+    }
     .ni {
-      font-size: 20px; flex-shrink: 0; width: 24px; text-align: center;
+      font-size: 18px; line-height: 1;
       color: var(--t4);
       transition: color 0.15s;
       font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
     }
-    .nav-item:hover .ni,
+    .nav-item:hover .ni { color: var(--t2); }
     .nav-item.active .ni {
+      color: var(--accent);
       font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
     }
-    .nl { flex: 1; }
-    .caret { font-size: 16px; margin-left: auto; color: var(--t5); transition: transform 0.22s; }
+    .nl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .caret {
+      font-size: 18px; margin-left: auto; color: var(--t5);
+      transition: transform 0.24s cubic-bezier(.4,0,.2,1), color 0.16s;
+    }
+    .nav-parent.open .caret,
+    .nav-parent.active .caret { color: var(--accent); }
     .nav-parent.open .caret { transform: rotate(180deg); }
 
     .nav-group { position: relative; }
 
     .nav-sub {
-      margin: 2px 0 4px 22px;
-      display: flex; flex-direction: column; gap: 1px;
-      border-left: 2px solid var(--border);
-      padding-left: 10px;
+      margin: 2px 0 6px 23px;
+      display: flex; flex-direction: column; gap: 2px;
+      border-left: 2px solid color-mix(in srgb, var(--accent) 16%, var(--border));
+      padding: 2px 0 2px 10px;
+      animation: navSubIn 0.2s cubic-bezier(.22,1,.36,1);
+    }
+    @keyframes navSubIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
     .nav-sub-item {
       display: flex; align-items: center; gap: 8px;
-      padding: 7px 10px;
-      color: var(--t4);
-      font-size: 12.5px; font-weight: 500;
-      text-decoration: none; border-radius: 8px;
-      transition: color 0.15s, background 0.15s;
+      padding: 8px 10px;
+      color: var(--t3);
+      font-size: 12.75px; font-weight: 500;
+      text-decoration: none; border-radius: 10px;
+      border: 1px solid transparent;
+      transition: color 0.15s, background 0.15s, border-color 0.15s;
     }
-    .nav-sub-item:hover { color: var(--t1); background: var(--surface-2); }
-    .nav-sub-item.active { color: var(--accent); font-weight: 600; background: var(--accent-s); }
-    .sub-icon { font-size: 15px; color: var(--t4); font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20; }
-    .nav-sub-item.active .sub-icon { color: var(--accent); font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20; }
+    .nav-sub-item:hover {
+      color: var(--t1);
+      background: color-mix(in srgb, var(--surface) 80%, transparent);
+      border-color: color-mix(in srgb, var(--border) 65%, transparent);
+    }
+    .nav-sub-item.active {
+      color: var(--accent-d);
+      font-weight: 600;
+      background: var(--accent-s);
+      border-color: color-mix(in srgb, var(--accent) 14%, transparent);
+    }
+    .sub-icon {
+      font-size: 15px; color: var(--t4);
+      font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+      transition: color 0.15s;
+    }
+    .nav-sub-item:hover .sub-icon { color: var(--t2); }
+    .nav-sub-item.active .sub-icon {
+      color: var(--accent);
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    }
+    .sub-label { overflow: hidden; text-overflow: ellipsis; }
 
-    /* Collapse button */
+    /* Collapse footer */
+    .sidebar-foot {
+      flex-shrink: 0;
+      padding: 8px var(--sb-pad-x) 14px;
+      position: relative;
+    }
+    .sidebar-foot::before {
+      content: '';
+      position: absolute; left: 16px; right: 16px; top: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+    }
     .toggle-btn {
-      margin: 8px 10px 14px;
-      padding: 9px;
-      border: 1px solid var(--border); background: var(--surface-2);
-      color: var(--t4); border-radius: 10px; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: all 0.15s; font-family: inherit;
+      margin-top: 8px;
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
+      background: color-mix(in srgb, var(--surface) 85%, transparent);
+      color: var(--t3); border-radius: 11px; cursor: pointer;
+      display: flex; align-items: center; justify-content: flex-start; gap: 8px;
+      transition: all 0.16s ease; font-family: inherit;
+      backdrop-filter: blur(6px);
     }
     .toggle-btn .material-icons-round { font-size: 18px; }
-    .toggle-btn:hover { background: var(--accent-s); color: var(--accent); border-color: var(--accent-s); }
+    .toggle-label { font-size: 12px; font-weight: 600; letter-spacing: 0.01em; }
+    .toggle-btn:hover {
+      background: var(--accent-s);
+      color: var(--accent);
+      border-color: color-mix(in srgb, var(--accent) 22%, transparent);
+      box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.10);
+    }
 
     /* ═══ MAIN ═══════════════════════════════════════ */
-    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      background-color: var(--bg);
+      background-image:
+        radial-gradient(900px 420px at 80% -8%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 55%),
+        linear-gradient(180deg, color-mix(in srgb, var(--bg-glow, #f5f8fc) 80%, transparent), transparent 220px);
+    }
 
+    /* 62px -> 56px. The bar carries a date string, theme, notifications and
+       the user pill; 56px holds all of it and returns 6px to content. */
     .topbar {
-      height: 62px;
+      height: 56px;
       background: var(--surface);
       border-bottom: 1px solid var(--border);
-      padding: 0 28px;
+      /* Gutter matches .page-content so the bar's contents line up with the
+         page title below it; previously 28px against a 28px page padding,
+         now both 20px. */
+      padding: 0 20px;
       display: flex; align-items: center; justify-content: space-between;
-      position: sticky; top: 0; z-index: 10; flex-shrink: 0;
+      /* Was z-index 10, which a sticky form footer (100) painted over.
+         The ladder in styles.scss now orders these deliberately. */
+      position: sticky; top: 0; z-index: var(--z-topbar); flex-shrink: 0;
       box-shadow: var(--sh-xs);
     }
     .topbar-l { display: flex; align-items: center; gap: 12px; }
@@ -537,15 +703,20 @@ import { environment } from '../../environments/environment';
       flex: 1; height: 32px; border-radius: 8px; border: 2px solid transparent;
       cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center;
     }
-    .swatch.light-sw { background: #f0f2f5; border-color: #e4e6ea; }
+    .swatch.light-sw { background: #e9eef5; border-color: #d7dee8; }
     .swatch.dark-sw  { background: #0d0f14; border-color: #252b3b; }
-    .swatch.sys-sw   { background: linear-gradient(135deg, #f0f2f5 50%, #0d0f14 50%); border-color: var(--border); }
+    .swatch.sys-sw   { background: linear-gradient(135deg, #e9eef5 50%, #0d0f14 50%); border-color: var(--border); }
     .swatch.active   { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-g); }
     .swatch .material-icons-round { font-size: 14px; }
     .swatch.light-sw .material-icons-round { color: #374151; }
     .swatch.dark-sw  .material-icons-round { color: #e2e8f0; }
 
-    .page-content { padding: 28px; flex: 1; overflow-y: auto; }
+    /* 28px -> 20px. Together with the 6px off the top bar and the unified
+       12px .os-page gap, this is the approved moderate density target.
+       The pages that compensated for the old 28px with a local
+       :host margin-top of -16px have had that workaround removed in
+       the same change, so every page now aligns at one offset. */
+    .page-content { padding: 20px; flex: 1; overflow-y: auto; }
 
     /* ═══ NOTIFICATION BELL ═══════════════════════════ */
     .notif-wrap { position: relative; }
@@ -692,18 +863,20 @@ import { environment } from '../../environments/environment';
     @media (max-width: 768px) {
       /* Sidebar becomes a fixed overlay drawer */
       .sidebar {
-        position: fixed; left: 0; top: 0; height: 100vh; z-index: 300;
-        width: 260px !important;
+        /* dvh so the drawer is not cut off by mobile browser toolbars. */
+        position: fixed; left: 0; top: 0; height: 100dvh; z-index: var(--z-sidebar);
+        width: 280px !important;
         transform: translateX(-100%);
         transition: transform 0.28s cubic-bezier(.4,0,.2,1);
         box-shadow: var(--sh-xl);
+        overflow: hidden;
       }
       .sidebar.mob-open { transform: translateX(0); }
 
       /* Backdrop */
       .mob-backdrop {
         display: block;
-        position: fixed; inset: 0; z-index: 299;
+        position: fixed; inset: 0; z-index: calc(var(--z-sidebar) - 1);
         background: rgba(0,0,0,0.45);
         animation: fadeIn 0.2s;
       }
@@ -730,29 +903,32 @@ import { environment } from '../../environments/environment';
       .mob-close .material-icons-round { font-size: 20px; }
 
       /* Desktop collapse button hidden on mobile */
-      .toggle-btn { display: none; }
+      .sidebar-foot { display: none; }
 
       /* Main area takes full width */
       .main { margin-left: 0 !important; }
 
       /* Topbar */
-      .topbar { padding: 0 14px; }
+      .topbar { padding: 0 16px; }
       .page-date { display: none; }
       .u-meta { display: none; }
       .u-chev { display: none; }
       .user-pill { padding: 4px; border-radius: 50%; }
 
       /* Page content */
-      .page-content { padding: 16px; padding-bottom: 80px; }
+      /* Single owner for this value now: styles.scss previously forced 72px
+         with !important here, making this line dead. The safe-area inset
+         keeps the last row clear of the iPhone home indicator. */
+      .page-content { padding: 16px; padding-bottom: calc(var(--fab-page-pad) + env(safe-area-inset-bottom, 0px)); }
     }
 
     @media (max-width: 480px) {
-      .page-content { padding: 12px; padding-bottom: 80px; }
+      .page-content { padding: 12px; padding-bottom: calc(var(--fab-page-pad) + env(safe-area-inset-bottom, 0px)); }
       .topbar { padding: 0 12px; }
     }
   `]
 })
-export class LayoutComponent implements OnInit {
+export class LayoutComponent implements OnInit, OnDestroy {
   auth       = inject(AuthService);
   theme      = inject(ThemeService);
   notifSvc   = inject(SetupNotificationService);
@@ -803,16 +979,90 @@ export class LayoutComponent implements OnInit {
     this.userMenuOpen.set(false);
   };
 
+  /** Page offset captured while the drawer holds the body fixed. */
+  private lockedScrollY = 0;
+
+  constructor() {
+    // Lock the page while the mobile navigation drawer is open. Previously the
+    // page scrolled underneath the scrim and lost its position on close.
+    // Reacts to the existing mobileOpen() signal; opens/closes nothing itself.
+    effect(() => {
+      if (this.mobileOpen()) this.lockBodyScroll();
+      else this.unlockBodyScroll();
+    });
+  }
+
+  private lockBodyScroll() {
+    const body = document.body;
+    if (body.classList.contains('os-scroll-locked')) return;
+    this.lockedScrollY = window.scrollY;
+    body.style.top = `-${this.lockedScrollY}px`;
+    body.classList.add('os-scroll-locked');
+  }
+
+  private unlockBodyScroll() {
+    const body = document.body;
+    if (!body.classList.contains('os-scroll-locked')) return;
+    body.classList.remove('os-scroll-locked');
+    body.style.top = '';
+    window.scrollTo(0, this.lockedScrollY);
+  }
+
+  private deferredShellHandle: { kind: 'idle' | 'timeout'; id: number } | null = null;
+  private shellDestroyed = false;
+
   ngOnInit() {
+    this.shellDestroyed = false;
+    // Critical path: role menu for navigation shell.
     this.menuSvc.ensureLoaded().subscribe();
     document.addEventListener('click', this.closePanels);
-    this.notifSvc.load();
+    // SignalR connect is cheap; conversation list is deferred so dashboard
+    // stats can claim the first network slots after login.
     this.chatSvc.connect();
-    this.chatSvc.loadConversations();
+    this.scheduleDeferredShellWork();
+  }
+
+  /** Setup checklist + chat inbox after the first paint / critical dashboard calls. */
+  private scheduleDeferredShellWork() {
+    this.cancelDeferredShellWork();
+    const run = () => {
+      this.deferredShellHandle = null;
+      // Do not run after logout or layout teardown.
+      if (this.shellDestroyed || !this.auth.isLoggedIn()) return;
+      this.notifSvc.load();
+      this.chatSvc.loadConversations();
+    };
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    if (typeof w.requestIdleCallback === 'function') {
+      const id = w.requestIdleCallback(() => run(), { timeout: 1200 });
+      this.deferredShellHandle = { kind: 'idle', id };
+    } else {
+      const id = window.setTimeout(run, 300);
+      this.deferredShellHandle = { kind: 'timeout', id };
+    }
+  }
+
+  private cancelDeferredShellWork() {
+    const handle = this.deferredShellHandle;
+    if (!handle) return;
+    this.deferredShellHandle = null;
+    if (handle.kind === 'timeout') {
+      clearTimeout(handle.id);
+      return;
+    }
+    const w = window as Window & { cancelIdleCallback?: (id: number) => void };
+    w.cancelIdleCallback?.(handle.id);
   }
 
   ngOnDestroy() {
+    this.shellDestroyed = true;
+    this.cancelDeferredShellWork();
     document.removeEventListener('click', this.closePanels);
+    // Never leave the body fixed if the shell is torn down while open.
+    this.unlockBodyScroll();
   }
 
   toggleCollapsed() {
