@@ -1,6 +1,8 @@
 import { Component, inject, OnInit, OnDestroy, signal, computed, effect } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router, IsActiveMatchOptions } from '@angular/router';
+import { RouterModule, Router, IsActiveMatchOptions, NavigationEnd } from '@angular/router';
+import { filter, map, startWith } from 'rxjs/operators';
 import { AuthService } from '../core/services/auth.service';
 import { MenuService } from '../core/services/menu.service';
 import { ThemeService, ThemeMode } from '../core/services/theme.service';
@@ -298,14 +300,17 @@ import { environment } from '../../environments/environment';
           </div>
         </header>
 
-        <main class="page-content">
+        <main class="page-content" [class.has-chat-fab]="showChatPanel()">
           <router-outlet />
         </main>
       </div>
 
     </div>
 
-    <app-chat-panel />
+    <!-- Floating chat only on dashboard — elsewhere it covers page actions. -->
+    @if (showChatPanel()) {
+      <app-chat-panel />
+    }
   `,
   styles: [`
     .shell {
@@ -915,15 +920,18 @@ import { environment } from '../../environments/environment';
       .u-chev { display: none; }
       .user-pill { padding: 4px; border-radius: 50%; }
 
-      /* Page content */
-      /* Single owner for this value now: styles.scss previously forced 72px
-         with !important here, making this line dead. The safe-area inset
-         keeps the last row clear of the iPhone home indicator. */
-      .page-content { padding: 16px; padding-bottom: calc(var(--fab-page-pad) + env(safe-area-inset-bottom, 0px)); }
+      /* Page content — FAB clearance only while chat is mounted (dashboard). */
+      .page-content { padding: 16px; }
+      .page-content.has-chat-fab {
+        padding-bottom: calc(var(--fab-page-pad) + env(safe-area-inset-bottom, 0px));
+      }
     }
 
     @media (max-width: 480px) {
-      .page-content { padding: 12px; padding-bottom: calc(var(--fab-page-pad) + env(safe-area-inset-bottom, 0px)); }
+      .page-content { padding: 12px; }
+      .page-content.has-chat-fab {
+        padding-bottom: calc(var(--fab-page-pad) + env(safe-area-inset-bottom, 0px));
+      }
       .topbar { padding: 0 12px; }
     }
   `]
@@ -937,6 +945,16 @@ export class LayoutComponent implements OnInit, OnDestroy {
   private router       = inject(Router);
   private menuSvc      = inject(MenuService);
   private settingsSvc  = inject(SettingsService);
+
+  /** Chat FAB/panel — dashboard route only. */
+  readonly showChatPanel = toSignal(
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+      map(e => this.isDashboardUrl(e.urlAfterRedirects)),
+      startWith(this.isDashboardUrl(this.router.url))
+    ),
+    { initialValue: this.isDashboardUrl(this.router.url) }
+  );
 
   menuItems  = this.menuSvc.items;
   open       = signal<Set<number>>(new Set());
@@ -1142,6 +1160,15 @@ export class LayoutComponent implements OnInit, OnDestroy {
   openChat(convId: number) {
     this.notifOpen.set(false);
     this.chatSvc.triggerOpenConvId.set(convId);
+    // Panel only exists on dashboard — open the thread there.
+    if (!this.showChatPanel()) {
+      this.router.navigate(['/dashboard']);
+    }
+  }
+
+  private isDashboardUrl(url: string): boolean {
+    const path = url.split('?')[0].split('#')[0];
+    return path === '/dashboard' || path.endsWith('/dashboard');
   }
 
   chatInitials(name: string) {
