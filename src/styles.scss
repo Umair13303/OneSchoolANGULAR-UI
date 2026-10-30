@@ -1489,13 +1489,12 @@ input.ng-invalid.ng-touched:focus {
 
      Fixed by making the container scroll on the X axis only. Y stays as the
      container had it, so nothing that was visible becomes clipped. Scoped
-     with :has() to containers that actually hold a table, and excluding any
-     that hold an `app-os-select`, whose dropdown panel is absolutely
-     positioned and would be trapped by a new scroll container.
-     (`app-date-picker` is position:fixed, so it is unaffected.) */
+     with :has() to containers that actually hold a table.
+     `app-os-select` and `app-date-picker` panels are position:fixed, so
+     overflow-x here does not clip their menus. */
   .table-scroll,
-  .card:has(> .table):not(:has(app-os-select)),
-  .os-stage-body:has(> .table):not(:has(app-os-select)) {
+  .card:has(> .table),
+  .os-stage-body:has(> .table) {
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch;
   }

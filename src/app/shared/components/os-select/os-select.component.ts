@@ -2,6 +2,7 @@ import {
   Component,
   ElementRef,
   HostListener,
+  OnDestroy,
   inject,
   input,
   output,
@@ -44,8 +45,17 @@ export interface OsSelectOption<T = unknown> {
               [class.spin]="open()">expand_more</span>
       </button>
 
+      <!-- Fixed panel — escapes .os-stage / .os-panel overflow:hidden clipping. -->
       @if (open()) {
-        <div class="os-dd-panel" role="listbox" [attr.aria-label]="ariaLabel() || placeholder()">
+        <div
+          class="os-dd-panel"
+          role="listbox"
+          [class.os-dd-drop-up]="dropUp()"
+          [attr.aria-label]="ariaLabel() || placeholder()"
+          [style.top.px]="panelTop()"
+          [style.left.px]="panelLeft()"
+          [style.width.px]="panelWidth()"
+          (click)="$event.stopPropagation()">
           @if (searchable()) {
             <div class="os-dd-search">
               <span class="material-icons-round">search</span>
@@ -168,12 +178,10 @@ export interface OsSelectOption<T = unknown> {
     .os-dd-caret.spin { transform: rotate(180deg); color: var(--accent); }
 
     .os-dd-panel {
-      position: absolute;
-      top: calc(100% + 6px);
-      left: 0;
-      right: 0;
-      min-width: max(100%, 220px);
-      z-index: 40;
+      position: fixed;
+      z-index: var(--z-popover, 1300);
+      min-width: 220px;
+      max-width: min(100vw - 16px, 420px);
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 0;
@@ -182,9 +190,19 @@ export interface OsSelectOption<T = unknown> {
       animation: os-dd-in 0.14s ease-out;
     }
 
+    .os-dd-panel.os-dd-drop-up {
+      transform: translateY(-100%);
+      animation: os-dd-in-up 0.14s ease-out;
+    }
+
     @keyframes os-dd-in {
       from { opacity: 0; transform: translateY(-4px); }
       to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes os-dd-in-up {
+      from { opacity: 0; transform: translateY(calc(-100% + 4px)); }
+      to   { opacity: 1; transform: translateY(-100%); }
     }
 
     .os-dd-search {
@@ -287,7 +305,7 @@ export interface OsSelectOption<T = unknown> {
     }
   `]
 })
-export class OsSelectComponent<T = unknown> {
+export class OsSelectComponent<T = unknown> implements OnDestroy {
   private host = inject(ElementRef<HTMLElement>);
 
   id = input('');
@@ -306,6 +324,14 @@ export class OsSelectComponent<T = unknown> {
   open = signal(false);
   query = signal('');
   focusIndex = signal(0);
+  dropUp = signal(false);
+  panelTop = signal(0);
+  panelLeft = signal(0);
+  panelWidth = signal(220);
+
+  /** Estimate: list max-height 260 + optional search row + chrome. */
+  private readonly panelHEstimate = 320;
+  private readonly onScrollOrResize = () => { if (this.open()) this.reposition(); };
 
   selectedLabel = computed(() => {
     const v = this.value();
@@ -330,6 +356,10 @@ export class OsSelectComponent<T = unknown> {
     });
   }
 
+  ngOnDestroy() {
+    this.detachPositionListeners();
+  }
+
   trackOpt = (_: number, opt: OsSelectOption<T>) => opt.value as object | string | number | boolean;
 
   isSelected(v: T) {
@@ -345,11 +375,52 @@ export class OsSelectComponent<T = unknown> {
     this.query.set('');
     const idx = Math.max(0, this.options().findIndex(o => o.value === this.value()));
     this.focusIndex.set(idx);
+    this.reposition();
     this.open.set(true);
+    this.attachPositionListeners();
+    // Second pass after paint so measured height can flip drop-up if needed.
+    queueMicrotask(() => this.reposition());
   }
 
   close() {
     this.open.set(false);
+    this.detachPositionListeners();
+  }
+
+  private attachPositionListeners() {
+    window.addEventListener('scroll', this.onScrollOrResize, true);
+    window.addEventListener('resize', this.onScrollOrResize);
+  }
+
+  private detachPositionListeners() {
+    window.removeEventListener('scroll', this.onScrollOrResize, true);
+    window.removeEventListener('resize', this.onScrollOrResize);
+  }
+
+  private reposition() {
+    const trigger = this.host.nativeElement.querySelector('.os-dd-trigger') as HTMLElement | null;
+    const rect = (trigger ?? this.host.nativeElement).getBoundingClientRect();
+    const gap = 6;
+    const panelEl = this.host.nativeElement.querySelector('.os-dd-panel') as HTMLElement | null;
+    const panelH = panelEl?.offsetHeight || this.panelHEstimate;
+    const panelW = Math.max(rect.width, 220);
+
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const up = spaceBelow < panelH + gap && spaceAbove >= panelH + gap;
+    this.dropUp.set(up);
+
+    if (up) {
+      this.panelTop.set(rect.top - gap);
+    } else {
+      const top = rect.bottom + gap;
+      this.panelTop.set(Math.min(top, Math.max(8, window.innerHeight - Math.min(panelH, this.panelHEstimate) - 8)));
+    }
+
+    let left = rect.left;
+    left = Math.max(8, Math.min(left, window.innerWidth - panelW - 8));
+    this.panelLeft.set(left);
+    this.panelWidth.set(Math.min(panelW, window.innerWidth - 16));
   }
 
   onQuery(q: string) {

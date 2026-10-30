@@ -294,7 +294,7 @@ export interface Row {
     </div>
 
     @if (rows().length > 0) {
-      <div class="os-stage-foot att-foot fab-sticky-foot" [class.has-dirty]="dirty()">
+      <div class="os-stage-foot att-foot" [class.has-dirty]="dirty()">
         <div class="save-left">
           <span class="save-summary" aria-label="Attendance summary">
             <span class="sum-pill sum-p"><strong>{{ presentCount() }}</strong> Present</span>
@@ -333,7 +333,7 @@ export interface Row {
               <span>Saving…</span>
             } @else {
               <span class="material-icons-round">save</span>
-              <span>{{ dirty() ? 'Save changes' : 'Save attendance' }}</span>
+              <span>Save</span>
             }
           </button>
         </div>
@@ -523,8 +523,19 @@ export interface Row {
 
     .att-foot {
       gap: 10px;
-      .save-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
-      .save-right { display: flex; align-items: center; gap: .45rem; flex-shrink: 0; margin-left: auto; }
+      width: 100%;
+      box-sizing: border-box;
+      justify-content: space-between;
+      align-items: center;
+      .save-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; flex: 1 1 auto; }
+      .save-right {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        flex-shrink: 0;
+        margin-left: auto;
+      }
       .save-summary {
         display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap;
         font-size: 13px; font-weight: 700; color: var(--t3);
@@ -592,20 +603,27 @@ export interface Row {
       .ratio-track { flex: 1; width: auto; }
       .roll-grid {
         max-height: none;
-        padding-bottom: calc(var(--fab-sticky-bottom) + 56px);
+        padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
       }
       .roll-item { min-height: 56px; padding: 10px; border-radius: 14px; }
       .mk { width: 48px; min-height: 48px; }
       .mk .material-icons-round { font-size: 20px; }
       .att-foot {
+        position: sticky;
+        bottom: 0;
+        z-index: var(--z-sticky-footer, 50);
         margin: 0 -12px -12px;
-        padding: 10px var(--fab-padding-right) calc(10px + env(safe-area-inset-bottom, 0px)) 12px;
+        padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+        background: color-mix(in srgb, var(--surface) 94%, transparent);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 -6px 20px rgba(15, 23, 42, .08);
       }
       .att-foot .save-action-btn {
-        flex: 1; min-height: 48px; justify-content: center;
+        min-height: 48px; justify-content: center;
         border-radius: 12px; font-size: 15px;
+        padding-inline: 22px;
       }
-      .att-foot .save-right { width: 100%; }
+      .att-foot .save-right { width: auto; margin-left: auto; }
       .att-foot .back-class { flex: 0 0 auto; }
       .search-btn.btn-primary { width: 100%; min-height: 44px; justify-content: center; }
     }
