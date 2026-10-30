@@ -8,6 +8,7 @@ import { MenuService } from '../core/services/menu.service';
 import { ThemeService, ThemeMode } from '../core/services/theme.service';
 import { SettingsService } from '../core/services/settings.service';
 import { SetupNotificationService } from '../core/services/setup-notification.service';
+import { InstituteService } from '../core/services/institute.service';
 import { ChatPanelComponent } from '../shared/components/chat-panel/chat-panel.component';
 import { ChatService } from '../core/services/chat.service';
 import { SwalNotificationService } from '../core/services/swal-notification.service';
@@ -945,6 +946,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   private router       = inject(Router);
   private menuSvc      = inject(MenuService);
   private settingsSvc  = inject(SettingsService);
+  private instituteSvc = inject(InstituteService);
 
   /** Chat FAB/panel — dashboard route only. */
   readonly showChatPanel = toSignal(
@@ -960,7 +962,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   open       = signal<Set<number>>(new Set());
   instituteName    = computed(() => this.auth.currentUser()?.instituteName ?? 'OneSkool');
   instituteTagline = computed(() => this.auth.currentUser()?.tagline ?? 'School Management System');
-  instituteLogo    = computed(() => this.auth.currentUser()?.logoUrl ?? null);
+  instituteLogo    = computed(() => this.resolveLogoUrl(this.auth.currentUser()?.logoUrl));
   isSuperAdmin     = computed(() => this.auth.currentUser()?.role === 'superadmin');
   sysMenuItems     = computed(() => this.menuItems().filter(i => i.routeUrl?.startsWith('/superadmin/')));
   mainMenuItems    = computed(() => this.menuItems().filter(i => !i.routeUrl?.startsWith('/superadmin/')));
@@ -1034,10 +1036,44 @@ export class LayoutComponent implements OnInit, OnDestroy {
     // Critical path: role menu for navigation shell.
     this.menuSvc.ensureLoaded().subscribe();
     document.addEventListener('click', this.closePanels);
+    // School name/logo from the user's institute (not DevCompany branding).
+    this.loadInstituteBranding();
     // SignalR connect is cheap; conversation list is deferred so dashboard
     // stats can claim the first network slots after login.
     this.chatSvc.connect();
     this.scheduleDeferredShellWork();
+  }
+
+  /** Pull live institute name/logo into the sidebar brand. */
+  private loadInstituteBranding() {
+    if (!this.auth.isLoggedIn()) return;
+    // Superadmin keeps platform (DevCompany) branding from login.
+    if (this.auth.currentUser()?.role === 'superadmin') return;
+
+    this.instituteSvc.getMyInstitute().subscribe({
+      next: res => {
+        if (this.shellDestroyed || res.status === 204 || !res.body) return;
+        const body = res.body;
+        const hadInstitute = !!this.auth.currentUser()?.instituteId;
+        this.auth.patchCurrentUser({
+          instituteId: body.instituteId,
+          instituteName: body.name,
+          tagline: body.name,
+          logoUrl: body.logoUrl ?? undefined
+        });
+        // Old sessions may lack instituteId in the JWT — refresh so tenant APIs work.
+        if (!hadInstitute && body.instituteId) {
+          this.auth.refreshToken().subscribe({ error: () => {} });
+        }
+      },
+      error: () => {}
+    });
+  }
+
+  private resolveLogoUrl(url: string | null | undefined): string | null {
+    if (!url) return null;
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
+    return `${environment.serverUrl}${url.startsWith('/') ? '' : '/'}${url}`;
   }
 
   /** Setup checklist + chat inbox after the first paint / critical dashboard calls. */
