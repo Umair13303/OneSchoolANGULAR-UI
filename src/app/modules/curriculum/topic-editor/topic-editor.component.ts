@@ -329,16 +329,16 @@ type Tab = 'content' | 'materials' | 'activities';
     }
     .te-card-body { padding: .85rem 1rem 1rem; }
 
-    /* Symmetric Cancel ←→ Preview + Save, sticky above chat FAB */
+    /* Symmetric Cancel ←→ Preview + Save */
     .te-card-foot {
       position: sticky;
-      bottom: var(--fab-sticky-bottom);
+      bottom: 0;
       z-index: var(--z-sticky-footer);
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: .75rem;
-      padding: .85rem var(--fab-padding-right) .85rem 1rem;
+      padding: .85rem 1rem;
       border-top: 1px solid #e2e8f0;
       background: rgba(248, 250, 252, .97);
       backdrop-filter: blur(8px);

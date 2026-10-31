@@ -13,6 +13,7 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
   standalone: true,
   imports: [CommonModule, RouterModule, PageHeaderComponent, LoadingComponent],
   template: `
+    <div class="os-page compact">
     <app-page-header
       title="My Timetable"
       [subtitle]="teacherName() ? 'Schedule for ' + teacherName() : 'Your weekly class schedule'" />
@@ -283,6 +284,7 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
         </div>
       </div>
     }
+    </div>
   `,
   styles: [`
     .stats-bar {

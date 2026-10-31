@@ -370,9 +370,9 @@ export interface Row {
     .att-bar { gap: 10px; }
     .att-fields { flex: 1; min-width: 0; }
     .att-fields .os-field-label { display: none; }
-    .period-field { flex: 1.3 1 260px; }
-    .period-field app-os-select { min-width: 260px; width: 100%; }
-    .date-field { flex: 0 0 150px; }
+    .period-field { flex: 1 1 180px; min-width: 0; }
+    .period-field app-os-select { min-width: 0; width: 100%; }
+    .date-field { flex: 0 1 150px; min-width: 0; }
     .att-body { padding: 10px 12px 12px; }
     .icon-refresh {
       width: 40px; height: 40px; border-radius: 10px;

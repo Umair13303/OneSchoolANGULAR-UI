@@ -54,8 +54,8 @@ type Tab = 'diary' | 'manage';
       </div>
     }
 
-    <div class="os-stage-bar">
-      <div class="os-toolbar-group">
+    <div class="os-stage-bar hw-filters">
+      <div class="os-toolbar-group hw-ids">
         <div class="os-field inline grow">
           <label class="os-field-label">Year</label>
           <app-os-select
@@ -82,6 +82,8 @@ type Tab = 'diary' | 'manage';
             [value]="selectedSubject"
             (valueChange)="selectedSubject = $event; load()" />
         </div>
+      </div>
+      <div class="os-toolbar-group hw-dates end">
         <div class="os-field inline">
           <label class="os-field-label">From</label>
           <div class="os-date-wrap"><app-date-picker [(ngModel)]="fromDate" (dateChange)="load()" /></div>
@@ -90,8 +92,6 @@ type Tab = 'diary' | 'manage';
           <label class="os-field-label">To</label>
           <div class="os-date-wrap"><app-date-picker [(ngModel)]="toDate" (dateChange)="load()" /></div>
         </div>
-      </div>
-      <div class="os-toolbar-group end">
         <button type="button" class="btn-secondary btn-sm" (click)="clearFilters()">Clear</button>
       </div>
     </div>
@@ -286,6 +286,49 @@ type Tab = 'diary' | 'manage';
   `,
   styles: [`
     :host { display:block; min-width:0; }
+
+    .hw-filters {
+      flex-wrap: wrap;
+      row-gap: 10px;
+    }
+    .hw-filters .hw-ids,
+    .hw-filters .hw-dates {
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+    .hw-filters app-os-select {
+      min-width: 0;
+      width: 100%;
+    }
+    .hw-filters .os-field.grow {
+      flex: 1 1 140px;
+      min-width: 0;
+    }
+    @media (max-width: 1100px) {
+      .hw-filters {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .hw-filters .hw-ids,
+      .hw-filters .hw-dates {
+        width: 100%;
+        margin-left: 0;
+      }
+      .hw-filters .hw-dates {
+        justify-content: flex-start;
+      }
+    }
+    @media (max-width: 640px) {
+      .hw-filters .hw-dates {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .hw-filters .os-date-wrap,
+      .hw-filters .btn-secondary {
+        width: 100%;
+      }
+      .actions { flex-wrap: wrap; }
+    }
 
     .tab-bar { display:flex; gap:0; margin-bottom:20px; border-bottom:2px solid var(--border); }
     .tab-bar button { padding:10px 24px; border:none; background:none; cursor:pointer; font-size:14px; color:var(--t4); font-family:inherit; }

@@ -114,7 +114,7 @@ import {
                 </div>
               </div>
 
-              <div class="form-footer fab-sticky-foot">
+              <div class="form-footer">
                 @if (fromClassroom()) {
                   <a class="btn-secondary btn-sm"
                      [routerLink]="['/classroom/today']"
@@ -272,16 +272,13 @@ import {
     .field.invalid input,
     .field.invalid textarea { border-color: var(--red); }
 
-    .form-footer.fab-sticky-foot,
     .form-footer {
       display: flex;
       justify-content: flex-start;
       align-items: center;
       flex-wrap: wrap;
       gap: 8px;
-      /* Match field padding — don’t shove actions into the far-right FAB gutter */
       padding: 12px 16px;
-      padding-right: 16px;
       margin-top: 0;
       border-top: 1px solid var(--border);
       background: var(--surface-2);

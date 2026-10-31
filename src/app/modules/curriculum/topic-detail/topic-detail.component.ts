@@ -713,12 +713,20 @@ interface SabaqRow {
     .sheet-actions { display: flex; gap: .5rem; justify-content: flex-end; flex-wrap: wrap; padding-top: .15rem; }
     .sticky-actions {
       position: sticky;
-      bottom: var(--fab-sticky-bottom);
+      bottom: 0;
       background: #fff;
-      padding: .55rem var(--fab-padding-right) .1rem 0;
+      padding: .55rem 0 .1rem;
       border-top: 1px solid #f1f5f9;
       margin-top: .2rem;
       z-index: 1;
+    }
+    .sticky-actions.sheet-actions {
+      justify-content: flex-start;
+      gap: .5rem;
+    }
+    .sticky-actions .btn-primary,
+    .sticky-actions button[type="submit"] {
+      margin-left: auto;
     }
     .more-toggle {
       background: none; border: none; color: #2563eb; font: inherit; font-size: .8rem;

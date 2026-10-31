@@ -503,9 +503,10 @@ interface WorkflowStep {
       }
       a:hover { text-decoration: underline; }
       select {
-        flex: 1; min-width: 0; height: 28px; padding: 0 6px;
+        flex: 1; min-width: 0; height: 28px; min-height: 28px !important;
+        padding: 0 6px;
         border: 1px solid var(--border); border-radius: 6px;
-        background: var(--surface); font: inherit; font-size: 12px; font-weight: 700; color: var(--t1);
+        background: var(--surface); font: inherit; font-size: 16px; font-weight: 700; color: var(--t1);
       }
       select:focus {
         outline: none; border-color: var(--subj);

@@ -193,10 +193,20 @@ interface ResultRow {
 
     .alert-error { display:flex; align-items:center; gap:8px; padding:10px 16px; background:var(--red-s); border-top:1px solid var(--red-b); font-size:12.5px; color:var(--red); }
     .alert-error .material-icons-round { font-size:16px; }
-    .results-footer { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-top:1px solid var(--border); background:var(--surface-2); }
+    .results-footer {
+      display:flex; align-items:center; justify-content:flex-start; flex-wrap:wrap; gap:10px;
+      padding:12px 16px; border-top:1px solid var(--border); background:var(--surface-2);
+      position: sticky; bottom: 0; z-index: 5;
+    }
+    .results-footer .btn-primary { margin-left: auto; }
     .footer-note { font-size:12.5px; color:var(--t3); font-weight:600; }
     @keyframes spin { to { transform:rotate(360deg); } }
     .spin { animation:spin .8s linear infinite; display:inline-block; }
+    @media (max-width: 640px) {
+      .results-footer { flex-direction: column-reverse; align-items: stretch; }
+      .results-footer .btn-primary { margin-left: 0; width: 100%; justify-content: center; }
+      .fg.two { flex-direction: column; }
+    }
   `]
 })
 export class ExamResultsEntryComponent implements OnInit {

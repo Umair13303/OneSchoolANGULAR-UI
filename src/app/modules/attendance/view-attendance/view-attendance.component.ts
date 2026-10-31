@@ -246,9 +246,32 @@ import { MenuService } from '../../../core/services/menu.service';
       min-width: 0;
     }
     .seg-short { display: none; }
+    .os-stage-bar .os-field.grow { min-width: 0; flex: 1 1 140px; }
+    .os-stage-bar app-os-select { min-width: 0; width: 100%; }
+    .os-stage-bar .os-field-label {
+      position: absolute;
+      width: 1px; height: 1px;
+      padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0,0,0,0);
+      white-space: nowrap; border: 0;
+    }
     @media (max-width: 900px) {
       .seg-full { display: none; }
       .seg-short { display: inline; }
+      .os-stage-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .os-stage-bar .os-toolbar-group,
+      .os-stage-bar .os-toolbar-group.end {
+        width: 100%;
+        margin-left: 0;
+        flex-wrap: wrap;
+      }
+      .os-stage-bar .os-date-wrap,
+      .os-stage-bar .search-btn {
+        width: 100%;
+      }
     }
 
     /* ═══ TABS NAV BAR ═══════════════════════════════ */
