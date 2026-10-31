@@ -876,86 +876,79 @@ import { environment } from '../../environments/environment';
     .mob-menu-btn { display: none; }
     .mob-close    { display: none; }
 
-    /* Teacher dock — phone + desktop (sits under main content, clears sidebar) */
+    /* Teacher dock — phone / narrow only (hidden on desktop browser) */
     .teacher-dock { display: none; }
-    .shell.is-teacher {
-      --teacher-dock-h: calc(58px + env(safe-area-inset-bottom, 0px));
-    }
-    .shell.is-teacher .teacher-dock {
-      display: flex;
-      position: fixed;
-      left: 260px; right: 0; bottom: 0;
-      z-index: var(--z-teacher-dock);
-      height: var(--teacher-dock-h);
-      padding: 6px 10px calc(6px + env(safe-area-inset-bottom, 0px));
-      box-sizing: border-box;
-      align-items: stretch;
-      justify-content: space-around;
-      gap: 4px;
-      max-width: none;
-      background: color-mix(in srgb, var(--surface) 92%, transparent);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border-top: 1px solid var(--border);
-      box-shadow: 0 -8px 28px rgba(15, 23, 42, 0.08);
-      transition: left 0.28s cubic-bezier(.4,0,.2,1);
-    }
-    .shell.is-teacher.sb-collapsed .teacher-dock { left: 76px; }
-    .shell.is-teacher .td-item {
-      flex: 1 1 0;
-      min-width: 0;
-      max-width: 140px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 2px;
-      text-decoration: none;
-      color: var(--t4);
-      border-radius: 12px;
-      padding: 4px 8px;
-      font: inherit;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
-      transition: color .15s, background .15s;
-    }
-    .shell.is-teacher .td-item:hover { background: var(--surface-2); color: var(--t2); }
-    .shell.is-teacher .td-item:active { background: var(--surface-2); }
-    .shell.is-teacher .td-ico {
-      font-size: 22px;
-      width: 22px; height: 22px;
-      line-height: 1;
-      font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
-    }
-    .shell.is-teacher .td-lbl {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.01em;
-      line-height: 1.1;
-      max-width: 100%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .shell.is-teacher .td-item.active {
-      color: var(--accent);
-      background: var(--accent-s);
-    }
-    .shell.is-teacher .td-item.active .td-ico {
-      font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
-    }
-    .shell.is-teacher .page-content.has-teacher-dock {
-      padding-bottom: calc(20px + var(--teacher-dock-h));
-    }
-    .shell.is-teacher .topbar .sign-out { display: none; }
 
     /* ═══ RESPONSIVE ════════════════════════════════════ */
-    @media (max-width: 768px) {
-      .shell.is-teacher .teacher-dock {
-        left: 0;
-        padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
+    @media (max-width: 900px) {
+      .shell.is-teacher {
+        --teacher-dock-h: calc(58px + env(safe-area-inset-bottom, 0px));
       }
-      .shell.is-teacher .td-item { max-width: none; padding: 4px 2px; }
+      .shell.is-teacher .teacher-dock {
+        display: flex;
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        z-index: var(--z-teacher-dock);
+        height: var(--teacher-dock-h);
+        padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
+        box-sizing: border-box;
+        align-items: stretch;
+        justify-content: space-around;
+        gap: 2px;
+        background: color-mix(in srgb, var(--surface) 92%, transparent);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border-top: 1px solid var(--border);
+        box-shadow: 0 -8px 28px rgba(15, 23, 42, 0.08);
+      }
+      .shell.is-teacher .td-item {
+        flex: 1 1 0;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        text-decoration: none;
+        color: var(--t4);
+        border-radius: 12px;
+        padding: 4px 2px;
+        font: inherit;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+        transition: color .15s, background .15s;
+      }
+      .shell.is-teacher .td-item:active { background: var(--surface-2); }
+      .shell.is-teacher .td-ico {
+        font-size: 22px;
+        width: 22px; height: 22px;
+        line-height: 1;
+        font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+      }
+      .shell.is-teacher .td-lbl {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        line-height: 1.1;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .shell.is-teacher .td-item.active {
+        color: var(--accent);
+        background: var(--accent-s);
+      }
+      .shell.is-teacher .td-item.active .td-ico {
+        font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+      }
+      .shell.is-teacher .page-content.has-teacher-dock {
+        padding-bottom: calc(16px + var(--teacher-dock-h));
+      }
+      .shell.is-teacher .topbar .sign-out { display: none; }
+    }
+
+    @media (max-width: 768px) {
       /* Sidebar becomes a fixed overlay drawer */
       .sidebar {
         /* dvh so the drawer is not cut off by mobile browser toolbars. */
