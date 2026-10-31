@@ -35,7 +35,12 @@ export class AutoLoginComponent implements OnInit {
       localStorage.setItem('refresh_token', refresh);
       localStorage.setItem('auth_user', decodeURIComponent(user));
       this.msg = 'Login successful! Redirecting...';
-      this.router.navigate(['/dashboard']);
+      let home = '/dashboard';
+      try {
+        const parsed = JSON.parse(decodeURIComponent(user));
+        if ((parsed?.role ?? '').toLowerCase() === 'teacher') home = '/classroom/today';
+      } catch { /* keep dashboard */ }
+      this.router.navigateByUrl(home);
     } else {
       this.msg = 'Missing parameters.';
       this.router.navigate(['/auth/login']);

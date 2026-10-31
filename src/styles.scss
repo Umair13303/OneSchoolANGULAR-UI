@@ -80,6 +80,7 @@
      a dialog. Keep these in order; do not hardcode competing z-indexes. */
   --z-content:        1;
   --z-sticky-footer:  50;
+  --z-teacher-dock:   80;
   --z-topbar:         100;
   --z-sidebar:        300;
   --z-fab:            500;
@@ -88,14 +89,17 @@
   --z-popover:        1300;
   --z-toast:          1500;
 
+  /* Teacher phone dock — layout sets this > 0 on teacher + narrow screens */
+  --teacher-dock-h:     0px;
+
   /* Chat FAB — keep in sync with chat-panel.component.ts */
   --fab-size:           58px;
   --fab-inset-bottom:   24px;
   --fab-inset-right:    24px;
   --fab-gap:            12px;
-  --fab-sticky-bottom:  calc(var(--fab-inset-bottom) + var(--fab-size) + var(--fab-gap));
+  --fab-sticky-bottom:  calc(var(--fab-inset-bottom) + var(--fab-size) + var(--fab-gap) + var(--teacher-dock-h));
   --fab-padding-right:  calc(var(--fab-inset-right) + var(--fab-size) + var(--fab-gap));
-  --fab-page-pad:       calc(var(--fab-inset-bottom) + var(--fab-size) + 22px);
+  --fab-page-pad:       calc(var(--fab-inset-bottom) + var(--fab-size) + 22px + var(--teacher-dock-h));
 
   /* Radius */
   --r:           8px;
@@ -1141,6 +1145,7 @@ input.ng-invalid.ng-touched:focus {
 
 .form-actions-sticky, .save-footer {
   position: sticky;
+  /* fab-sticky-bottom already includes --teacher-dock-h when the teacher dock is on */
   bottom: var(--fab-sticky-bottom);
   z-index: var(--z-sticky-footer);
   background: color-mix(in srgb, var(--surface) 94%, transparent);

@@ -20,7 +20,7 @@ import { environment } from '../../environments/environment';
   standalone: true,
   imports: [CommonModule, RouterModule, ChatPanelComponent],
   template: `
-    <div class="shell">
+    <div class="shell" [class.is-teacher]="isTeacherApp()">
 
       <!-- Mobile overlay backdrop -->
       @if (mobileOpen()) {
@@ -297,11 +297,26 @@ import { environment } from '../../environments/environment';
           </div>
         </header>
 
-        <main class="page-content" [class.has-chat-fab]="showChatPanel()">
+        <main class="page-content" [class.has-chat-fab]="showChatPanel()" [class.has-teacher-dock]="isTeacherApp()">
           <router-outlet />
         </main>
       </div>
 
+      <!-- Teacher phone app dock — CSS shows only on narrow screens -->
+      @if (isTeacherApp()) {
+        <nav class="teacher-dock" aria-label="Teacher shortcuts">
+          @for (tab of teacherDockTabs; track tab.path) {
+            <a [routerLink]="tab.path"
+               class="td-item"
+               [class.active]="dockActive(tab.match)"
+               [attr.aria-current]="dockActive(tab.match) ? 'page' : null"
+               (click)="mobileOpen.set(false)">
+              <span class="td-ico material-icons-round">{{ tab.icon }}</span>
+              <span class="td-lbl">{{ tab.label }}</span>
+            </a>
+          }
+        </nav>
+      }
     </div>
 
     <!-- Floating chat only on dashboard — elsewhere it covers page actions. -->
@@ -861,7 +876,78 @@ import { environment } from '../../environments/environment';
     .mob-menu-btn { display: none; }
     .mob-close    { display: none; }
 
+    /* Teacher dock — phone/tablet only (see media query) */
+    .teacher-dock { display: none; }
+
     /* ═══ RESPONSIVE ════════════════════════════════════ */
+    @media (max-width: 900px) {
+      .shell.is-teacher {
+        --teacher-dock-h: calc(58px + env(safe-area-inset-bottom, 0px));
+      }
+      .shell.is-teacher .teacher-dock {
+        display: flex;
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        z-index: var(--z-teacher-dock);
+        height: var(--teacher-dock-h);
+        padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
+        box-sizing: border-box;
+        align-items: stretch;
+        justify-content: space-around;
+        gap: 2px;
+        background: color-mix(in srgb, var(--surface) 92%, transparent);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border-top: 1px solid var(--border);
+        box-shadow: 0 -8px 28px rgba(15, 23, 42, 0.08);
+      }
+      .shell.is-teacher .td-item {
+        flex: 1 1 0;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        text-decoration: none;
+        color: var(--t4);
+        border-radius: 12px;
+        padding: 4px 2px;
+        font: inherit;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+        transition: color .15s, background .15s;
+      }
+      .shell.is-teacher .td-item:active { background: var(--surface-2); }
+      .shell.is-teacher .td-ico {
+        font-size: 22px;
+        width: 22px; height: 22px;
+        line-height: 1;
+        font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+      }
+      .shell.is-teacher .td-lbl {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        line-height: 1.1;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .shell.is-teacher .td-item.active {
+        color: var(--accent);
+        background: var(--accent-s);
+      }
+      .shell.is-teacher .td-item.active .td-ico {
+        font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+      }
+      .shell.is-teacher .page-content.has-teacher-dock {
+        padding-bottom: calc(16px + var(--teacher-dock-h));
+      }
+      .shell.is-teacher .topbar .sign-out { display: none; }
+    }
+
     @media (max-width: 768px) {
       /* Sidebar becomes a fixed overlay drawer */
       .sidebar {
@@ -922,12 +1008,21 @@ import { environment } from '../../environments/environment';
       .page-content.has-chat-fab {
         padding-bottom: calc(var(--fab-page-pad) + env(safe-area-inset-bottom, 0px));
       }
+      .shell.is-teacher .page-content.has-teacher-dock {
+        padding-bottom: calc(12px + var(--teacher-dock-h));
+      }
+      .shell.is-teacher .page-content.has-teacher-dock.has-chat-fab {
+        padding-bottom: calc(var(--fab-page-pad) + var(--teacher-dock-h));
+      }
     }
 
     @media (max-width: 480px) {
       .page-content { padding: 12px; }
       .page-content.has-chat-fab {
         padding-bottom: calc(var(--fab-page-pad) + env(safe-area-inset-bottom, 0px));
+      }
+      .shell.is-teacher .page-content.has-teacher-dock {
+        padding-bottom: calc(10px + var(--teacher-dock-h));
       }
       .topbar { padding: 0 12px; }
     }
@@ -960,9 +1055,19 @@ export class LayoutComponent implements OnInit, OnDestroy {
   instituteTagline = computed(() => this.auth.currentUser()?.tagline ?? 'School Management System');
   instituteLogo    = computed(() => this.resolveLogoUrl(this.auth.currentUser()?.logoUrl));
   isSuperAdmin     = computed(() => this.auth.currentUser()?.role === 'superadmin');
+  /** Pure teacher role — enables the phone bottom dock / app shell. */
+  isTeacherApp     = computed(() => (this.auth.currentUser()?.role ?? '').toLowerCase() === 'teacher');
   sysMenuItems     = computed(() => this.menuItems().filter(i => i.routeUrl?.startsWith('/superadmin/')));
   mainMenuItems    = computed(() => this.menuItems().filter(i => !i.routeUrl?.startsWith('/superadmin/')));
   collapsed  = signal(false);
+
+  readonly teacherDockTabs: { path: string; match: string; label: string; icon: string }[] = [
+    { path: '/classroom/today',     match: '/classroom',           label: 'Today',     icon: 'today' },
+    { path: '/attendance/mark',     match: '/attendance',          label: 'Attend',    icon: 'how_to_reg' },
+    { path: '/homework/list',       match: '/homework',            label: 'Homework',  icon: 'assignment' },
+    { path: '/timetable/my-schedule', match: '/timetable/my-schedule', label: 'Schedule', icon: 'calendar_month' },
+    { path: '/account/profile',     match: '/account',             label: 'Me',        icon: 'person' },
+  ];
   themeOpen  = signal(false);
   mobileOpen = signal(false);
   notifOpen  = signal(false);
@@ -1006,6 +1111,15 @@ export class LayoutComponent implements OnInit, OnDestroy {
       if (this.mobileOpen()) this.lockBodyScroll();
       else this.unlockBodyScroll();
     });
+  }
+
+  /** Bottom-dock active state (prefix match so nested routes stay highlighted). */
+  dockActive(match: string): boolean {
+    const path = this.router.url.split('?')[0].split('#')[0];
+    if (match === '/timetable/my-schedule') {
+      return path === match || path.startsWith(match + '/');
+    }
+    return path === match || path.startsWith(match + '/');
   }
 
   private lockBodyScroll() {

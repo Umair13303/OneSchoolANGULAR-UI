@@ -39,7 +39,7 @@ export class LoginComponent implements OnInit {
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(6)]]
     });
-    if (this.authService.isLoggedIn()) this.router.navigate(['/dashboard']);
+    if (this.authService.isLoggedIn()) this.router.navigateByUrl(this.homeUrl());
   }
 
   ngOnInit() {
@@ -59,7 +59,7 @@ export class LoginComponent implements OnInit {
       next: () => {
         const user = this.authService.currentUser();
         if (user) this.swal.loginToast(user.fullName, user.role);
-        this.router.navigate(['/dashboard']);
+        this.router.navigateByUrl(this.homeUrl());
       },
       error: (err: HttpErrorResponse) => {
         if (err.status === 401) {
@@ -76,4 +76,9 @@ export class LoginComponent implements OnInit {
 
   get email() { return this.loginForm.get('email'); }
   get password() { return this.loginForm.get('password'); }
+
+  /** Teachers land on Classroom Today — their daily home. */
+  private homeUrl(): string {
+    return this.authService.hasRole('teacher') ? '/classroom/today' : '/dashboard';
+  }
 }

@@ -603,14 +603,15 @@ export interface Row {
       .ratio-track { flex: 1; width: auto; }
       .roll-grid {
         max-height: none;
-        padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+        padding-bottom: calc(72px + var(--teacher-dock-h, 0px) + env(safe-area-inset-bottom, 0px));
       }
       .roll-item { min-height: 56px; padding: 10px; border-radius: 14px; }
       .mk { width: 48px; min-height: 48px; }
       .mk .material-icons-round { font-size: 20px; }
       .att-foot {
         position: sticky;
-        bottom: 0;
+        /* Sit above the teacher phone dock when present */
+        bottom: var(--teacher-dock-h, 0px);
         z-index: var(--z-sticky-footer, 50);
         margin: 0 -12px -12px;
         padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
