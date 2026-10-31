@@ -187,7 +187,7 @@ function fromYMD(s: string): Date | null {
 
     /* ── Panel ───────────────────────────────────── */
     .dp-panel {
-      position: fixed; z-index: 1400;
+      position: fixed; z-index: var(--z-popover, 1300);
       width: 288px;
       max-height: 70vh;
       overflow-x: hidden;
@@ -424,23 +424,23 @@ export class DatePickerComponent implements OnInit, OnDestroy, ControlValueAcces
     const panelW = 288;
     const gap = 6;
     const edge = 8;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceAbove = rect.top;
-    // Toolbar pickers sit near the top — opening down covers the roster.
-    // Flip up whenever we're in the upper band and there's usable room above.
-    const nearTop = rect.top < Math.min(300, window.innerHeight * 0.42);
-    const up = nearTop
-      ? spaceAbove >= 120
-      : (spaceBelow < panelH + gap && spaceAbove > spaceBelow);
+    // App topbar (~56px) + a little breathing room — never open "up" into it.
+    const topChrome = 72;
+    const spaceBelow = window.innerHeight - rect.bottom - edge;
+    const usableAbove = rect.top - topChrome;
+
+    // Prefer down. Only flip up when below is cramped AND there is a full
+    // usable band under the topbar (avoids View Attendance clipping).
+    const up = spaceBelow < panelH && usableAbove >= 260;
     this.dropUp.set(up);
 
     if (up) {
       // Anchor bottom edge just above the input; translateY(-100%) lifts it.
       this.panelTop.set(rect.top - gap);
-      this.panelMaxH.set(Math.min(panelH, Math.max(180, spaceAbove - gap - edge)));
+      this.panelMaxH.set(Math.min(panelH, Math.max(220, usableAbove - gap)));
     } else {
       this.panelTop.set(rect.bottom + gap);
-      this.panelMaxH.set(Math.min(panelH, Math.max(180, spaceBelow - gap - edge)));
+      this.panelMaxH.set(Math.min(panelH, Math.max(220, spaceBelow - gap)));
     }
 
     // Right-align to the trigger so chips/actions to the right stay visible.
