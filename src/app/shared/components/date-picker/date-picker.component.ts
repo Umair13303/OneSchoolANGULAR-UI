@@ -53,6 +53,7 @@ function fromYMD(s: string): Date | null {
         <div class="dp-panel" [class.dp-drop-up]="dropUp()"
              [style.top.px]="panelTop()"
              [style.left.px]="panelLeft()"
+             [style.maxHeight.px]="panelMaxH()"
              (click)="$event.stopPropagation()">
 
           <!-- Header: prev / month+year / next -->
@@ -188,6 +189,10 @@ function fromYMD(s: string): Date | null {
     .dp-panel {
       position: fixed; z-index: 1400;
       width: 288px;
+      max-height: 70vh;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
@@ -327,6 +332,7 @@ export class DatePickerComponent implements OnInit, OnDestroy, ControlValueAcces
   dropUp  = signal(false);
   panelTop = signal(0);
   panelLeft = signal(0);
+  panelMaxH = signal(340);
   view    = signal<'days' | 'months' | 'years'>('days');
   cursor  = signal({ year: new Date().getFullYear(), month: new Date().getMonth() });
 
@@ -417,21 +423,29 @@ export class DatePickerComponent implements OnInit, OnDestroy, ControlValueAcces
     const panelH = 340;
     const panelW = 288;
     const gap = 6;
+    const edge = 8;
     const spaceBelow = window.innerHeight - rect.bottom;
     const spaceAbove = rect.top;
-    // Prefer drop-down; only flip up when there is clearly enough room above for the full panel.
-    const up = spaceBelow < panelH && spaceAbove >= panelH + gap;
+    // Toolbar pickers sit near the top — opening down covers the roster.
+    // Flip up whenever we're in the upper band and there's usable room above.
+    const nearTop = rect.top < Math.min(300, window.innerHeight * 0.42);
+    const up = nearTop
+      ? spaceAbove >= 120
+      : (spaceBelow < panelH + gap && spaceAbove > spaceBelow);
     this.dropUp.set(up);
 
     if (up) {
-      // Anchor just above the input; CSS translateY(-100%) lifts the panel.
+      // Anchor bottom edge just above the input; translateY(-100%) lifts it.
       this.panelTop.set(rect.top - gap);
+      this.panelMaxH.set(Math.min(panelH, Math.max(180, spaceAbove - gap - edge)));
     } else {
-      this.panelTop.set(Math.min(rect.bottom + gap, Math.max(8, window.innerHeight - panelH - 8)));
+      this.panelTop.set(rect.bottom + gap);
+      this.panelMaxH.set(Math.min(panelH, Math.max(180, spaceBelow - gap - edge)));
     }
 
-    let left = rect.left;
-    left = Math.max(8, Math.min(left, window.innerWidth - panelW - 8));
+    // Right-align to the trigger so chips/actions to the right stay visible.
+    let left = rect.right - panelW;
+    left = Math.max(edge, Math.min(left, window.innerWidth - panelW - edge));
     this.panelLeft.set(left);
   }
 
