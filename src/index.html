@@ -7,18 +7,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="icon" type="image/png" href="/branding/oneskool-logo.png">
-  <!-- Fonts are self-hosted via Fontsource in styles.scss (no Google CDN). -->
+  <!-- Icon font preload — block FOUT of ligature text on notification/logout/etc. -->
+  <link rel="preload" href="/assets/fonts/material-symbols-rounded.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- Fonts are self-hosted (Inter via Fontsource; Material Symbols via assets). -->
   <style>
+    @font-face {
+      font-family: 'Material Symbols Rounded Variable';
+      font-style: normal;
+      font-display: block;
+      font-weight: 100 700;
+      src: url('/assets/fonts/material-symbols-rounded.woff2') format('woff2-variations');
+    }
     .material-icons-round {
-      font-family: 'Material Symbols Rounded Variable', 'Material Symbols Rounded';
+      font-family: 'Material Symbols Rounded Variable', 'Material Symbols Rounded' !important;
       font-weight: normal; font-style: normal;
       font-size: 20px; line-height: 1;
       letter-spacing: normal; text-transform: none;
       display: inline-block; white-space: nowrap;
-      word-wrap: normal; direction: ltr;
-      /* Clip ligature names if the icon font is briefly unavailable */
-      width: 1em; height: 1em; overflow: hidden; flex-shrink: 0;
-      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      word-wrap: normal; direction: ltr; flex-shrink: 0;
+      -webkit-font-feature-settings: 'liga';
+      font-feature-settings: 'liga';
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
       -webkit-font-smoothing: antialiased;
     }
     .css-spinner {

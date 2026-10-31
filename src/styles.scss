@@ -1,6 +1,15 @@
 /* Self-hosted — avoid blank icons/text while Google Fonts CDN is slow or blocked */
 @import '@fontsource-variable/inter/wght.css';
-@import '@fontsource-variable/material-symbols-rounded/fill.css';
+
+/* Material Symbols: stable assets URL + font-display:block so ligature names
+   never flash as "no"/"lo"/"ex" while the font downloads. */
+@font-face {
+  font-family: 'Material Symbols Rounded Variable';
+  font-style: normal;
+  font-display: block;
+  font-weight: 100 700;
+  src: url('/assets/fonts/material-symbols-rounded.woff2') format('woff2-variations');
+}
 
 /* ═══════════════════════════════════════════════════
    LIGHT THEME
@@ -228,12 +237,24 @@ body.os-scroll-locked {
   overflow: hidden;
 }
 
-/* Keep icon ligature names clipped when Google Fonts is slow or blocked */
+/* Icon ligatures — do NOT clip with overflow:hidden (that showed "no"/"lo") */
 .material-icons-round {
-  width: 1em;
-  height: 1em;
-  overflow: hidden;
+  font-family: 'Material Symbols Rounded Variable', 'Material Symbols Rounded' !important;
+  font-weight: normal;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
   flex-shrink: 0;
+  -webkit-font-feature-settings: 'liga';
+  font-feature-settings: 'liga';
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Scrollbar */

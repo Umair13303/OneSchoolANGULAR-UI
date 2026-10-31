@@ -134,9 +134,7 @@ import { environment } from '../../environments/environment';
             <!-- Theme picker -->
             <div class="theme-wrap" [class.open]="themeOpen()" (click)="$event.stopPropagation()">
               <button class="icon-btn" (click)="themeOpen.set(!themeOpen())" title="Theme">
-                <span class="material-icons-round">
-                  {{ theme.mode() === 'dark' ? 'dark_mode' : theme.mode() === 'system' ? 'brightness_auto' : 'light_mode' }}
-                </span>
+                <span class="material-icons-round">{{ theme.mode() === 'dark' ? 'dark_mode' : theme.mode() === 'system' ? 'brightness_auto' : 'light_mode' }}</span>
               </button>
               @if (themeOpen()) {
                 <div class="theme-panel" (click)="$event.stopPropagation()">
@@ -198,9 +196,7 @@ import { environment } from '../../environments/environment';
                                 [class.alerts-off]="!swalSvc.enabled()"
                                 (click)="swalSvc.toggle()"
                                 [title]="swalSvc.enabled() ? 'Mute pop-up alerts' : 'Enable pop-up alerts'">
-                          <span class="material-icons-round">
-                            {{ swalSvc.enabled() ? 'notifications_active' : 'notifications_off' }}
-                          </span>
+                          <span class="material-icons-round">{{ swalSvc.enabled() ? 'notifications_active' : 'notifications_off' }}</span>
                         </button>
                         <button class="np-refresh" (click)="notifSvc.load(true); chatSvc.loadUsers()" title="Refresh">
                           <span class="material-icons-round" [class.spin]="notifSvc.loading()">refresh</span>
