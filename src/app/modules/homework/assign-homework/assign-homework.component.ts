@@ -215,7 +215,8 @@ import {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
-      max-width: 520px;
+      width: 100%;
+      max-width: none;
       position: relative;
       z-index: 5;
     }
@@ -271,17 +272,26 @@ import {
     .field.invalid input,
     .field.invalid textarea { border-color: var(--red); }
 
+    .form-footer.fab-sticky-foot,
     .form-footer {
       display: flex;
-      justify-content: flex-end;
+      justify-content: flex-start;
       align-items: center;
+      flex-wrap: wrap;
       gap: 8px;
-      padding: 10px var(--fab-padding-right) 10px 16px;
+      /* Match field padding — don’t shove actions into the far-right FAB gutter */
+      padding: 12px 16px;
+      padding-right: 16px;
+      margin-top: 0;
       border-top: 1px solid var(--border);
       background: var(--surface-2);
       position: relative;
       z-index: 1;
       border-radius: 0 0 var(--r-lg, 12px) var(--r-lg, 12px);
+    }
+    .form-footer .btn-primary,
+    .form-footer .btn-secondary {
+      min-height: 36px;
     }
 
     .hw-assign-page {
