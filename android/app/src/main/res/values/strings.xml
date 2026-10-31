@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">OneSchool Teacher</string>
+    <string name="title_activity_main">OneSchool Teacher</string>
+    <string name="package_name">com.oneschool.teacher</string>
+    <string name="custom_url_scheme">com.oneschool.teacher</string>
+</resources>

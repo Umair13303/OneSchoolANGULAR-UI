@@ -41,4 +41,13 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
-.vs/ 
+.vs/
+
+# Capacitor / Android local build
+android/local.properties
+android/.gradle/
+android/app/build/
+android/build/
+android/captures/
+*.apk
+*.aab
