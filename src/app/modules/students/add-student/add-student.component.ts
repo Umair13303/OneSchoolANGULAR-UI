@@ -81,18 +81,24 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
       </div>
     }
 
+    <div class="os-page compact add-student-page">
     <div class="admission-card">
       <div class="adm-header">
         <div class="adm-header-left">
           <div class="adm-avatar" [style.background]="previewColor()">{{ previewInitials() }}</div>
-          <div>
-            <h2 class="adm-title">Add Existing Student <span class="adm-name">{{ previewFullName() }}</span></h2>
-            <p class="adm-sub">Enter existing student information — Step {{ activeTab() + 1 }}/4</p>
+          <div class="adm-header-titles">
+            <h2 class="adm-title">
+              Add Student
+              @if (previewFullName()) {
+                <span class="adm-name">· {{ previewFullName() }}</span>
+              }
+            </h2>
+            <p class="adm-sub">Register an existing student with personal, contact, and guardian details</p>
           </div>
         </div>
         <div class="adm-header-right">
-          <span class="adm-step-badge">Step {{ activeTab() + 1 }}/4</span>
-          <button class="adm-back-btn" (click)="router.navigate(['/students/list'])" title="Cancel & Exit">
+          <span class="adm-step-badge">Step {{ activeTab() + 1 }} of 4</span>
+          <button class="adm-back-btn" type="button" (click)="router.navigate(['/students/list'])" title="Cancel &amp; Exit">
             <span class="material-icons-round">close</span>
           </button>
         </div>
@@ -102,26 +108,48 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
         <div class="progress-fill" [style.width.%]="(activeTab() + 1) * 25"></div>
       </div>
 
-      <div class="adm-tabs">
-        <button type="button" class="adm-tab" [class.active]="activeTab() === 0" [class.done]="activeTab() > 0" (click)="activeTab.set(0)">
-          <span class="tab-dot">@if (activeTab() > 0) { <span class="material-icons-round">check</span> } @else { 1 }</span>
-          <span class="tab-label">Personal</span>
-        </button>
-        <div class="tab-connector" [class.done]="activeTab() > 0"></div>
-        <button type="button" class="adm-tab" [class.active]="activeTab() === 1" [class.done]="activeTab() > 1" (click)="activeTab.set(1)">
-          <span class="tab-dot">@if (activeTab() > 1) { <span class="material-icons-round">check</span> } @else { 2 }</span>
-          <span class="tab-label">Contact</span>
-        </button>
-        <div class="tab-connector" [class.done]="activeTab() > 1"></div>
-        <button type="button" class="adm-tab" [class.active]="activeTab() === 2" [class.done]="activeTab() > 2" (click)="activeTab.set(2)">
-          <span class="tab-dot">@if (activeTab() > 2) { <span class="material-icons-round">check</span> } @else { 3 }</span>
-          <span class="tab-label">Enrollment</span>
-        </button>
-        <div class="tab-connector" [class.done]="activeTab() > 2"></div>
-        <button type="button" class="adm-tab" [class.active]="activeTab() === 3" (click)="activeTab.set(3)">
-          <span class="tab-dot">4</span>
-          <span class="tab-label">Guardian</span>
-        </button>
+      <div class="adm-stepper-wrap">
+        <div class="adm-stepper-mobile">
+          <div class="asm-info">
+            <span class="asm-step-tag">Step {{ activeTab() + 1 }}/4</span>
+            <span class="asm-step-name">
+              @switch (activeTab()) {
+                @case (0) { Personal }
+                @case (1) { Contact }
+                @case (2) { Enrollment }
+                @case (3) { Guardian }
+              }
+            </span>
+          </div>
+          <div class="asm-dots">
+            <span class="asm-dot" [class.active]="activeTab() === 0" [class.done]="activeTab() > 0" (click)="activeTab.set(0)">1</span>
+            <span class="asm-dot" [class.active]="activeTab() === 1" [class.done]="activeTab() > 1" (click)="activeTab.set(1)">2</span>
+            <span class="asm-dot" [class.active]="activeTab() === 2" [class.done]="activeTab() > 2" (click)="activeTab.set(2)">3</span>
+            <span class="asm-dot" [class.active]="activeTab() === 3" [class.done]="activeTab() > 3" (click)="activeTab.set(3)">4</span>
+          </div>
+        </div>
+
+        <div class="adm-tabs">
+          <button type="button" class="adm-tab" [class.active]="activeTab() === 0" [class.done]="activeTab() > 0" (click)="activeTab.set(0)">
+            <span class="tab-dot">@if (activeTab() > 0) { <span class="material-icons-round">check</span> } @else { 1 }</span>
+            <span class="tab-label">Personal</span>
+          </button>
+          <div class="tab-connector" [class.done]="activeTab() > 0"></div>
+          <button type="button" class="adm-tab" [class.active]="activeTab() === 1" [class.done]="activeTab() > 1" (click)="activeTab.set(1)">
+            <span class="tab-dot">@if (activeTab() > 1) { <span class="material-icons-round">check</span> } @else { 2 }</span>
+            <span class="tab-label">Contact</span>
+          </button>
+          <div class="tab-connector" [class.done]="activeTab() > 1"></div>
+          <button type="button" class="adm-tab" [class.active]="activeTab() === 2" [class.done]="activeTab() > 2" (click)="activeTab.set(2)">
+            <span class="tab-dot">@if (activeTab() > 2) { <span class="material-icons-round">check</span> } @else { 3 }</span>
+            <span class="tab-label">Enrollment</span>
+          </button>
+          <div class="tab-connector" [class.done]="activeTab() > 2"></div>
+          <button type="button" class="adm-tab" [class.active]="activeTab() === 3" (click)="activeTab.set(3)">
+            <span class="tab-dot">4</span>
+            <span class="tab-label">Guardian</span>
+          </button>
+        </div>
       </div>
 
       <div class="adm-body">
@@ -213,8 +241,7 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
               </div>
 
               <div class="tab-nav">
-                <span></span>
-                <button type="button" class="btn-primary" (click)="next()">
+                <button type="button" class="btn-primary btn-next" (click)="next()">
                   Next Step <span class="material-icons-round">arrow_forward</span>
                 </button>
               </div>
@@ -259,7 +286,7 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
                 <button type="button" class="btn-secondary" (click)="activeTab.set(0)">
                   <span class="material-icons-round">arrow_back</span> Back
                 </button>
-                <button type="button" class="btn-primary" (click)="next()">
+                <button type="button" class="btn-primary btn-next" (click)="next()">
                   Next Step <span class="material-icons-round">arrow_forward</span>
                 </button>
               </div>
@@ -379,7 +406,7 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
                 <button type="button" class="btn-secondary" (click)="activeTab.set(1)">
                   <span class="material-icons-round">arrow_back</span> Back
                 </button>
-                <button type="button" class="btn-primary" (click)="next()">
+                <button type="button" class="btn-primary btn-next" (click)="next()">
                   Next Step <span class="material-icons-round">arrow_forward</span>
                 </button>
               </div>
@@ -463,7 +490,7 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
                   <button type="button" class="btn-secondary" (click)="activeTab.set(2)">
                     <span class="material-icons-round">arrow_back</span> Back
                   </button>
-                  <button type="submit" class="btn-primary" [disabled]="saving()">
+                  <button type="submit" class="btn-primary btn-submit" [disabled]="saving()">
                     @if (saving()) {
                       <span class="material-icons-round spin">sync</span> Saving...
                     } @else {
@@ -478,10 +505,13 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
         </form>
       </div>
     </div>
+    </div>
 
     } <!-- end else -->
   `,
   styles: [`
+    :host { display: block; min-width: 0; }
+    .add-student-page { padding-bottom: var(--fab-page-pad, 24px); }
     .success-screen { display: flex; align-items: center; justify-content: center; min-height: 50vh; }
     .success-card {
       background: var(--surface); border: 1px solid var(--border);
@@ -514,6 +544,7 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
       border: 1px solid var(--border);
       border-radius: var(--r-2xl, 20px);
       box-shadow: var(--sh);
+      overflow: hidden;
       margin-bottom: var(--sp-6, 24px);
     }
 
@@ -522,10 +553,10 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
       padding: 16px 22px;
       background: linear-gradient(135deg, var(--accent-s) 0%, var(--surface) 100%);
       border-bottom: 1px solid var(--border);
-      border-radius: var(--r-2xl, 20px) var(--r-2xl, 20px) 0 0;
       gap: 14px;
     }
     .adm-header-left { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+    .adm-header-titles { min-width: 0; }
     .adm-header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
     .adm-avatar {
       width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
@@ -533,8 +564,11 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
       font-size: 16px; font-weight: 800; color: #fff;
       box-shadow: 0 2px 8px rgba(0,0,0,0.15); transition: background 0.3s;
     }
-    .adm-title { font-size: 15px; font-weight: 700; color: var(--t1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; }
-    .adm-name { color: var(--accent); margin-left: 4px; }
+    .adm-title {
+      font-size: 16px; font-weight: 700; color: var(--t1); line-height: 1.3;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0;
+    }
+    .adm-name { color: var(--accent); font-weight: 700; }
     .adm-sub { font-size: 12px; color: var(--t4); margin: 2px 0 0; }
     .adm-step-badge {
       padding: 5px 13px; border-radius: 99px;
@@ -555,11 +589,37 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
     .progress-bar { height: 3px; background: var(--border); width: 100%; }
     .progress-fill { height: 100%; background: var(--accent); transition: width 0.35s cubic-bezier(.22,1,.36,1); }
 
+    .adm-stepper-wrap {
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+    }
+    .adm-stepper-mobile {
+      display: none;
+      padding: 10px 16px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .asm-info { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .asm-step-tag {
+      font-size: 11px; font-weight: 700; color: var(--accent);
+      background: var(--accent-s); border: 1px solid var(--accent-g);
+      padding: 2px 8px; border-radius: 99px; white-space: nowrap;
+    }
+    .asm-step-name { font-size: 13px; font-weight: 700; color: var(--t1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .asm-dots { display: flex; gap: 6px; flex-shrink: 0; }
+    .asm-dot {
+      width: 26px; height: 26px; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; cursor: pointer;
+      border: 2px solid var(--border-2); background: var(--surface); color: var(--t4);
+    }
+    .asm-dot.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .asm-dot.done { background: var(--green); border-color: var(--green); color: #fff; }
+
     .adm-tabs {
       display: flex; align-items: center;
       padding: 12px 24px;
-      background: var(--surface-2);
-      border-bottom: 1px solid var(--border);
       gap: 4px;
       overflow-x: auto;
     }
@@ -589,7 +649,16 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
     .tab-connector.done { background: var(--green); }
 
     .adm-body { padding: 0; }
-    .tab-pane { padding: 22px 24px 36px; display: flex; flex-direction: column; gap: 16px; min-height: 380px; }
+    .tab-pane {
+      padding: 20px 24px 20px;
+      display: flex; flex-direction: column; gap: 16px;
+      min-height: 0;
+    }
+    .form-field app-date-picker {
+      display: block;
+      width: 100%;
+      --input-h: 42px;
+    }
 
     .section-hint {
       display: flex; align-items: center; gap: 9px;
@@ -734,8 +803,11 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
 
     .tab-nav {
       display: flex; justify-content: space-between; align-items: center;
-      padding-top: 16px; margin-top: 8px; border-top: 1px solid var(--border);
+      flex-wrap: wrap; gap: 10px;
+      padding-top: 16px; margin-top: 4px; border-top: 1px solid var(--border);
     }
+    .tab-nav .btn-next,
+    .tab-nav .btn-submit { margin-left: auto; }
     .btn-primary, .btn-secondary {
       display: inline-flex; align-items: center; justify-content: center; gap: 7px;
       height: var(--btn-h, 42px); padding: 0 20px;
@@ -786,6 +858,26 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
     @keyframes spin { to { transform: rotate(360deg); } }
     .spin { animation: spin 0.8s linear infinite; display: inline-block; }
     @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    @media (max-width: 768px) {
+      .adm-header { padding: 14px 16px; flex-wrap: wrap; }
+      .adm-title { font-size: 14.5px; }
+      .adm-step-badge { display: none; }
+      .tab-pane { padding: 16px; }
+      .adm-tabs { display: none !important; }
+      .adm-stepper-mobile { display: flex; }
+      .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; }
+      .admission-preview {
+        flex-direction: column; align-items: flex-start; gap: 8px;
+        .ap-divider { display: none; }
+      }
+      .tab-nav {
+        flex-direction: column-reverse;
+        align-items: stretch;
+        .btn-primary, .btn-secondary { width: 100%; justify-content: center; }
+        .btn-next, .btn-submit { margin-left: 0; }
+      }
+    }
   `]
 })
 export class AddStudentComponent implements OnInit {
