@@ -8,7 +8,8 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { classDisplay, courseHeading } from '../curriculum-ui.util';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 @Component({
   selector: 'app-my-courses',
@@ -345,8 +346,8 @@ export class MyCoursesComponent implements OnInit {
     this.loading.set(true);
     this.bannerError.set('');
     forkJoin({
-      courses: this.curriculum.getMyCourses(),
-      slots: this.curriculum.getMyCourseSlots()
+      courses: this.curriculum.getMyCourses().pipe(catchError(() => of([] as CoursePlanListDto[]))),
+      slots: this.curriculum.getMyCourseSlots().pipe(catchError(() => of([] as TeacherCourseSlotDto[])))
     }).subscribe({
       next: ({ courses, slots }) => {
         this.courses.set(courses);
