@@ -1,6 +1,7 @@
 import {
   Component, Input, Output, EventEmitter, OnInit, OnDestroy,
-  signal, computed, ElementRef, inject, forwardRef, ChangeDetectionStrategy
+  signal, computed, ElementRef, inject, forwardRef, ChangeDetectionStrategy,
+  viewChild, afterNextRender, Injector
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
@@ -33,7 +34,6 @@ function fromYMD(s: string): Date | null {
   template: `
     <div class="dp-wrap" [class.dp-open]="open()" [class.dp-disabled]="disabled">
 
-      <!-- Trigger input -->
       <div class="dp-input" (click)="toggle(); $event.stopPropagation()" [class.dp-focus]="open()" [class.dp-error]="hasError">
         <span class="material-icons-round dp-cal-icon">calendar_month</span>
         <span class="dp-val" [class.dp-placeholder]="!value()">
@@ -48,15 +48,15 @@ function fromYMD(s: string): Date | null {
         }
       </div>
 
-      <!-- Dropdown panel (fixed so it never clips inside overflow sheets/modals) -->
       @if (open()) {
-        <div class="dp-panel" [class.dp-drop-up]="dropUp()"
+        <div class="dp-panel" #panel
+             [class.dp-drop-up]="dropUp()"
              [style.top.px]="panelTop()"
              [style.left.px]="panelLeft()"
+             [style.width.px]="panelWidth()"
              [style.maxHeight.px]="panelMaxH()"
              (click)="$event.stopPropagation()">
 
-          <!-- Header: prev / month+year / next -->
           <div class="dp-header">
             <button class="dp-nav" (click)="prevMonth()" type="button">
               <span class="material-icons-round">chevron_left</span>
@@ -81,7 +81,6 @@ function fromYMD(s: string): Date | null {
             </button>
           </div>
 
-          <!-- Day grid -->
           @if (view() === 'days') {
             <div class="dp-dow-row">
               @for (d of DAYS; track d) { <span class="dp-dow">{{ d }}</span> }
@@ -103,7 +102,6 @@ function fromYMD(s: string): Date | null {
             </div>
           }
 
-          <!-- Month grid -->
           @if (view() === 'months') {
             <div class="dp-months">
               @for (m of MONTHS; track m; let i = $index) {
@@ -118,7 +116,6 @@ function fromYMD(s: string): Date | null {
             </div>
           }
 
-          <!-- Year grid -->
           @if (view() === 'years') {
             <div class="dp-years">
               @for (y of yearRange(); track y) {
@@ -133,7 +130,6 @@ function fromYMD(s: string): Date | null {
             </div>
           }
 
-          <!-- Footer: Today shortcut -->
           <div class="dp-footer">
             <button class="dp-today-btn" (click)="goToday()" type="button">Today</button>
             @if (value()) {
@@ -147,10 +143,9 @@ function fromYMD(s: string): Date | null {
   `,
   styles: [`
     :host { display: block; width: 100%; position: relative; z-index: 0; }
+    :host(.dp-host-open) { z-index: 5; }
     .dp-wrap { position: relative; display: block; width: 100%; }
-    .dp-wrap.dp-open { z-index: 1200; }
 
-    /* ── Trigger ─────────────────────────────────── */
     .dp-input {
       display: flex; align-items: center; gap: 8px;
       padding: 0 10px;
@@ -185,9 +180,10 @@ function fromYMD(s: string): Date | null {
     .dp-clear:hover { background: var(--red-s); color: var(--red); }
     .dp-clear .material-icons-round { font-size: 13px; }
 
-    /* ── Panel ───────────────────────────────────── */
+    /* Panel is teleported to <body> so overflow/modals never clip it */
     .dp-panel {
-      position: fixed; z-index: var(--z-popover, 1300);
+      position: fixed;
+      z-index: 1600;
       width: 288px;
       max-height: 70vh;
       overflow-x: hidden;
@@ -196,9 +192,10 @@ function fromYMD(s: string): Date | null {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
-      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.06);
+      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18), 0 2px 6px rgba(15, 23, 42, 0.08);
       padding: 12px 10px 8px;
       animation: dp-in .14s ease-out;
+      box-sizing: border-box;
     }
     .dp-panel.dp-drop-up {
       transform: translateY(-100%);
@@ -210,7 +207,6 @@ function fromYMD(s: string): Date | null {
       to { opacity:1; transform:translateY(-100%); }
     }
 
-    /* ── Header ──────────────────────────────────── */
     .dp-header {
       display: flex; align-items: center; justify-content: space-between;
       margin-bottom: 10px; gap: 4px;
@@ -233,7 +229,6 @@ function fromYMD(s: string): Date | null {
     .dp-hd-btn:hover { background: var(--accent-s); color: var(--accent); }
     .dp-hd-static { display: block; }
 
-    /* ── Day-of-week row ─────────────────────────── */
     .dp-dow-row {
       display: grid; grid-template-columns: repeat(7, 1fr);
       margin-bottom: 4px;
@@ -244,7 +239,6 @@ function fromYMD(s: string): Date | null {
       padding: 4px 0;
     }
 
-    /* ── Day grid ────────────────────────────────── */
     .dp-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; }
 
     .dp-day {
@@ -268,7 +262,6 @@ function fromYMD(s: string): Date | null {
     }
     .dp-dis { opacity: .35; cursor: not-allowed; }
 
-    /* ── Month grid ──────────────────────────────── */
     .dp-months { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px 0; }
     .dp-month {
       padding: 10px 4px; text-align: center;
@@ -279,7 +272,6 @@ function fromYMD(s: string): Date | null {
     .dp-month:hover { background: var(--accent-s); color: var(--accent); }
     .dp-month.dp-sel { background: var(--accent); color: #fff; }
 
-    /* ── Year grid ───────────────────────────────── */
     .dp-years { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 4px 0; }
     .dp-year {
       padding: 9px 4px; text-align: center;
@@ -290,7 +282,6 @@ function fromYMD(s: string): Date | null {
     .dp-year:hover { background: var(--accent-s); color: var(--accent); }
     .dp-year.dp-sel { background: var(--accent); color: #fff; }
 
-    /* ── Footer ──────────────────────────────────── */
     .dp-footer {
       display: flex; gap: 8px; justify-content: flex-end;
       border-top: 1px solid var(--border); margin-top: 10px; padding-top: 8px;
@@ -304,22 +295,18 @@ function fromYMD(s: string): Date | null {
     .dp-today-btn:hover { background: var(--accent); color: #fff; }
     .dp-clear-btn { background: var(--surface-2); color: var(--t3); }
     .dp-clear-btn:hover { background: var(--red-s); color: var(--red); border-color: var(--red-b); }
-
-    /* ── Mobile ──────────────────────────────────── */
-    @media (max-width: 480px) {
-      .dp-panel { width: 100%; left: 0; right: 0; }
-    }
   `]
 })
 export class DatePickerComponent implements OnInit, OnDestroy, ControlValueAccessor {
   private host = inject(ElementRef<HTMLElement>);
+  private injector = inject(Injector);
+  private panelRef = viewChild<ElementRef<HTMLElement>>('panel');
 
   @Input() placeholder = 'Select date';
   @Input() min?: string;
   @Input() max?: string;
   @Input() disabled = false;
   @Input() hasError = false;
-  /** Extra class forwarded to the host for layout use */
   @Input() inputClass = '';
 
   @Output() dateChange = new EventEmitter<string>();
@@ -332,27 +319,35 @@ export class DatePickerComponent implements OnInit, OnDestroy, ControlValueAcces
   dropUp  = signal(false);
   panelTop = signal(0);
   panelLeft = signal(0);
+  panelWidth = signal(288);
   panelMaxH = signal(340);
   view    = signal<'days' | 'months' | 'years'>('days');
   cursor  = signal({ year: new Date().getFullYear(), month: new Date().getMonth() });
 
   private onChange: (v: string | null) => void = () => {};
   private onTouched: () => void = () => {};
-  private docClick = () => this.open.set(false);
+  private docClick = (e: MouseEvent) => {
+    const t = e.target as Node | null;
+    if (!t) return;
+    if (this.host.nativeElement.contains(t)) return;
+    const panel = this.panelRef()?.nativeElement;
+    if (panel?.contains(t)) return;
+    this.closePanel();
+  };
   private onScrollOrResize = () => { if (this.open()) this.reposition(); };
 
   ngOnInit() {
-    document.addEventListener('click', this.docClick);
+    document.addEventListener('click', this.docClick, true);
     window.addEventListener('scroll', this.onScrollOrResize, true);
     window.addEventListener('resize', this.onScrollOrResize);
   }
   ngOnDestroy() {
-    document.removeEventListener('click', this.docClick);
+    document.removeEventListener('click', this.docClick, true);
     window.removeEventListener('scroll', this.onScrollOrResize, true);
     window.removeEventListener('resize', this.onScrollOrResize);
+    this.detachPanel();
   }
 
-  // ── ControlValueAccessor ─────────────────────────
   writeValue(v: string | null) {
     this.value.set(v || null);
     if (v) {
@@ -364,7 +359,6 @@ export class DatePickerComponent implements OnInit, OnDestroy, ControlValueAcces
   registerOnTouched(fn: () => void) { this.onTouched = fn; }
   setDisabledState(d: boolean) { this.disabled = d; }
 
-  // ── Computed ─────────────────────────────────────
   selectedYear = computed(() => {
     const v = this.value();
     return v ? fromYMD(v)?.getFullYear() ?? null : null;
@@ -377,7 +371,7 @@ export class DatePickerComponent implements OnInit, OnDestroy, ControlValueAcces
 
     const first = new Date(year, month, 1);
     const start = new Date(first);
-    start.setDate(1 - first.getDay());           // back-fill to Sunday
+    start.setDate(1 - first.getDay());
 
     const cells: Day[] = [];
     for (let i = 0; i < 42; i++) {
@@ -392,7 +386,6 @@ export class DatePickerComponent implements OnInit, OnDestroy, ControlValueAcces
         disabled: (!!this.min && ymd < this.min) || (!!this.max && ymd > this.max)
       });
     }
-    // Trim last row if all other-month
     if (cells.slice(35).every(c => !c.curr)) cells.splice(35, 7);
     return cells;
   });
@@ -407,35 +400,59 @@ export class DatePickerComponent implements OnInit, OnDestroy, ControlValueAcces
     return `${r[0]} – ${r[r.length - 1]}`;
   });
 
-  // ── Interactions ─────────────────────────────────
   toggle() {
     if (this.disabled) return;
-    const next = !this.open();
-    if (next) {
-      this.reposition();
-      this.onTouched();
+    if (this.open()) {
+      this.closePanel();
+      return;
     }
-    this.open.set(next);
+    this.onTouched();
+    this.open.set(true);
+    this.host.nativeElement.classList.add('dp-host-open');
+    afterNextRender(() => {
+      this.attachPanelToBody();
+      this.reposition();
+    }, { injector: this.injector });
+  }
+
+  private closePanel() {
+    this.open.set(false);
+    this.host.nativeElement.classList.remove('dp-host-open');
+    this.detachPanel();
+  }
+
+  private attachPanelToBody() {
+    const el = this.panelRef()?.nativeElement;
+    if (el && el.parentElement !== document.body) {
+      document.body.appendChild(el);
+    }
+  }
+
+  private detachPanel() {
+    const el = this.panelRef()?.nativeElement;
+    if (el?.parentElement === document.body) {
+      el.remove();
+    }
   }
 
   private reposition() {
-    const rect = this.host.nativeElement.getBoundingClientRect();
+    const trigger = this.host.nativeElement.querySelector('.dp-input') as HTMLElement | null;
+    const rect = (trigger ?? this.host.nativeElement).getBoundingClientRect();
     const panelH = 340;
-    const panelW = 288;
     const gap = 6;
     const edge = 8;
-    // App topbar (~56px) + a little breathing room — never open "up" into it.
     const topChrome = 72;
     const spaceBelow = window.innerHeight - rect.bottom - edge;
     const usableAbove = rect.top - topChrome;
+    const width = Math.min(288, Math.max(260, window.innerWidth - edge * 2));
 
-    // Prefer down. Only flip up when below is cramped AND there is a full
-    // usable band under the topbar (avoids View Attendance clipping).
-    const up = spaceBelow < panelH && usableAbove >= 260;
+    // Prefer opening below the field on every form/toolbar.
+    // Only flip up when below is truly too small AND above is clearly clear.
+    const up = spaceBelow < 240 && usableAbove >= 280;
     this.dropUp.set(up);
+    this.panelWidth.set(width);
 
     if (up) {
-      // Anchor bottom edge just above the input; translateY(-100%) lifts it.
       this.panelTop.set(rect.top - gap);
       this.panelMaxH.set(Math.min(panelH, Math.max(220, usableAbove - gap)));
     } else {
@@ -443,10 +460,11 @@ export class DatePickerComponent implements OnInit, OnDestroy, ControlValueAcces
       this.panelMaxH.set(Math.min(panelH, Math.max(220, spaceBelow - gap)));
     }
 
-    // Right-align to the trigger so chips/actions to the right stay visible.
-    let left = rect.right - panelW;
-    left = Math.max(edge, Math.min(left, window.innerWidth - panelW - edge));
+    // Prefer right-align to the trigger; clamp into the viewport.
+    let left = rect.right - width;
+    left = Math.max(edge, Math.min(left, window.innerWidth - width - edge));
     this.panelLeft.set(left);
+    this.attachPanelToBody();
   }
 
   selectDay(day: Day) {
@@ -455,7 +473,7 @@ export class DatePickerComponent implements OnInit, OnDestroy, ControlValueAcces
     this.value.set(ymd);
     this.onChange(ymd);
     this.dateChange.emit(ymd);
-    this.open.set(false);
+    this.closePanel();
     this.view.set('days');
   }
 
@@ -499,7 +517,7 @@ export class DatePickerComponent implements OnInit, OnDestroy, ControlValueAcces
     this.onChange(ymd);
     this.dateChange.emit(ymd);
     this.view.set('days');
-    this.open.set(false);
+    this.closePanel();
   }
 
   clear(e: Event) {
