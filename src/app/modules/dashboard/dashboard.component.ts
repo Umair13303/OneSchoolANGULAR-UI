@@ -69,129 +69,8 @@ import { forkJoin } from 'rxjs';
     <!-- ═══ Teacher Dashboard ═══ -->
     @if (isTeacher()) {
 
-      @if (ttLoading()) {
-        <div class="tt-loading">
-          <span class="css-spinner" aria-hidden="true"></span>
-          <span class="tt-loading-text">Loading your schedule…</span>
-        </div>
-      } @else if (ttError()) {
-        <div class="td-empty">
-          <div class="td-empty-main">
-            <div class="td-empty-icon warn">
-              <span class="material-icons-round">wifi_off</span>
-            </div>
-            <div class="td-empty-copy">
-              <h2>Couldn’t load your schedule</h2>
-              <p>The connection was slow or timed out. Please try again.</p>
-            </div>
-            <button class="td-retry" type="button" (click)="loadTeacherSchedule()">Try again</button>
-          </div>
-        </div>
-      } @else if (teacherEntries().length === 0) {
-        <div class="td-empty">
-          <div class="td-empty-main">
-            <div class="td-empty-icon">
-              <span class="material-icons-round">event_available</span>
-            </div>
-            <div class="td-empty-copy">
-              <h2>No schedule assigned yet</h2>
-              <p>Ask your admin to assign your timetable. Meanwhile, you can still mark attendance, set homework, and open exams.</p>
-            </div>
-          </div>
-
-          <div class="td-week">
-            @for (d of emptyWeekDays; track d.key) {
-              <div class="td-week-day" [class.is-today]="d.key === todayDow">
-                <span class="td-week-label">{{ d.label }}</span>
-                <span class="td-week-state">{{ d.key === todayDow ? 'Today' : '—' }}</span>
-              </div>
-            }
-          </div>
-
-          <div class="td-shortcuts">
-            <a routerLink="/classroom/today" class="td-shortcut">
-              <span class="td-shortcut-icon" style="--ic:#4f6ef7">
-                <span class="material-icons-round">play_lesson</span>
-              </span>
-              <span class="td-shortcut-body">
-                <strong>Today's Classroom</strong>
-                <span>Run the full class workflow from one place</span>
-              </span>
-              <span class="material-icons-round td-shortcut-arrow">arrow_forward</span>
-            </a>
-            <a routerLink="/curriculum/my-courses" class="td-shortcut">
-              <span class="td-shortcut-icon" style="--ic:#7c3aed">
-                <span class="material-icons-round">auto_stories</span>
-              </span>
-              <span class="td-shortcut-body">
-                <strong>My Courses</strong>
-                <span>Teach topics, oral, quiz &amp; logs</span>
-              </span>
-              <span class="material-icons-round td-shortcut-arrow">arrow_forward</span>
-            </a>
-            <a routerLink="/attendance/mark" class="td-shortcut">
-              <span class="td-shortcut-icon" style="--ic:#0891b2">
-                <span class="material-icons-round">how_to_reg</span>
-              </span>
-              <span class="td-shortcut-body">
-                <strong>Mark Attendance</strong>
-                <span>Record who’s present in class</span>
-              </span>
-              <span class="material-icons-round td-shortcut-arrow">arrow_forward</span>
-            </a>
-            <a routerLink="/attendance/view" class="td-shortcut">
-              <span class="td-shortcut-icon" style="--ic:#059669">
-                <span class="material-icons-round">fact_check</span>
-              </span>
-              <span class="td-shortcut-body">
-                <strong>View Attendance</strong>
-                <span>Review past attendance records</span>
-              </span>
-              <span class="material-icons-round td-shortcut-arrow">arrow_forward</span>
-            </a>
-            <a routerLink="/homework/assign" class="td-shortcut">
-              <span class="td-shortcut-icon" style="--ic:#d97706">
-                <span class="material-icons-round">edit_note</span>
-              </span>
-              <span class="td-shortcut-body">
-                <strong>Assign Homework</strong>
-                <span>Create and publish class work</span>
-              </span>
-              <span class="material-icons-round td-shortcut-arrow">arrow_forward</span>
-            </a>
-            <a routerLink="/exams/papers" class="td-shortcut">
-              <span class="td-shortcut-icon" style="--ic:#db2777">
-                <span class="material-icons-round">quiz</span>
-              </span>
-              <span class="td-shortcut-body">
-                <strong>Exam Papers</strong>
-                <span>Set up papers and enter results</span>
-              </span>
-              <span class="material-icons-round td-shortcut-arrow">arrow_forward</span>
-            </a>
-            <a routerLink="/homework/list" class="td-shortcut">
-              <span class="td-shortcut-icon" style="--ic:#0284c7">
-                <span class="material-icons-round">menu_book</span>
-              </span>
-              <span class="td-shortcut-body">
-                <strong>Homework Diary</strong>
-                <span>See assigned and due work</span>
-              </span>
-              <span class="material-icons-round td-shortcut-arrow">arrow_forward</span>
-            </a>
-            <a routerLink="/timetable/view" class="td-shortcut">
-              <span class="td-shortcut-icon" style="--ic:#4f6ef7">
-                <span class="material-icons-round">calendar_view_week</span>
-              </span>
-              <span class="td-shortcut-body">
-                <strong>View Timetable</strong>
-                <span>Check class timings when assigned</span>
-              </span>
-              <span class="material-icons-round td-shortcut-arrow">arrow_forward</span>
-            </a>
-          </div>
-        </div>
-      } @else {
+      <!-- Keep shortcuts usable while schedule loads — empty timetable shouldn't freeze the page -->
+      @if (!ttLoading() && !ttError() && teacherEntries().length > 0) {
 
         <!-- TODAY: Now / Next — clock-aware, no new API -->
         <section class="td-today-focus" aria-label="Today's focus">
@@ -527,6 +406,129 @@ import { forkJoin } from 'rxjs';
           </div>
 
         </div>
+      } @else {
+        <!-- Loading / error / empty: shortcuts stay clickable (no full-page freeze) -->
+        <div class="td-empty">
+          @if (ttLoading()) {
+            <div class="tt-loading tt-loading-inline">
+              <span class="css-spinner" aria-hidden="true"></span>
+              <span class="tt-loading-text">Checking your schedule…</span>
+            </div>
+          } @else if (ttError()) {
+            <div class="td-empty-main">
+              <div class="td-empty-icon warn">
+                <span class="material-icons-round">wifi_off</span>
+              </div>
+              <div class="td-empty-copy">
+                <h2>Couldn’t load your schedule</h2>
+                <p>The connection was slow or timed out. You can still use the shortcuts below.</p>
+              </div>
+              <button class="td-retry" type="button" (click)="loadTeacherSchedule()">Try again</button>
+            </div>
+          } @else {
+            <div class="td-empty-main">
+              <div class="td-empty-icon">
+                <span class="material-icons-round">event_available</span>
+              </div>
+              <div class="td-empty-copy">
+                <h2>No schedule assigned yet</h2>
+                <p>Ask your admin to assign your timetable. Meanwhile, you can still mark attendance, set homework, and open exams.</p>
+              </div>
+            </div>
+          }
+
+          <div class="td-week">
+            @for (d of emptyWeekDays; track d.key) {
+              <div class="td-week-day" [class.is-today]="d.key === todayDow">
+                <span class="td-week-label">{{ d.label }}</span>
+                <span class="td-week-state">{{ d.key === todayDow ? 'Today' : '—' }}</span>
+              </div>
+            }
+          </div>
+
+          <div class="td-shortcuts">
+            <a routerLink="/classroom/today" class="td-shortcut">
+              <span class="td-shortcut-icon" style="--ic:#4f6ef7">
+                <span class="material-icons-round">play_lesson</span>
+              </span>
+              <span class="td-shortcut-body">
+                <strong>Today's Classroom</strong>
+                <span>Run the full class workflow from one place</span>
+              </span>
+              <span class="material-icons-round td-shortcut-arrow">arrow_forward</span>
+            </a>
+            <a routerLink="/curriculum/my-courses" class="td-shortcut">
+              <span class="td-shortcut-icon" style="--ic:#7c3aed">
+                <span class="material-icons-round">auto_stories</span>
+              </span>
+              <span class="td-shortcut-body">
+                <strong>My Courses</strong>
+                <span>Teach topics, oral, quiz &amp; logs</span>
+              </span>
+              <span class="material-icons-round td-shortcut-arrow">arrow_forward</span>
+            </a>
+            <a routerLink="/attendance/mark" class="td-shortcut">
+              <span class="td-shortcut-icon" style="--ic:#0891b2">
+                <span class="material-icons-round">how_to_reg</span>
+              </span>
+              <span class="td-shortcut-body">
+                <strong>Mark Attendance</strong>
+                <span>Record who’s present in class</span>
+              </span>
+              <span class="material-icons-round td-shortcut-arrow">arrow_forward</span>
+            </a>
+            <a routerLink="/attendance/view" class="td-shortcut">
+              <span class="td-shortcut-icon" style="--ic:#059669">
+                <span class="material-icons-round">fact_check</span>
+              </span>
+              <span class="td-shortcut-body">
+                <strong>View Attendance</strong>
+                <span>Review past attendance records</span>
+              </span>
+              <span class="material-icons-round td-shortcut-arrow">arrow_forward</span>
+            </a>
+            <a routerLink="/homework/assign" class="td-shortcut">
+              <span class="td-shortcut-icon" style="--ic:#d97706">
+                <span class="material-icons-round">edit_note</span>
+              </span>
+              <span class="td-shortcut-body">
+                <strong>Assign Homework</strong>
+                <span>Create and publish class work</span>
+              </span>
+              <span class="material-icons-round td-shortcut-arrow">arrow_forward</span>
+            </a>
+            <a routerLink="/exams/papers" class="td-shortcut">
+              <span class="td-shortcut-icon" style="--ic:#db2777">
+                <span class="material-icons-round">quiz</span>
+              </span>
+              <span class="td-shortcut-body">
+                <strong>Exam Papers</strong>
+                <span>Set up papers and enter results</span>
+              </span>
+              <span class="material-icons-round td-shortcut-arrow">arrow_forward</span>
+            </a>
+            <a routerLink="/homework/list" class="td-shortcut">
+              <span class="td-shortcut-icon" style="--ic:#0284c7">
+                <span class="material-icons-round">menu_book</span>
+              </span>
+              <span class="td-shortcut-body">
+                <strong>Homework Diary</strong>
+                <span>See assigned and due work</span>
+              </span>
+              <span class="material-icons-round td-shortcut-arrow">arrow_forward</span>
+            </a>
+            <a routerLink="/timetable/view" class="td-shortcut">
+              <span class="td-shortcut-icon" style="--ic:#4f6ef7">
+                <span class="material-icons-round">calendar_view_week</span>
+              </span>
+              <span class="td-shortcut-body">
+                <strong>View Timetable</strong>
+                <span>Check class timings when assigned</span>
+              </span>
+              <span class="material-icons-round td-shortcut-arrow">arrow_forward</span>
+            </a>
+          </div>
+        </div>
       }
     }
 
@@ -839,6 +841,10 @@ import { forkJoin } from 'rxjs';
       padding:64px 24px; color:var(--t4);
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--r-2xl); animation: td-rise .4s ease both;
+    }
+    .tt-loading-inline {
+      flex-direction: row; justify-content: center;
+      padding: 16px 20px;
     }
     .tt-loading-text { font-size:13px; font-weight:600; }
 
@@ -1247,7 +1253,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   isTeacher() { return this.auth.hasRole('teacher'); }
 
   // Teacher schedule
-  ttLoading      = signal(false);
+  ttLoading      = signal(true);
   ttError        = signal(false);
   teacherEntries = signal<TimetableEntryDto[]>([]);
 

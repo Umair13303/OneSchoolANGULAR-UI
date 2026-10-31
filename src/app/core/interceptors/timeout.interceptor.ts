@@ -1,10 +1,12 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { TimeoutError, catchError, retry, throwError, timeout, timer } from 'rxjs';
 
-const REQUEST_MS = 30_000;
+/** Keep teacher/admin first paint snappy — empty forms shouldn't wait ~1 min. */
+const REQUEST_MS = 12_000;
 
 function shouldRetry(err: unknown): boolean {
-  if (err instanceof TimeoutError) return true;
+  // Timeouts already waited REQUEST_MS; retrying doubles the spinner feel.
+  if (err instanceof TimeoutError) return false;
   if (err instanceof HttpErrorResponse) {
     return err.status === 0 || err.status === 503;
   }
@@ -20,7 +22,7 @@ export const timeoutInterceptor: HttpInterceptorFn = (req, next) => {
     timeout(REQUEST_MS),
     retry({
       count: 1,
-      delay: (err) => shouldRetry(err) ? timer(2000) : throwError(() => err)
+      delay: (err) => shouldRetry(err) ? timer(1500) : throwError(() => err)
     }),
     catchError(err => {
       if (err instanceof TimeoutError) {

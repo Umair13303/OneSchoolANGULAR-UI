@@ -1034,9 +1034,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
     document.addEventListener('click', this.closePanels);
     // School name/logo from the user's institute (not DevCompany branding).
     this.loadInstituteBranding();
-    // SignalR connect is cheap; conversation list is deferred so dashboard
-    // stats can claim the first network slots after login.
-    this.chatSvc.connect();
+    // Defer chat until after teacher/admin critical dashboard calls claim bandwidth.
     this.scheduleDeferredShellWork();
   }
 
@@ -1079,6 +1077,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
       this.deferredShellHandle = null;
       // Do not run after logout or layout teardown.
       if (this.shellDestroyed || !this.auth.isLoggedIn()) return;
+      this.chatSvc.connect();
       this.notifSvc.load();
       this.chatSvc.loadConversations();
     };
@@ -1086,11 +1085,14 @@ export class LayoutComponent implements OnInit, OnDestroy {
       requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
       cancelIdleCallback?: (id: number) => void;
     };
+    // Teachers often land on an empty timetable — give schedule APIs a clear first slot.
+    const idleTimeout = this.auth.currentUser()?.role === 'teacher' ? 2500 : 1200;
+    const fallbackMs = this.auth.currentUser()?.role === 'teacher' ? 800 : 300;
     if (typeof w.requestIdleCallback === 'function') {
-      const id = w.requestIdleCallback(() => run(), { timeout: 1200 });
+      const id = w.requestIdleCallback(() => run(), { timeout: idleTimeout });
       this.deferredShellHandle = { kind: 'idle', id };
     } else {
-      const id = window.setTimeout(run, 300);
+      const id = window.setTimeout(run, fallbackMs);
       this.deferredShellHandle = { kind: 'timeout', id };
     }
   }

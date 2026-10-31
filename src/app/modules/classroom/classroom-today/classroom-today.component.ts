@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { forkJoin, of } from 'rxjs';
+import { of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
 import { AuthService } from '../../../core/services/auth.service';
@@ -872,43 +872,53 @@ export class ClassroomTodayComponent implements OnInit {
       return;
     }
 
-    forkJoin({
-      tt: this.ttSvc.getForTeacher(user.userId).pipe(catchError(() => of([]))),
-      assigns: this.academic.getAssignmentsByTeacher(user.userId).pipe(catchError(() => of([] as ClassSubjectDto[]))),
-      courses: this.curriculum.getMyCourses().pipe(catchError(() => of([] as CoursePlanListDto[])))
-    }).subscribe({
-      next: ({ tt, assigns, courses }) => {
+    // Assignments first so the hub paints quickly when timetable/courses are empty or slow.
+    this.academic.getAssignmentsByTeacher(user.userId).pipe(
+      catchError(() => of([] as ClassSubjectDto[]))
+    ).subscribe({
+      next: assigns => {
+        this.assignments.set((assigns || []).filter(a => a.isActive));
+        this.loading.set(false);
+        this.tryOpenFromQuery();
+      },
+      error: () => this.loading.set(false)
+    });
+
+    this.ttSvc.getForTeacher(user.userId).pipe(catchError(() => of([]))).subscribe({
+      next: (tt: any) => {
         const days = tt as any[];
         const today = (Array.isArray(days) ? days : [])
           .flatMap((d: any) => d.entries ?? [])
           .filter((e: TimetableEntryDto) => !e.isBreak && e.periodNo > 0 && e.dayOfWeek === this.todayDow)
           .sort((a: TimetableEntryDto, b: TimetableEntryDto) => a.periodNo - b.periodNo);
-
         this.todayEntries.set(today);
-        this.assignments.set((assigns || []).filter(a => a.isActive));
-        this.courses.set(courses || []);
-        this.loading.set(false);
+      }
+    });
 
-        const qp = this.route.snapshot.queryParamMap;
-        const classId = Number(qp.get('classId'));
-        const subjectId = Number(qp.get('subjectId'));
-        if (classId && subjectId) {
-          this.openSession({
-            classId,
-            subjectId,
-            periodId: qp.get('periodId') ? Number(qp.get('periodId')) : null,
-            periodNo: qp.get('periodNo') ? Number(qp.get('periodNo')) : null,
-            topicId: qp.get('topicId') ? Number(qp.get('topicId')) : null,
-            startTime: qp.get('startTime'),
-            endTime: qp.get('endTime'),
-            academicYearId: qp.get('academicYearId') ? Number(qp.get('academicYearId')) : null,
-            className: qp.get('className'),
-            section: qp.get('section'),
-            subjectName: qp.get('subjectName')
-          });
-        }
-      },
-      error: () => this.loading.set(false)
+    this.curriculum.getMyCourses().pipe(
+      catchError(() => of([] as CoursePlanListDto[]))
+    ).subscribe({
+      next: courses => this.courses.set(courses || [])
+    });
+  }
+
+  private tryOpenFromQuery() {
+    const qp = this.route.snapshot.queryParamMap;
+    const classId = Number(qp.get('classId'));
+    const subjectId = Number(qp.get('subjectId'));
+    if (!classId || !subjectId) return;
+    this.openSession({
+      classId,
+      subjectId,
+      periodId: qp.get('periodId') ? Number(qp.get('periodId')) : null,
+      periodNo: qp.get('periodNo') ? Number(qp.get('periodNo')) : null,
+      topicId: qp.get('topicId') ? Number(qp.get('topicId')) : null,
+      startTime: qp.get('startTime'),
+      endTime: qp.get('endTime'),
+      academicYearId: qp.get('academicYearId') ? Number(qp.get('academicYearId')) : null,
+      className: qp.get('className'),
+      section: qp.get('section'),
+      subjectName: qp.get('subjectName')
     });
   }
 

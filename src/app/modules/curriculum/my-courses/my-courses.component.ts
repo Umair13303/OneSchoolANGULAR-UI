@@ -345,14 +345,25 @@ export class MyCoursesComponent implements OnInit {
   reload() {
     this.loading.set(true);
     this.bannerError.set('');
+    let coursesFailed = false;
+    let slotsFailed = false;
     forkJoin({
-      courses: this.curriculum.getMyCourses().pipe(catchError(() => of([] as CoursePlanListDto[]))),
-      slots: this.curriculum.getMyCourseSlots().pipe(catchError(() => of([] as TeacherCourseSlotDto[])))
+      courses: this.curriculum.getMyCourses().pipe(catchError(() => {
+        coursesFailed = true;
+        return of([] as CoursePlanListDto[]);
+      })),
+      slots: this.curriculum.getMyCourseSlots().pipe(catchError(() => {
+        slotsFailed = true;
+        return of([] as TeacherCourseSlotDto[]);
+      }))
     }).subscribe({
       next: ({ courses, slots }) => {
         this.courses.set(courses);
         this.slots.set(slots);
         this.loading.set(false);
+        if (coursesFailed && slotsFailed) {
+          this.bannerError.set('Could not load your courses. Please refresh.');
+        }
       },
       error: () => {
         this.loading.set(false);
