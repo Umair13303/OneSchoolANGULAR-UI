@@ -13,9 +13,9 @@
 export const environment = {
   production: true,
 
-    apiUrl: 'https://demooneschoolbe.runasp.net/api',
+  apiUrl: 'https://demooneschoolbe.runasp.net/api',
 
-  fileServerUrl: 'https://REPLACE_WITH_YOUR_FILESERVER_DOMAIN/api',
+  fileServerUrl: 'https://onschoolfs.runasp.net/api',
 
   get serverUrl() { return this.apiUrl.replace('/api', ''); }
 };

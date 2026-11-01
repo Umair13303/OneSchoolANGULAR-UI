@@ -14,6 +14,7 @@ const config: CapacitorConfig = {
     allowNavigation: [
       'https://demooneschoolbe.runasp.net/*',
       'https://demooneschoolfe.runasp.net/*',
+      'https://onschoolfs.runasp.net/*',
     ],
   },
   android: {
