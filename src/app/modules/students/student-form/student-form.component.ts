@@ -908,13 +908,13 @@ interface SelectedFee {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 18px 22px;
+      padding: 20px 22px;
       background: linear-gradient(135deg, var(--accent-s) 0%, var(--surface) 100%);
       border-bottom: 1px solid var(--border);
       gap: 14px;
-      min-height: 96px;
+      min-height: 128px;
     }
-    .adm-header-left { display: flex; align-items: center; gap: 16px; flex: 1; min-width: 0; }
+    .adm-header-left { display: flex; align-items: center; gap: 18px; flex: 1; min-width: 0; }
     .adm-header-titles { min-width: 0; }
     .adm-header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 

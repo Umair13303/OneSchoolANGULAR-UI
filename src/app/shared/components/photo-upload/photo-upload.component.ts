@@ -8,10 +8,9 @@ import { FileUploadResponse } from '../../../core/models/file-upload.model';
  * entityType e.g. "student-photo"/"staff-photo") and emits the resulting
  * FileUploadResponse so the parent form can stash the fileId.
  *
- * `variant="header"` renders a compact 40px rounded-square badge (matching a
- * page header's identity chip) that falls back to colored initials — set
- * fallbackColor/fallbackText for that look — instead of the larger 68px
- * circular avatar used inline in a form body.
+ * `variant="header"` renders a 96px rounded-square identity photo in the
+ * admission/edit card header (falls back to colored initials via
+ * fallbackColor/fallbackText). Default body variant is a 68px circle.
  */
 @Component({
   selector: 'app-photo-upload',
@@ -66,16 +65,16 @@ import { FileUploadResponse } from '../../../core/models/file-upload.model';
     /* ── Header variant (edit / admission card) ── */
     .photo-upload.header { flex-direction: row; }
     .photo-upload.header .avatar {
-      width: 72px; height: 72px; border-radius: 16px;
-      border: 2px solid rgba(255,255,255,0.55);
-      box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+      width: 96px; height: 96px; border-radius: 18px;
+      border: 2px solid rgba(255,255,255,0.65);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.16);
     }
-    .photo-upload.header .placeholder-icon { font-size: 34px; }
-    .photo-upload.header .fallback-text { font-size: 22px; }
+    .photo-upload.header .placeholder-icon { font-size: 44px; }
+    .photo-upload.header .fallback-text { font-size: 28px; }
     .photo-upload.header .edit-badge {
-      width: 24px; height: 24px; border-width: 2px; bottom: -2px; right: -2px;
+      width: 28px; height: 28px; border-width: 2px; bottom: -3px; right: -3px;
     }
-    .photo-upload.header .edit-badge .material-icons-round { font-size: 13px; }
+    .photo-upload.header .edit-badge .material-icons-round { font-size: 15px; }
     .photo-upload.header .photo-error { display: none; }
   `]
 })
