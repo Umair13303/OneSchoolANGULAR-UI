@@ -51,6 +51,22 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
             icon="class"
             ariaLabel="Class"
             [searchable]="classOptions().length > 6" />
+          <div class="os-seg square" role="tablist" aria-label="View mode">
+            <button type="button" class="os-seg-btn"
+                    [class.active]="viewMode() === 'list'"
+                    (click)="setViewMode('list')"
+                    title="List view">
+              <span class="material-icons-round">view_list</span>
+              <span class="seg-full">List</span>
+            </button>
+            <button type="button" class="os-seg-btn"
+                    [class.active]="viewMode() === 'cards'"
+                    (click)="setViewMode('cards')"
+                    title="Student cards">
+              <span class="material-icons-round">badge</span>
+              <span class="seg-full">Cards</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -61,46 +77,90 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
         <app-empty-state icon="groups" title="No students found" message="Adjust your filters or add a new admission." />
       </div>
     } @else {
-      <!-- No pad modifier: the table spans the stage and its own cell
-           padding supplies the inset, so rows read edge to edge. -->
-      <div class="os-stage-body">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Student</th>
-              <th>Admission No</th>
-              <th>Class</th>
-              <th>Gender</th>
-              <th>Phone</th>
-              <th>Status</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (s of students(); track s.studentId) {
+      @if (viewMode() === 'list') {
+        <div class="os-stage-body">
+          <table class="table">
+            <thead>
               <tr>
-                <td>
-                  <div class="s-cell">
-                    @if (s.photoFileId && !brokenPhotos().has(s.studentId)) {
-                      <img class="s-av s-av-img" [src]="photoSrc(s.photoFileId)" [alt]="s.fullName"
-                           (error)="markPhotoBroken(s.studentId)" />
-                    } @else {
-                      <div class="s-av">{{ s.fullName[0] }}</div>
-                    }
-                    <span class="s-name">{{ s.fullName }}</span>
-                  </div>
-                </td>
-                <td><span class="adm-pill">{{ s.admissionNo }}</span></td>
-                <td>{{ s.className }} {{ s.section }}</td>
-                <td>{{ s.gender ?? '—' }}</td>
-                <td>{{ s.phone ?? '—' }}</td>
-                <td>
-                  <span class="badge" [class.active]="s.isActive" [class.inactive]="!s.isActive">
+                <th>Student</th>
+                <th>Admission No</th>
+                <th>Class</th>
+                <th>Gender</th>
+                <th>Phone</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (s of students(); track s.studentId) {
+                <tr>
+                  <td>
+                    <div class="s-cell">
+                      @if (s.photoFileId && !brokenPhotos().has(s.studentId)) {
+                        <img class="s-av s-av-img" [src]="photoSrc(s.photoFileId)" [alt]="s.fullName"
+                             (error)="markPhotoBroken(s.studentId)" />
+                      } @else {
+                        <div class="s-av">{{ s.fullName[0] }}</div>
+                      }
+                      <span class="s-name">{{ s.fullName }}</span>
+                    </div>
+                  </td>
+                  <td><span class="adm-pill">{{ s.admissionNo }}</span></td>
+                  <td>{{ s.className }} {{ s.section }}</td>
+                  <td>{{ s.gender ?? '—' }}</td>
+                  <td>{{ s.phone ?? '—' }}</td>
+                  <td>
+                    <span class="badge" [class.active]="s.isActive" [class.inactive]="!s.isActive">
+                      {{ s.isActive ? 'Active' : 'Inactive' }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="actions">
+                      <a [routerLink]="['/students/edit', s.studentId]" class="icon-btn" title="Edit student">
+                        <span class="material-icons-round">edit</span>
+                      </a>
+                      @if (s.isActive) {
+                        <button class="icon-btn act-leave" title="Mark as Leaving" (click)="openLeave(s)">
+                          <span class="material-icons-round">exit_to_app</span>
+                        </button>
+                      }
+                      @if (!s.isActive) {
+                        <button class="icon-btn act-cert" title="Print Leaving Certificate" (click)="printCertificate(s.studentId)" [disabled]="printingId() === s.studentId">
+                          <span class="material-icons-round">{{ printingId() === s.studentId ? 'refresh' : 'print' }}</span>
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="os-stage-body pad">
+          <div class="stu-cards">
+            @for (s of students(); track s.studentId) {
+              <article class="stu-card" [class.inactive-card]="!s.isActive">
+                <div class="stu-card-photo">
+                  @if (s.photoFileId && !brokenPhotos().has(s.studentId)) {
+                    <img [src]="photoSrc(s.photoFileId)" [alt]="s.fullName"
+                         (error)="markPhotoBroken(s.studentId)" />
+                  } @else {
+                    <div class="stu-card-fallback">{{ s.fullName[0] }}</div>
+                  }
+                  <span class="stu-card-status badge" [class.active]="s.isActive" [class.inactive]="!s.isActive">
                     {{ s.isActive ? 'Active' : 'Inactive' }}
                   </span>
-                </td>
-                <td>
-                  <div class="actions">
+                </div>
+                <div class="stu-card-body">
+                  <h3 class="stu-card-name">{{ s.fullName }}</h3>
+                  <span class="adm-pill">{{ s.admissionNo }}</span>
+                  <div class="stu-card-meta">
+                    <span><span class="material-icons-round">class</span>{{ s.className || '—' }} {{ s.section }}</span>
+                    <span><span class="material-icons-round">wc</span>{{ s.gender ?? '—' }}</span>
+                    <span><span class="material-icons-round">call</span>{{ s.phone ?? '—' }}</span>
+                  </div>
+                  <div class="stu-card-actions actions">
                     <a [routerLink]="['/students/edit', s.studentId]" class="icon-btn" title="Edit student">
                       <span class="material-icons-round">edit</span>
                     </a>
@@ -115,12 +175,12 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
                       </button>
                     }
                   </div>
-                </td>
-              </tr>
+                </div>
+              </article>
             }
-          </tbody>
-        </table>
-      </div>
+          </div>
+        </div>
+      }
 
       <div class="os-stage-foot">
         <span class="tbl-count">{{ totalCount() }} students</span>
@@ -197,9 +257,82 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
       background: var(--accent-s); border: 1px solid var(--accent-g);
       padding: 2px 9px; border-radius: 5px;
     }
+
+    /* ── Student cards ── */
+    .stu-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .stu-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .stu-card:hover {
+      border-color: var(--accent-g);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    }
+    .stu-card.inactive-card { opacity: 0.78; }
+    .stu-card-photo {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      background: var(--surface-2);
+      overflow: hidden;
+    }
+    .stu-card-photo img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+    .stu-card-fallback {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--accent); color: #fff;
+      font-size: 56px; font-weight: 800; text-transform: uppercase;
+    }
+    .stu-card-status {
+      position: absolute; top: 10px; right: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+    .stu-card-body {
+      padding: 12px 14px 14px;
+      display: flex; flex-direction: column; gap: 8px;
+      flex: 1;
+    }
+    .stu-card-name {
+      margin: 0; font-size: 14.5px; font-weight: 700; color: var(--t1);
+      line-height: 1.3;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .stu-card-meta {
+      display: flex; flex-direction: column; gap: 5px;
+      font-size: 12.5px; color: var(--t3);
+    }
+    .stu-card-meta > span {
+      display: flex; align-items: center; gap: 6px; min-width: 0;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .stu-card-meta .material-icons-round {
+      font-size: 15px; color: var(--t4); flex-shrink: 0;
+    }
+    .stu-card-actions {
+      display: flex; gap: 6px; margin-top: auto; padding-top: 4px;
+    }
+    .stu-card-actions .icon-btn .material-icons-round { font-size: 17px; }
+
+    @media (max-width: 560px) {
+      .stu-cards { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+      .stu-card-name { font-size: 13.5px; }
+    }
   `]
 })
 export class StudentListComponent implements OnInit {
+  private static readonly VIEW_KEY = 'oneschool.studentList.view';
+
   private studentSvc   = inject(StudentService);
   private academicSvc  = inject(AcademicService);
   private instituteSvc = inject(InstituteService);
@@ -211,6 +344,19 @@ export class StudentListComponent implements OnInit {
   leavingStudent = signal<StudentListDto | null>(null);
   printingId     = signal<number | null>(null);
   brokenPhotos   = signal(new Set<number>());
+  viewMode       = signal<'list' | 'cards'>(StudentListComponent.readStoredView());
+
+  private static readStoredView(): 'list' | 'cards' {
+    try {
+      const v = localStorage.getItem(StudentListComponent.VIEW_KEY);
+      return v === 'cards' ? 'cards' : 'list';
+    } catch { return 'list'; }
+  }
+
+  setViewMode(mode: 'list' | 'cards'): void {
+    this.viewMode.set(mode);
+    try { localStorage.setItem(StudentListComponent.VIEW_KEY, mode); } catch { /* ignore */ }
+  }
 
   photoSrc(fileId: number): string {
     return `${environment.fileServerUrl}/files/${fileId}`;
