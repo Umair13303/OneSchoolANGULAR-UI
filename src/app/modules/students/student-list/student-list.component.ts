@@ -119,11 +119,10 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
                       <a [routerLink]="['/students/edit', s.studentId]" class="icon-btn" title="Edit student">
                         <span class="material-icons-round">edit</span>
                       </a>
-                      <button class="icon-btn act-card" title="Print Student Card"
-                              (click)="printStudentCard(s.studentId)"
-                              [disabled]="printingCardId() === s.studentId">
-                        <span class="material-icons-round">{{ printingCardId() === s.studentId ? 'refresh' : 'badge' }}</span>
-                      </button>
+                      <a class="icon-btn act-card" title="Print Student Card"
+                         [routerLink]="['/students', s.studentId, 'card']" target="_blank">
+                        <span class="material-icons-round">badge</span>
+                      </a>
                       @if (s.isActive) {
                         <button class="icon-btn act-leave" title="Mark as Leaving" (click)="openLeave(s)">
                           <span class="material-icons-round">exit_to_app</span>
@@ -169,11 +168,10 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
                     <a [routerLink]="['/students/edit', s.studentId]" class="icon-btn" title="Edit student">
                       <span class="material-icons-round">edit</span>
                     </a>
-                    <button class="icon-btn act-card" title="Print Student Card"
-                            (click)="printStudentCard(s.studentId)"
-                            [disabled]="printingCardId() === s.studentId">
-                      <span class="material-icons-round">{{ printingCardId() === s.studentId ? 'refresh' : 'badge' }}</span>
-                    </button>
+                    <a class="icon-btn act-card" title="Print Student Card"
+                       [routerLink]="['/students', s.studentId, 'card']" target="_blank">
+                      <span class="material-icons-round">badge</span>
+                    </a>
                     @if (s.isActive) {
                       <button class="icon-btn act-leave" title="Mark as Leaving" (click)="openLeave(s)">
                         <span class="material-icons-round">exit_to_app</span>
@@ -243,6 +241,7 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
       background: var(--surface-2); border: 1px solid var(--border);
     }
     .s-name { font-weight: 600; color: var(--t1); font-size: 13.5px; }
+    a.icon-btn { text-decoration: none; }
 
     /* .btn-edit / .btn-leave / .btn-cert removed — the global .icon-btn now
        supplies size, hover, disabled and focus. Only the two semantic hover

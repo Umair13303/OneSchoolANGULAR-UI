@@ -8,6 +8,13 @@ export const routes: Routes = [
     loadChildren: () => import('./modules/auth/auth.routes').then(m => m.authRoutes)
   },
   {
+    // Full browser page, outside the app shell, so the card is a normal tab.
+    path: 'students/:id/card',
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['superadmin', 'admin', 'principal'] },
+    loadComponent: () => import('./modules/students/student-card/student-card.component').then(m => m.StudentCardComponent)
+  },
+  {
     path: '',
     canActivate: [authGuard],
     loadComponent: () => import('./layout/layout.component').then(m => m.LayoutComponent),
