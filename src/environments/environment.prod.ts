@@ -15,7 +15,8 @@ export const environment = {
 
   apiUrl: 'https://demooneschoolbe.runasp.net/api',
 
-  fileServerUrl: 'https://onschoolfs.runasp.net/api',
+  // Same origin as Hub — Hub proxies to onschoolfs (avoids FileServer CORS until FS FTP deploy is configured).
+  fileServerUrl: 'https://demooneschoolbe.runasp.net/api',
 
   get serverUrl() { return this.apiUrl.replace('/api', ''); }
 };
