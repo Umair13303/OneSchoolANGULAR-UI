@@ -2,20 +2,19 @@ import { Component, EventEmitter, Input, Output, inject, signal } from '@angular
 import { CommonModule } from '@angular/common';
 import { FileUploadService } from '../../../core/services/file-upload.service';
 import { FileUploadResponse } from '../../../core/models/file-upload.model';
+import { PhotoCropDialogComponent } from '../photo-crop-dialog/photo-crop-dialog.component';
 
 /**
- * Avatar picker. Uploads immediately on file selection (to the FileServer,
- * entityType e.g. "student-photo"/"staff-photo") and emits the resulting
- * FileUploadResponse so the parent form can stash the fileId.
+ * Avatar picker. On file select opens a crop/adjust dialog (pan + zoom),
+ * then uploads the cropped 512×512 JPEG to FileServer and emits FileUploadResponse.
  *
- * `variant="header"` renders a 96px rounded-square identity photo in the
- * admission/edit card header (falls back to colored initials via
- * fallbackColor/fallbackText). Default body variant is a 68px circle.
+ * `variant="header"` = 96px rounded-square in admission/edit header.
+ * Default body variant = 68px circle.
  */
 @Component({
   selector: 'app-photo-upload',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, PhotoCropDialogComponent],
   template: `
     <div class="photo-upload" [class.header]="variant === 'header'">
       <label class="avatar" [class.uploading]="uploading()" [style.background]="!displayUrl() ? fallbackColor : null">
@@ -30,10 +29,18 @@ import { FileUploadResponse } from '../../../core/models/file-upload.model';
           <div class="spinner-overlay"><span class="material-icons-round spin">progress_activity</span></div>
         }
         <div class="edit-badge"><span class="material-icons-round">photo_camera</span></div>
-        <input type="file" accept="image/*" (change)="onFileSelected($event)" [disabled]="uploading()" />
+        <input type="file" accept="image/*" (change)="onFileSelected($event)" [disabled]="uploading() || !!cropSrc()" />
       </label>
       @if (error()) { <p class="photo-error">{{ error() }}</p> }
     </div>
+
+    @if (cropSrc(); as src) {
+      <app-photo-crop-dialog
+        [imageSrc]="src"
+        [fileName]="cropFileName()"
+        (confirmCrop)="onCropConfirmed($event)"
+        (cancel)="onCropCancel()" />
+    }
   `,
   styles: [`
     .photo-upload { display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; }
@@ -94,6 +101,9 @@ export class PhotoUploadComponent {
   error = signal('');
   private localPreview = signal<string | null>(null);
 
+  cropSrc = signal<string | null>(null);
+  cropFileName = signal('photo.jpg');
+
   displayUrl = () => this.localPreview() ?? this.photoUrl;
 
   onFileSelected(event: Event) {
@@ -103,9 +113,24 @@ export class PhotoUploadComponent {
     if (!file) return;
 
     this.error.set('');
+    this.cropFileName.set(file.name || 'photo.jpg');
     const reader = new FileReader();
-    reader.onload = () => this.localPreview.set(reader.result as string);
+    reader.onload = () => this.cropSrc.set(reader.result as string);
+    reader.onerror = () => this.error.set('Could not read image. Please try another file.');
     reader.readAsDataURL(file);
+  }
+
+  onCropCancel(): void {
+    this.cropSrc.set(null);
+  }
+
+  onCropConfirmed(file: File): void {
+    this.cropSrc.set(null);
+    this.error.set('');
+
+    const previewReader = new FileReader();
+    previewReader.onload = () => this.localPreview.set(previewReader.result as string);
+    previewReader.readAsDataURL(file);
 
     this.uploading.set(true);
     this.uploadSvc.upload(file, this.entityType, {
