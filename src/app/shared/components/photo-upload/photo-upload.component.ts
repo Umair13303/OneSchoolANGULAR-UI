@@ -63,17 +63,19 @@ import { FileUploadResponse } from '../../../core/models/file-upload.model';
     @keyframes spin { to { transform: rotate(360deg); } }
     .photo-error { font-size: 11px; color: #ef4444; text-align: center; max-width: 140px; }
 
-    /* ── Compact header variant ── */
+    /* ── Header variant (edit / admission card) ── */
     .photo-upload.header { flex-direction: row; }
     .photo-upload.header .avatar {
-      width: 40px; height: 40px; border-radius: 11px;
-      border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      width: 72px; height: 72px; border-radius: 16px;
+      border: 2px solid rgba(255,255,255,0.55);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.18);
     }
-    .photo-upload.header .placeholder-icon { font-size: 18px; }
+    .photo-upload.header .placeholder-icon { font-size: 34px; }
+    .photo-upload.header .fallback-text { font-size: 22px; }
     .photo-upload.header .edit-badge {
-      width: 16px; height: 16px; border-width: 1.5px; bottom: -2px; right: -2px;
+      width: 24px; height: 24px; border-width: 2px; bottom: -2px; right: -2px;
     }
-    .photo-upload.header .edit-badge .material-icons-round { font-size: 9px; }
+    .photo-upload.header .edit-badge .material-icons-round { font-size: 13px; }
     .photo-upload.header .photo-error { display: none; }
   `]
 })

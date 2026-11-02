@@ -81,7 +81,12 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
               <tr>
                 <td>
                   <div class="s-cell">
-                    <div class="s-av">{{ s.fullName[0] }}</div>
+                    @if (s.photoFileId && !brokenPhotos().has(s.studentId)) {
+                      <img class="s-av s-av-img" [src]="photoSrc(s.photoFileId)" [alt]="s.fullName"
+                           (error)="markPhotoBroken(s.studentId)" />
+                    } @else {
+                      <div class="s-av">{{ s.fullName[0] }}</div>
+                    }
                     <span class="s-name">{{ s.fullName }}</span>
                   </div>
                 </td>
@@ -156,12 +161,16 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
     .pager-btn:hover:not(:disabled) { background: var(--accent-s); color: var(--accent); border-color: var(--accent-g); }
     .pager-btn:disabled { opacity: .4; cursor: not-allowed; }
     .pager-btn .material-icons-round { font-size: 18px; }
-    .s-cell { display: flex; align-items: center; gap: 10px; }
+    .s-cell { display: flex; align-items: center; gap: 12px; }
     .s-av {
-      width: 30px; height: 30px; border-radius: 8px;
+      width: 44px; height: 44px; border-radius: 12px;
       background: var(--accent);
       color: #fff; display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 800; flex-shrink: 0; text-transform: uppercase;
+      font-size: 15px; font-weight: 800; flex-shrink: 0; text-transform: uppercase;
+    }
+    .s-av-img {
+      object-fit: cover; display: block;
+      background: var(--surface-2); border: 1px solid var(--border);
     }
     .s-name { font-weight: 600; color: var(--t1); font-size: 13.5px; }
 
@@ -201,6 +210,15 @@ export class StudentListComponent implements OnInit {
   loading        = signal(false);
   leavingStudent = signal<StudentListDto | null>(null);
   printingId     = signal<number | null>(null);
+  brokenPhotos   = signal(new Set<number>());
+
+  photoSrc(fileId: number): string {
+    return `${environment.fileServerUrl}/files/${fileId}`;
+  }
+
+  markPhotoBroken(studentId: number): void {
+    this.brokenPhotos.update(s => new Set(s).add(studentId));
+  }
 
   page       = signal(1);
   pageSize   = 25;

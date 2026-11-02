@@ -10,6 +10,7 @@ export interface StudentListDto {
   admissionDate: string;
   className: string | null;
   section: string | null;
+  photoFileId: number | null;
 }
 
 export interface PagedResult<T> {
