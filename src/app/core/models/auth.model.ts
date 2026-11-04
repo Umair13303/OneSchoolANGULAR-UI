@@ -9,6 +9,9 @@ export interface UserInfo {
   email: string;
   role: string;
   roleId: number;
+  /** Effective roles including derived parent when children are linked. */
+  roles?: string[];
+  isAlsoParent?: boolean;
   instituteId?: number;
   campusId?: number;
   instituteName?: string;

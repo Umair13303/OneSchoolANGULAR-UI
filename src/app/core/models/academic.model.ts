@@ -51,6 +51,8 @@ export interface ClassDto {
   instituteName?: string | null;
   campusId?: number | null;
   campusName?: string | null;
+  classTeacherId?: number | null;
+  classTeacherName?: string | null;
   subjectCount: number;
 }
 

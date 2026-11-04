@@ -93,7 +93,19 @@ export class AuthService {
   getToken(): string | null { return localStorage.getItem(TOKEN_KEY); }
   getRefreshToken(): string | null { return localStorage.getItem(REFRESH_KEY); }
   getRole(): string { return this.currentUser()?.role ?? ''; }
-  hasRole(...roles: string[]): boolean { return roles.includes(this.getRole()); }
+  getRoles(): string[] {
+    const u = this.currentUser();
+    if (!u) return [];
+    if (u.roles?.length) return u.roles.map(r => r.toLowerCase());
+    return u.role ? [u.role.toLowerCase()] : [];
+  }
+  hasRole(...roles: string[]): boolean {
+    const mine = this.getRoles();
+    return roles.some(r => mine.includes(r.toLowerCase()));
+  }
+  isAlsoParent(): boolean {
+    return !!this.currentUser()?.isAlsoParent || this.hasRole('parent');
+  }
 
   updateCurrentUserBranding(patch: Partial<{ instituteName: string; tagline: string; logoUrl: string; copyrightText: string }>) {
     this.patchCurrentUser(patch);

@@ -49,17 +49,25 @@ export const routes: Routes = [
         data: { roles: ['superadmin','admin','principal'] },
         loadComponent: () => import('./modules/students/student-form/student-form.component').then(m => m.StudentFormComponent)
       },
-      {
-        path: 'students/add',
-        canActivate: [roleGuard],
-        data: { roles: ['superadmin','admin','principal'] },
-        loadComponent: () => import('./modules/students/add-student/add-student.component').then(m => m.AddStudentComponent)
-      },
+      // Soft-deprecated: keep route for bookmarks, redirect to New Admission.
+      { path: 'students/add', redirectTo: 'students/new', pathMatch: 'full' },
       {
         path: 'students/import',
         canActivate: [roleGuard],
         data: { roles: ['superadmin','admin','principal'] },
         loadComponent: () => import('./modules/students/import-students/import-students.component').then(m => m.ImportStudentsComponent)
+      },
+      {
+        path: 'students/view/:id',
+        canActivate: [roleGuard],
+        data: { roles: ['superadmin','admin','principal','teacher','parent','staff'] },
+        loadComponent: () => import('./modules/students/student-profile/student-profile.component').then(m => m.StudentProfileComponent)
+      },
+      {
+        path: 'my-children',
+        canActivate: [roleGuard],
+        data: { roles: ['parent','teacher','staff','admin','principal'] },
+        loadComponent: () => import('./modules/parent/my-children.component').then(m => m.MyChildrenComponent)
       },
       {
         path: 'students/edit/:id',
@@ -86,6 +94,12 @@ export const routes: Routes = [
         canActivate: [roleGuard],
         data: { roles: ['superadmin','admin'] },
         loadComponent: () => import('./modules/academics/teacher-assignments/teacher-assignments.component').then(m => m.TeacherAssignmentsComponent)
+      },
+      {
+        path: 'academics/class-teachers',
+        canActivate: [roleGuard],
+        data: { roles: ['superadmin','admin','principal'] },
+        loadComponent: () => import('./modules/academics/class-teachers/class-teachers.component').then(m => m.ClassTeachersComponent)
       },
       {
         path: 'academics/years',
@@ -272,7 +286,7 @@ export const routes: Routes = [
       {
         path: 'fees/student-fees',
         canActivate: [roleGuard],
-        data: { roles: ['superadmin','admin','principal'] },
+        data: { roles: ['superadmin','admin','principal','parent','teacher'] },
         loadComponent: () => import('./modules/fees/student-fees/student-fees.component').then(m => m.StudentFeesComponent)
       },
       {

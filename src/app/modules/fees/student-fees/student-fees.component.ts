@@ -2,11 +2,14 @@ import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { concatMap, from, tap, last } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { FeeService } from '../../../core/services/fee.service';
 import { AcademicService } from '../../../core/services/academic.service';
 import { InstituteService } from '../../../core/services/institute.service';
 import { UserService } from '../../../core/services/user.service';
+import { StudentService } from '../../../core/services/student.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { StudentListDto } from '../../../core/models/student.model';
 import { environment } from '../../../../environments/environment';
 import {
   StudentFeeDto, FeePaymentDto, FeeStructureDto, BulkAssignFeeDto,
@@ -27,7 +30,17 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
 
     <!-- Filters -->
     <div class="filter-bar card">
-      @if (isSuperAdmin) {
+      @if (isParentFeeView) {
+        <div class="field">
+          <label>Child</label>
+          <select [(ngModel)]="parentStudentId" (change)="loadFees()">
+            @for (c of myChildren(); track c.studentId) {
+              <option [ngValue]="c.studentId">{{ c.fullName }} ({{ c.admissionNo }})</option>
+            }
+          </select>
+        </div>
+      }
+      @if (!isParentFeeView && isSuperAdmin) {
         <div class="field">
           <label>Institute</label>
           <select [(ngModel)]="filterInstituteId" (change)="onInstituteChange()">
@@ -47,7 +60,7 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
           </select>
         </div>
       }
-      @if (isInstituteAdmin) {
+      @if (!isParentFeeView && isInstituteAdmin) {
         <div class="field">
           <label>Campus</label>
           <select [(ngModel)]="filterCampusId" (change)="loadFees()">
@@ -58,38 +71,40 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
           </select>
         </div>
       }
-      <div class="field">
-        <label>Academic Year</label>
-        <select [(ngModel)]="filterYearId" (change)="onYearChange()">
-          <option [ngValue]="null">All Years</option>
-          @for (y of years(); track y.academicYearId) {
-            <option [ngValue]="y.academicYearId">{{ y.yearLabel }}</option>
-          }
-        </select>
-      </div>
-      <div class="field">
-        <label>Class</label>
-        <select [(ngModel)]="filterClassId" (change)="loadFees()">
-          <option [ngValue]="null">All Classes</option>
-          @for (c of filterClasses(); track c.classId) {
-            <option [ngValue]="c.classId">{{ c.className }} {{ c.section }}</option>
-          }
-        </select>
-      </div>
-      <div class="field">
-        <label>Status</label>
-        <select [(ngModel)]="filterStatus" (change)="loadFees()">
-          <option value="">All Status</option>
-          <option value="Unpaid">Unpaid</option>
-          <option value="Partial">Partial</option>
-          <option value="Paid">Paid</option>
-          <option value="Waived">Waived</option>
-        </select>
-      </div>
-      <div style="display:flex; gap:8px; margin-top:auto">
-        <button class="btn-primary" (click)="openBulkModal()">⚡ Bulk Assign</button>
-        <button class="btn-secondary" (click)="openConcessionPanel()">🎟 Concessions</button>
-      </div>
+      @if (!isParentFeeView) {
+        <div class="field">
+          <label>Academic Year</label>
+          <select [(ngModel)]="filterYearId" (change)="onYearChange()">
+            <option [ngValue]="null">All Years</option>
+            @for (y of years(); track y.academicYearId) {
+              <option [ngValue]="y.academicYearId">{{ y.yearLabel }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label>Class</label>
+          <select [(ngModel)]="filterClassId" (change)="loadFees()">
+            <option [ngValue]="null">All Classes</option>
+            @for (c of filterClasses(); track c.classId) {
+              <option [ngValue]="c.classId">{{ c.className }} {{ c.section }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <select [(ngModel)]="filterStatus" (change)="loadFees()">
+            <option value="">All Status</option>
+            <option value="Unpaid">Unpaid</option>
+            <option value="Partial">Partial</option>
+            <option value="Paid">Paid</option>
+            <option value="Waived">Waived</option>
+          </select>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:auto">
+          <button class="btn-primary" (click)="openBulkModal()">⚡ Bulk Assign</button>
+          <button class="btn-secondary" (click)="openConcessionPanel()">🎟 Concessions</button>
+        </div>
+      }
     </div>
 
     <!-- Summary Strip -->
@@ -713,12 +728,19 @@ export class StudentFeesComponent implements OnInit {
   private acadSvc      = inject(AcademicService);
   private instituteSvc = inject(InstituteService);
   private userSvc      = inject(UserService);
+  private studentSvc   = inject(StudentService);
   private authSvc      = inject(AuthService);
+  private route        = inject(ActivatedRoute);
   private fb           = inject(FormBuilder);
 
-  get isSuperAdmin()    { return this.authSvc.hasRole('SuperAdmin'); }
-  get isInstituteAdmin(){ return this.authSvc.hasRole('InstituteAdmin'); }
-  get isCampusAdmin()   { return this.authSvc.hasRole('CampusAdmin', 'Teacher', 'Staff'); }
+  get isSuperAdmin()    { return this.authSvc.hasRole('superadmin'); }
+  get isInstituteAdmin(){ return this.authSvc.hasRole('admin'); }
+  get isCampusAdmin()   { return this.authSvc.hasRole('principal', 'teacher', 'staff'); }
+  /** Parent / teacher-as-parent fee view (not school-wide admin). */
+  get isParentFeeView() {
+    return this.authSvc.isAlsoParent()
+      && !this.authSvc.hasRole('superadmin', 'admin', 'principal');
+  }
 
   fees              = signal<StudentFeeDto[]>([]);
   years             = signal<AcademicYear[]>([]);
@@ -740,6 +762,8 @@ export class StudentFeesComponent implements OnInit {
   filterClassId:     number | null = null;
   filterStatus:      string = '';
   concessionFilterYear: number | null = null;
+  myChildren = signal<StudentListDto[]>([]);
+  parentStudentId: number | null = null;
 
   showBulkModal       = signal(false);
   showPaymentModal    = signal(false);
@@ -827,6 +851,21 @@ export class StudentFeesComponent implements OnInit {
 
   ngOnInit() {
     const user = this.authSvc.currentUser();
+    const qpStudent = Number(this.route.snapshot.queryParamMap.get('studentId'));
+
+    if (this.isParentFeeView) {
+      this.studentSvc.getMyChildren().subscribe({
+        next: kids => {
+          this.myChildren.set(kids);
+          this.parentStudentId = (qpStudent && kids.some(k => k.studentId === qpStudent))
+            ? qpStudent
+            : (kids[0]?.studentId ?? null);
+          this.loadFees();
+        },
+        error: () => { this.myChildren.set([]); this.fees.set([]); }
+      });
+      return;
+    }
 
     if (this.isSuperAdmin) {
       this.instituteSvc.getInstitutes().subscribe(i => this.institutes.set(i));
@@ -839,7 +878,7 @@ export class StudentFeesComponent implements OnInit {
     }
 
     this.acadSvc.getYears().subscribe(y => this.years.set(y));
-    this.feeSvc.getDiscountPolicies().subscribe(d => this.discountPolicies.set(d));
+    this.feeSvc.getDiscountPolicies().subscribe({ next: d => this.discountPolicies.set(d), error: () => {} });
     this.loadFees();
 
     const jwtInstId = user?.instituteId;
@@ -872,6 +911,14 @@ export class StudentFeesComponent implements OnInit {
   }
 
   loadFees() {
+    if (this.isParentFeeView) {
+      if (!this.parentStudentId) { this.fees.set([]); return; }
+      this.feeSvc.getStudentFees({ studentId: this.parentStudentId }).subscribe({
+        next: f => this.fees.set(f),
+        error: () => this.fees.set([])
+      });
+      return;
+    }
     this.feeSvc.getStudentFees({
       instituteId:    this.filterInstituteId ?? undefined,
       campusId:       this.filterCampusId    ?? undefined,

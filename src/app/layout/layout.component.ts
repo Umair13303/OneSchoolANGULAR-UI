@@ -276,7 +276,12 @@ import { environment } from '../../environments/environment';
                 </div>
                 <div class="u-meta">
                   <span class="u-name">{{ auth.currentUser()?.fullName }}</span>
-                  <span class="u-role">{{ auth.currentUser()?.role | titlecase }}</span>
+                  <span class="u-role">
+                    {{ auth.currentUser()?.role | titlecase }}
+                    @if (auth.isAlsoParent() && !auth.hasRole('parent')) {
+                      <span class="also-parent">+ Parent</span>
+                    }
+                  </span>
                 </div>
                 <span class="material-icons-round u-chev">expand_more</span>
               </button>
@@ -647,7 +652,11 @@ import { environment } from '../../environments/environment';
     .u-av img { width: 100%; height: 100%; object-fit: cover; }
     .u-meta { display: flex; flex-direction: column; text-align: left; }
     .u-name { font-size: 12.5px; font-weight: 700; color: var(--t1); line-height: 1.2; }
-    .u-role { font-size: 10px; color: var(--t4); font-weight: 500; }
+    .u-role { font-size: 10px; color: var(--t4); font-weight: 500; display: inline-flex; align-items: center; gap: 6px; }
+    .also-parent {
+      font-size: 9px; font-weight: 800; letter-spacing: .3px; text-transform: uppercase;
+      padding: 1px 6px; border-radius: 999px; background: var(--accent-s, #eff6ff); color: var(--accent, #2563eb);
+    }
     .u-chev { font-size: 16px; color: var(--t4); }
     .user-menu {
       position: absolute; right: 0; top: calc(100% + 8px); z-index: 40;

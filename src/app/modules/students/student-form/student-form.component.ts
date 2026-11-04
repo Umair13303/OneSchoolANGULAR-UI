@@ -1,11 +1,12 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormsModule, FormBuilder, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormsModule, FormBuilder, FormArray, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { StudentService } from '../../../core/services/student.service';
 import { FeeService } from '../../../core/services/fee.service';
 import { AcademicService } from '../../../core/services/academic.service';
 import { InstituteService } from '../../../core/services/institute.service';
+import { FileUploadService } from '../../../core/services/file-upload.service';
 import { environment } from '../../../../environments/environment';
 import { ClassDto, AcademicYear } from '../../../core/models/academic.model';
 import { FeeStructureDto } from '../../../core/models/fee.model';
@@ -14,6 +15,7 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
 import { PhotoUploadComponent } from '../../../shared/components/photo-upload/photo-upload.component';
 import { SwalNotificationService } from '../../../core/services/swal-notification.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { StudentTransferDialogComponent } from '../student-transfer-dialog/student-transfer-dialog.component';
 
 interface SelectedFee {
   feeStructureId: number;
@@ -29,7 +31,7 @@ interface SelectedFee {
 @Component({
   selector: 'app-student-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, PageHeaderComponent, DatePickerComponent, PhotoUploadComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, PageHeaderComponent, DatePickerComponent, PhotoUploadComponent, StudentTransferDialogComponent],
   template: `
     <!-- Success screen after admission -->
     @if (success()) {
@@ -510,6 +512,39 @@ interface SelectedFee {
                   </div>
                 </div>
 
+                @if (editId()) {
+                  <div class="setup-alert" style="margin-top:10px">
+                    <span class="material-icons-round">info</span>
+                    <div class="sa-content">
+                      <strong>Class changes use Transfer / Promote.</strong>
+                      Editing here updates profile and guardian only.
+                      <button type="button" class="sa-link" (click)="showTransfer.set(true)">
+                        Change class <span class="material-icons-round">arrow_forward</span>
+                      </button>
+                    </div>
+                  </div>
+                }
+
+                <div class="docs-admit">
+                  <div class="section-hint" style="margin-top:8px">
+                    <span class="material-icons-round">attach_file</span>
+                    <span>Optional documents (photo is in the header). You can also upload these later from the profile.</span>
+                  </div>
+                  <div class="docs-admit-row">
+                    <label class="file-btn">
+                      <span class="material-icons-round">upload_file</span>
+                      {{ birthCertLabel() }}
+                      <input type="file" accept="image/*,.pdf" (change)="onDocFile($event, 'birth-certificate')" [disabled]="docBusy()" />
+                    </label>
+                    <label class="file-btn">
+                      <span class="material-icons-round">upload_file</span>
+                      {{ prevSchoolCertLabel() }}
+                      <input type="file" accept="image/*,.pdf" (change)="onDocFile($event, 'prev-school-cert')" [disabled]="docBusy()" />
+                    </label>
+                  </div>
+                  @if (docError()) { <p class="ferr" style="margin-top:8px">{{ docError() }}</p> }
+                </div>
+
                 @if (f['academicYearId'].value && f['classId'].value) {
                   <div class="admission-preview">
                     <div class="ap-item">
@@ -543,100 +578,101 @@ interface SelectedFee {
             <!-- ── Tab 3: Guardian ── -->
             @if (activeTab() === 3) {
               <div class="tab-pane">
-              <ng-container formGroupName="guardian">
-                <div class="section-hint">
+              <div class="section-hint">
+                <span class="material-icons-round">family_restroom</span>
+                <span>Enter parent/guardian contact details. Sibling check uses the first guardian's CNIC.</span>
+              </div>
+
+              <div formArrayName="guardians">
+                @for (gCtrl of guardians.controls; track $index; let gi = $index) {
+                  <div class="guardian-card" [formGroupName]="gi">
+                    <div class="guardian-card-head">
+                      <strong>Guardian {{ gi + 1 }}</strong>
+                      @if (guardians.length > 1) {
+                        <button type="button" class="linkish danger" (click)="removeGuardian(gi)">Remove</button>
+                      }
+                    </div>
+                    <div class="form-grid-2">
+                      <div class="form-field">
+                        <label>Relationship <span class="req">*</span></label>
+                        <div class="input-wrap select-wrap">
+                          <span class="material-icons-round field-icon">family_restroom</span>
+                          <select formControlName="relation">
+                            <option>Father</option>
+                            <option>Mother</option>
+                            <option>Guardian</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div class="form-field" [class.has-error]="gCtrl.get('fullName')!.invalid && gCtrl.get('fullName')!.touched">
+                        <label>Full Name <span class="req">*</span></label>
+                        <div class="input-wrap">
+                          <span class="material-icons-round field-icon">person</span>
+                          <input formControlName="fullName" placeholder="Guardian's full name" />
+                        </div>
+                      </div>
+                    </div>
+                    <div class="form-grid-3">
+                      <div class="form-field" [class.has-error]="gCtrl.get('phone')!.invalid && gCtrl.get('phone')!.touched">
+                        <label>Phone <span class="req">*</span></label>
+                        <div class="input-wrap">
+                          <span class="material-icons-round field-icon">call</span>
+                          <input formControlName="phone" placeholder="0300-1234567" type="tel" />
+                        </div>
+                      </div>
+                      <div class="form-field">
+                        <label>CNIC</label>
+                        <div class="input-wrap">
+                          <span class="material-icons-round field-icon">credit_card</span>
+                          <input formControlName="cnic" placeholder="12345-1234567-1" (blur)="gi === 0 && onCnicBlur()" />
+                        </div>
+                      </div>
+                      <div class="form-field">
+                        <label>Occupation</label>
+                        <div class="input-wrap">
+                          <span class="material-icons-round field-icon">work</span>
+                          <input formControlName="occupation" placeholder="e.g. Business / Service" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <button type="button" class="btn-secondary add-guardian" (click)="addGuardian()">
+                <span class="material-icons-round">person_add</span> Add another guardian
+              </button>
+
+              @if (siblingCheckDone() && siblingCount() > 0) {
+                <div class="sibling-banner found">
                   <span class="material-icons-round">family_restroom</span>
-                  <span>Enter parent/guardian contact details. Sibling check is performed automatically via CNIC.</span>
-                </div>
-
-                <div class="form-grid-2">
-                  <div class="form-field">
-                    <label>Relationship <span class="req">*</span></label>
-                    <div class="input-wrap select-wrap">
-                      <span class="material-icons-round field-icon">family_restroom</span>
-                      <select formControlName="relation">
-                        <option>Father</option>
-                        <option>Mother</option>
-                        <option>Guardian</option>
-                      </select>
+                  <div class="sb-content">
+                    <div class="sb-title">
+                      <strong>{{ siblingCount() }} sibling(s) already registered</strong>
+                      <span class="sb-order-tag">Child #{{ siblingOrder() }}</span>
                     </div>
-                  </div>
-
-                  <div class="form-field" [class.has-error]="gf['fullName'].invalid && gf['fullName'].touched">
-                    <label>Guardian Full Name <span class="req">*</span></label>
-                    <div class="input-wrap">
-                      <span class="material-icons-round field-icon">person</span>
-                      <input formControlName="fullName" placeholder="Father or guardian's full name" />
-                    </div>
-                    @if (gf['fullName'].invalid && gf['fullName'].touched) {
-                      <span class="ferr">
-                        <span class="material-icons-round">error</span> Guardian name is required
-                      </span>
-                    }
-                  </div>
-                </div>
-
-                <div class="form-grid-3">
-                  <div class="form-field" [class.has-error]="gf['phone'].invalid && gf['phone'].touched">
-                    <label>Guardian Phone <span class="req">*</span></label>
-                    <div class="input-wrap">
-                      <span class="material-icons-round field-icon">call</span>
-                      <input formControlName="phone" placeholder="0300-1234567" type="tel" />
-                    </div>
-                    @if (gf['phone'].invalid && gf['phone'].touched) {
-                      <span class="ferr">
-                        <span class="material-icons-round">error</span> Phone number is required
-                      </span>
-                    }
-                  </div>
-
-                  <div class="form-field">
-                    <label>Guardian CNIC</label>
-                    <div class="input-wrap">
-                      <span class="material-icons-round field-icon">credit_card</span>
-                      <input formControlName="cnic" placeholder="12345-1234567-1" (blur)="onCnicBlur()" />
-                    </div>
-                  </div>
-
-                  <div class="form-field">
-                    <label>Guardian Occupation</label>
-                    <div class="input-wrap">
-                      <span class="material-icons-round field-icon">work</span>
-                      <input formControlName="occupation" placeholder="e.g. Business / Service" />
+                    <p class="sb-desc">Linked siblings under this guardian's CNIC:</p>
+                    <div class="sb-names">
+                      @for (s of siblings(); track s.studentId) {
+                        <span class="sb-chip">
+                          <span class="material-icons-round">person</span>
+                          {{ s.name }} ({{ s.admissionNo }})
+                        </span>
+                      }
                     </div>
                   </div>
                 </div>
-
-                <!-- Sibling Detection Banner -->
-                @if (siblingCheckDone() && siblingCount() > 0) {
-                  <div class="sibling-banner found">
-                    <span class="material-icons-round">family_restroom</span>
-                    <div class="sb-content">
-                      <div class="sb-title">
-                        <strong>{{ siblingCount() }} sibling(s) already registered</strong>
-                        <span class="sb-order-tag">Child #{{ siblingOrder() }}</span>
-                      </div>
-                      <p class="sb-desc">Linked siblings under this guardian's CNIC:</p>
-                      <div class="sb-names">
-                        @for (s of siblings(); track s.studentId) {
-                          <span class="sb-chip">
-                            <span class="material-icons-round">person</span>
-                            {{ s.name }} ({{ s.admissionNo }})
-                          </span>
-                        }
-                      </div>
-                    </div>
+              }
+              @if (siblingCheckDone() && siblingCount() === 0) {
+                <div class="sibling-banner new">
+                  <span class="material-icons-round">person_add</span>
+                  <div class="sb-content">
+                    <strong>First admission under this CNIC.</strong> No existing siblings detected.
                   </div>
-                }
-                @if (siblingCheckDone() && siblingCount() === 0) {
-                  <div class="sibling-banner new">
-                    <span class="material-icons-round">person_add</span>
-                    <div class="sb-content">
-                      <strong>First admission under this CNIC.</strong> No existing siblings detected.
-                    </div>
-                  </div>
-                }
+                </div>
+              }
 
+              <ng-container>
                 <div class="tab-nav">
                   <button type="button" class="btn-secondary" (click)="activeTab.set(2)">
                     <span class="material-icons-round">arrow_back</span> Back
@@ -796,6 +832,16 @@ interface SelectedFee {
         </div>
 
     </div>
+
+    @if (showTransfer() && editId()) {
+      <app-student-transfer-dialog
+        [studentId]="editId()!"
+        [studentName]="previewFullName()"
+        [admissionNo]="''"
+        [isActive]="true"
+        initialMode="Transfer"
+        (closed)="onTransferClosed($event)" />
+    }
 
     } <!-- end else -->
   `,
@@ -1281,6 +1327,34 @@ interface SelectedFee {
       height: 18px;
       background: var(--green-b);
     }
+
+    .docs-admit-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+    .docs-admit .file-btn {
+      display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 12px;
+      border-radius: 10px; border: 1px dashed var(--border, #cbd5e1); background: var(--surface-2, #f8fafc);
+      color: var(--t2, #475569); font-size: 12.5px; font-weight: 600; cursor: pointer;
+    }
+    .docs-admit .file-btn input { display: none; }
+    .docs-admit .file-btn .material-icons-round { font-size: 18px; }
+
+    .guardian-card {
+      border: 1px solid var(--border, #e5e7eb);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      background: var(--surface-2, #f8fafc);
+    }
+    .guardian-card-head {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 10px; font-size: 13px;
+    }
+    .add-guardian {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-bottom: 14px; height: 34px; padding: 0 12px;
+      border-radius: 9px; border: 1px solid var(--border, #e5e7eb);
+      background: var(--surface, #fff); cursor: pointer; font-weight: 700; font-size: 12.5px;
+    }
+    .linkish.danger { color: #b91c1c; border: none; background: none; cursor: pointer; font-weight: 700; }
 
     /* ── Sibling Banner ── */
     .sibling-banner {
@@ -1812,11 +1886,18 @@ export class StudentFormComponent implements OnInit {
   private feeSvc       = inject(FeeService);
   private academicSvc  = inject(AcademicService);
   private instituteSvc = inject(InstituteService);
+  private fileSvc      = inject(FileUploadService);
   private route        = inject(ActivatedRoute);
   private swal         = inject(SwalNotificationService);
   router = inject(Router);
 
   editId = signal<number | null>(null);
+  showTransfer = signal(false);
+  loadedIsActive = true;
+  docBusy = signal(false);
+  docError = signal('');
+  birthCertName = signal('');
+  prevSchoolCertName = signal('');
 
   schoolName       = '';
   schoolLogo       = '';
@@ -1865,17 +1946,33 @@ export class StudentFormComponent implements OnInit {
     academicYearId: [null as number | null, Validators.required],
     classId:        [null as number | null, Validators.required],
     photoFileId:    [null as number | null],
-    guardian: this.fb.group({
-      relation:   ['Father', Validators.required],
-      fullName:   ['', Validators.required],
-      phone:      ['', Validators.required],
-      cnic:       [''],
-      occupation: ['']
-    })
+    birthCertificateFileId: [null as number | null],
+    previousSchoolCertFileId: [null as number | null],
+    guardians: this.fb.array([this.createGuardianGroup()])
   });
 
   get f()  { return this.form.controls; }
-  get gf() { return (this.form.get('guardian') as any).controls; }
+  get guardians(): FormArray { return this.form.get('guardians') as FormArray; }
+
+  createGuardianGroup(g?: Partial<{ guardianId: number | null; relation: string; fullName: string; phone: string; cnic: string; occupation: string }>): FormGroup {
+    return this.fb.group({
+      guardianId: [g?.guardianId ?? null as number | null],
+      relation:   [g?.relation ?? 'Father', Validators.required],
+      fullName:   [g?.fullName ?? '', Validators.required],
+      phone:      [g?.phone ?? '', Validators.required],
+      cnic:       [g?.cnic ?? ''],
+      occupation: [g?.occupation ?? '']
+    });
+  }
+
+  addGuardian(relation = 'Mother'): void {
+    this.guardians.push(this.createGuardianGroup({ relation }));
+  }
+
+  removeGuardian(index: number): void {
+    if (this.guardians.length <= 1) return;
+    this.guardians.removeAt(index);
+  }
 
   previewFullName() {
     const fn = this.f['firstName'].value ?? '';
@@ -1927,10 +2024,26 @@ export class StudentFormComponent implements OnInit {
       const numId = +id;
       this.editId.set(numId);
       this.studentSvc.getById(numId).subscribe((s: any) => {
+        this.loadedIsActive = s.isActive !== false;
         // load classes for the student's academic year first
         if (s.currentAcademicYearId) {
           this.academicSvc.getClasses(s.currentAcademicYearId).subscribe(c => this.classes.set(c));
         }
+        this.studentSvc.getDocuments(numId).subscribe({
+          next: docs => {
+            const birth = docs.find(d => d.entityType === 'birth-certificate');
+            const prev = docs.find(d => d.entityType === 'prev-school-cert');
+            if (birth) {
+              this.birthCertName.set(birth.originalName);
+              this.form.patchValue({ birthCertificateFileId: birth.fileId });
+            }
+            if (prev) {
+              this.prevSchoolCertName.set(prev.originalName);
+              this.form.patchValue({ previousSchoolCertFileId: prev.fileId });
+            }
+          },
+          error: () => {}
+        });
         this.form.patchValue({
           firstName:      s.firstName,
           lastName:       s.lastName,
@@ -1949,15 +2062,20 @@ export class StudentFormComponent implements OnInit {
         });
         this.photoUrl.set(s.photoFileId ? `${environment.fileServerUrl}/files/${s.photoFileId}` : null);
         if (s.guardians?.length) {
-          const g = s.guardians[0];
-          this.form.get('guardian')!.patchValue({
-            relation:   g.relation   ?? 'Father',
-            fullName:   g.fullName   ?? '',
-            phone:      g.phone      ?? '',
-            cnic:       g.cnic       ?? '',
-            occupation: g.occupation ?? '',
-          });
+          this.guardians.clear();
+          for (const g of s.guardians) {
+            this.guardians.push(this.createGuardianGroup({
+              guardianId: g.guardianId ?? null,
+              relation:   g.relation   ?? 'Father',
+              fullName:   g.fullName   ?? '',
+              phone:      g.phone      ?? '',
+              cnic:       g.cnic       ?? '',
+              occupation: g.occupation ?? '',
+            }));
+          }
         }
+        this.form.get('academicYearId')?.disable({ emitEvent: false });
+        this.form.get('classId')?.disable({ emitEvent: false });
       });
     }
   }
@@ -1982,7 +2100,7 @@ export class StudentFormComponent implements OnInit {
   }
 
   onCnicBlur() {
-    const cnic = (this.form.get('guardian')?.get('cnic')?.value ?? '').trim();
+    const cnic = (this.guardians.at(0)?.get('cnic')?.value ?? '').trim();
     if (!cnic) { this.siblingCheckDone.set(false); return; }
     this.studentSvc.siblingCheck(cnic).subscribe({
       next: r => {
@@ -2031,9 +2149,13 @@ export class StudentFormComponent implements OnInit {
       if (this.f['admissionDate'].invalid || this.f['academicYearId'].invalid || this.f['classId'].invalid) return;
     }
     if (this.activeTab() === 3) {
-      this.gf['fullName'].markAsTouched();
-      this.gf['phone'].markAsTouched();
-      if (this.gf['fullName'].invalid || this.gf['phone'].invalid) return;
+      let invalid = false;
+      for (const ctrl of this.guardians.controls) {
+        ctrl.get('fullName')?.markAsTouched();
+        ctrl.get('phone')?.markAsTouched();
+        if (ctrl.get('fullName')?.invalid || ctrl.get('phone')?.invalid) invalid = true;
+      }
+      if (invalid) return;
       if (this.editId()) { this.submit(); return; }
       // Moving from Guardian to Fees — load fee structures
       this.loadFeeStructures();
@@ -2103,39 +2225,112 @@ export class StudentFormComponent implements OnInit {
     this.siblingOrder.set(1);
     this.siblings.set([]);
     this.photoUrl.set(null);
-    this.form.reset({ admissionDate: new Date().toISOString().slice(0,10), guardian: { relation: 'Father' } });
+    this.loadedIsActive = true;
+    this.birthCertName.set('');
+    this.prevSchoolCertName.set('');
+    this.docError.set('');
+    this.guardians.clear();
+    this.guardians.push(this.createGuardianGroup());
+    this.form.reset({ admissionDate: new Date().toISOString().slice(0,10) });
   }
 
   onPhotoUploaded(res: { fileId: number }) {
     this.form.patchValue({ photoFileId: res.fileId });
   }
 
+  birthCertLabel(): string {
+    return this.birthCertName() || 'Birth Certificate';
+  }
+  prevSchoolCertLabel(): string {
+    return this.prevSchoolCertName() || 'Previous School Cert';
+  }
+
+  onDocFile(ev: Event, entityType: 'birth-certificate' | 'prev-school-cert'): void {
+    const input = ev.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    this.docBusy.set(true);
+    this.docError.set('');
+    this.fileSvc.upload(file, entityType, {
+      entityId: this.editId(),
+      schoolName: this.instituteName,
+      label: entityType
+    }).subscribe({
+      next: res => {
+        if (entityType === 'birth-certificate') {
+          this.form.patchValue({ birthCertificateFileId: res.fileId });
+          this.birthCertName.set(file.name);
+        } else {
+          this.form.patchValue({ previousSchoolCertFileId: res.fileId });
+          this.prevSchoolCertName.set(file.name);
+        }
+        if (this.editId()) {
+          this.studentSvc.tagDocument(this.editId()!, res.fileId, entityType).subscribe({
+            next: () => this.docBusy.set(false),
+            error: e => { this.docBusy.set(false); this.docError.set(e?.error?.error ?? 'Tag failed.'); }
+          });
+        } else {
+          this.docBusy.set(false);
+        }
+      },
+      error: e => { this.docBusy.set(false); this.docError.set(e?.error?.error ?? 'Upload failed.'); }
+    });
+  }
+
+  onTransferClosed(changed: boolean): void {
+    this.showTransfer.set(false);
+    if (changed && this.editId()) {
+      this.studentSvc.getById(this.editId()!).subscribe(s => {
+        this.form.get('academicYearId')?.enable({ emitEvent: false });
+        this.form.get('classId')?.enable({ emitEvent: false });
+        this.form.patchValue({
+          academicYearId: s.currentAcademicYearId ?? null,
+          classId: s.currentClassId ?? null,
+        });
+        if (s.currentAcademicYearId) {
+          this.academicSvc.getClasses(s.currentAcademicYearId).subscribe(c => this.classes.set(c));
+        }
+        this.form.get('academicYearId')?.disable({ emitEvent: false });
+        this.form.get('classId')?.disable({ emitEvent: false });
+      });
+    }
+  }
+
   submit() {
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     this.saving.set(true);
     this.error.set('');
-    const v = this.form.value;
+    const v = this.form.getRawValue();
 
-    const basePayload = {
-      firstName:      v.firstName,
-      lastName:       v.lastName,
-      dateOfBirth:    v.dateOfBirth || null,
-      gender:         v.gender || null,
-      bloodGroup:     v.bloodGroup || null,
-      religion:       v.religion || null,
-      nationality:    v.nationality || null,
-      address:        v.address || null,
-      phone:          v.phone || null,
-      email:          v.email || null,
-      admissionDate:  v.admissionDate || null,
-      academicYearId: v.academicYearId,
-      classId:        v.classId,
-      photoFileId:    v.photoFileId ?? null,
-      guardians:      [v.guardian],
-    };
+    const guardianPayload = (v.guardians ?? []).map((g: any) => ({
+      guardianId: g?.guardianId ?? null,
+      fullName:   g?.fullName,
+      relation:   g?.relation,
+      phone:      g?.phone,
+      cnic:       g?.cnic || null,
+      occupation: g?.occupation || null,
+    }));
 
     if (this.editId()) {
-      this.studentSvc.update(this.editId()!, basePayload).subscribe({
+      const updatePayload = {
+        firstName:   v.firstName,
+        lastName:    v.lastName,
+        dateOfBirth: v.dateOfBirth || null,
+        gender:      v.gender || null,
+        bloodGroup:  v.bloodGroup || null,
+        religion:    v.religion || null,
+        nationality: v.nationality || null,
+        address:     v.address || null,
+        phone:       v.phone || null,
+        email:       v.email || null,
+        photoFileId: v.photoFileId ?? null,
+        birthCertificateFileId: v.birthCertificateFileId ?? null,
+        previousSchoolCertFileId: v.previousSchoolCertFileId ?? null,
+        isActive:    this.loadedIsActive,
+        guardians:   guardianPayload,
+      };
+      this.studentSvc.update(this.editId()!, updatePayload).subscribe({
         next: () => {
           this.saving.set(false);
           this.success.set(true);
@@ -2147,6 +2342,25 @@ export class StudentFormComponent implements OnInit {
         }
       });
     } else {
+      const basePayload = {
+        firstName:      v.firstName,
+        lastName:       v.lastName,
+        dateOfBirth:    v.dateOfBirth || null,
+        gender:         v.gender || null,
+        bloodGroup:     v.bloodGroup || null,
+        religion:       v.religion || null,
+        nationality:    v.nationality || null,
+        address:        v.address || null,
+        phone:          v.phone || null,
+        email:          v.email || null,
+        admissionDate:  v.admissionDate || null,
+        academicYearId: v.academicYearId,
+        classId:        v.classId,
+        photoFileId:    v.photoFileId ?? null,
+        birthCertificateFileId: v.birthCertificateFileId ?? null,
+        previousSchoolCertFileId: v.previousSchoolCertFileId ?? null,
+        guardians:      guardianPayload,
+      };
       const fees = this.selectedFees().map(f => ({
         feeStructureId: f.feeStructureId,
         amountDue: f.amountDue,

@@ -7,6 +7,8 @@ import { AcademicService } from '../../core/services/academic.service';
 import { TimetableService } from '../../core/services/timetable.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { DashboardService } from '../../core/services/dashboard.service';
+import { StudentService } from '../../core/services/student.service';
+import { StudentListDto } from '../../core/models/student.model';
 import { TimetableEntryDto, DAY_NAMES } from '../../core/models/timetable.model';
 import { forkJoin } from 'rxjs';
 
@@ -65,6 +67,29 @@ import { forkJoin } from 'rxjs';
         </div>
       }
     </div>
+
+    @if (isAlsoParent() && myChildren().length) {
+      <section class="parent-kids card" aria-label="My children">
+        <div class="pk-hd">
+          <h2>My Children</h2>
+          <a routerLink="/my-children">View all</a>
+        </div>
+        <div class="pk-list">
+          @for (c of myChildren(); track c.studentId) {
+            <div class="pk-item">
+              <div class="pk-info">
+                <strong>{{ c.fullName }}</strong>
+                <span>{{ c.className || '—' }} {{ c.section }} · {{ c.admissionNo }}</span>
+              </div>
+              <div class="pk-actions">
+                <a [routerLink]="['/fees/student-fees']" [queryParams]="{ studentId: c.studentId }">Fees</a>
+                <a [routerLink]="['/students/view', c.studentId]">Profile</a>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    }
 
     <!-- ═══ Teacher Dashboard ═══ -->
     @if (isTeacher()) {
@@ -698,6 +723,20 @@ import { forkJoin } from 'rxjs';
     } <!-- end @if (!isTeacher()) -->
   `,
   styles: [`
+    .parent-kids { margin: 0 0 16px; padding: 14px 16px; }
+    .pk-hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .pk-hd h2 { margin: 0; font-size: 15px; }
+    .pk-hd a { font-size: 12px; font-weight: 700; color: var(--accent); text-decoration: none; }
+    .pk-list { display: grid; gap: 8px; }
+    .pk-item {
+      display: flex; justify-content: space-between; gap: 12px; align-items: center;
+      padding: 10px 12px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border);
+    }
+    .pk-info { display: flex; flex-direction: column; gap: 2px; }
+    .pk-info span { font-size: 12px; color: var(--t3); }
+    .pk-actions { display: flex; gap: 8px; }
+    .pk-actions a { font-size: 12px; font-weight: 700; text-decoration: none; color: var(--accent); }
+
     /* Hero */
     .hero {
       display: flex; align-items: center; justify-content: space-between;
@@ -1251,6 +1290,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   today = new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   isTeacher() { return this.auth.hasRole('teacher'); }
+  isAlsoParent() { return this.auth.isAlsoParent(); }
+  myChildren = signal<StudentListDto[]>([]);
+  private studentSvc = inject(StudentService);
 
   // Teacher schedule
   ttLoading      = signal(true);
@@ -1423,6 +1465,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    if (this.isAlsoParent()) {
+      this.studentSvc.getMyChildren().subscribe({
+        next: kids => this.myChildren.set(kids),
+        error: () => this.myChildren.set([])
+      });
+    }
+
     if (this.isTeacher()) {
       this.loadTeacherSchedule();
       this.clockTimer = setInterval(() => this.nowTick.set(Date.now()), 30_000);

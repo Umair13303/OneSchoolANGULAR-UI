@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { StudentService } from '../../../core/services/student.service';
 import { AcademicService } from '../../../core/services/academic.service';
 import { InstituteService } from '../../../core/services/institute.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { environment } from '../../../../environments/environment';
 import { StudentListDto } from '../../../core/models/student.model';
 import { ClassDto, AcademicYear } from '../../../core/models/academic.model';
@@ -12,15 +13,26 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { StudentLeavingComponent } from '../student-leaving/student-leaving.component';
+import { StudentTransferDialogComponent } from '../student-transfer-dialog/student-transfer-dialog.component';
+import { StudentPromoteBulkDialogComponent } from '../student-promote-bulk-dialog/student-promote-bulk-dialog.component';
 import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
 
 @Component({
   selector: 'app-student-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, StudentLeavingComponent, OsSelectComponent],
+  imports: [CommonModule, RouterModule, FormsModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, StudentLeavingComponent, StudentTransferDialogComponent, StudentPromoteBulkDialogComponent, OsSelectComponent],
   template: `
     <div class="os-page compact">
     <app-page-header [dense]="true" title="Student List" routeUrl="/students/list">
+      <button type="button" class="btn-secondary" (click)="exportList()" [disabled]="exporting()">
+        <span class="material-icons-round">download</span>
+        Export
+      </button>
+      <button type="button" class="btn-secondary" (click)="showPromoteBulk.set(true)"
+              [disabled]="!selectedClass || !selectedYear">
+        <span class="material-icons-round">trending_up</span>
+        Promote Class
+      </button>
       <a routerLink="/students/new" class="btn-primary">
         <span class="material-icons-round">person_add</span>
         New Admission
@@ -51,6 +63,12 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
             icon="class"
             ariaLabel="Class"
             [searchable]="classOptions().length > 6" />
+          <div class="os-seg square" role="tablist" aria-label="Status filter">
+            <button type="button" class="os-seg-btn" [class.active]="statusFilter() === 'active'" (click)="setStatusFilter('active')">Active</button>
+            <button type="button" class="os-seg-btn" [class.active]="statusFilter() === 'inactive'" (click)="setStatusFilter('inactive')">Inactive</button>
+            <button type="button" class="os-seg-btn" [class.active]="statusFilter() === 'all'" (click)="setStatusFilter('all')">All</button>
+            <button type="button" class="os-seg-btn" [class.active]="statusFilter() === 'deleted'" (click)="setStatusFilter('deleted')">Deleted</button>
+          </div>
           <div class="os-seg square" role="tablist" aria-label="View mode">
             <button type="button" class="os-seg-btn"
                     [class.active]="viewMode() === 'list'"
@@ -102,7 +120,7 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
                       } @else {
                         <div class="s-av">{{ s.fullName[0] }}</div>
                       }
-                      <span class="s-name">{{ s.fullName }}</span>
+                      <a class="s-name" [routerLink]="['/students/view', s.studentId]">{{ s.fullName }}</a>
                     </div>
                   </td>
                   <td><span class="adm-pill">{{ s.admissionNo }}</span></td>
@@ -110,28 +128,43 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
                   <td>{{ s.gender ?? '—' }}</td>
                   <td>{{ s.phone ?? '—' }}</td>
                   <td>
-                    <span class="badge" [class.active]="s.isActive" [class.inactive]="!s.isActive">
-                      {{ s.isActive ? 'Active' : 'Inactive' }}
+                    <span class="badge" [class.active]="s.isActive && !s.isDeleted" [class.inactive]="!s.isActive || s.isDeleted">
+                      {{ s.isDeleted ? 'Deleted' : (s.isActive ? 'Active' : 'Inactive') }}
                     </span>
                   </td>
                   <td>
                     <div class="actions">
-                      <a [routerLink]="['/students/edit', s.studentId]" class="icon-btn" title="Edit student">
-                        <span class="material-icons-round">edit</span>
-                      </a>
-                      <a class="icon-btn act-card" title="Print Student Card"
-                         [routerLink]="['/students', s.studentId, 'card']" target="_blank">
-                        <span class="material-icons-round">badge</span>
-                      </a>
-                      @if (s.isActive) {
-                        <button class="icon-btn act-leave" title="Mark as Leaving" (click)="openLeave(s)">
-                          <span class="material-icons-round">exit_to_app</span>
+                      @if (s.isDeleted) {
+                        <button class="icon-btn act-card" title="Restore student" (click)="restoreStudent(s)">
+                          <span class="material-icons-round">restore_from_trash</span>
                         </button>
-                      }
-                      @if (!s.isActive) {
-                        <button class="icon-btn act-cert" title="Print Leaving Certificate" (click)="printCertificate(s.studentId)" [disabled]="printingId() === s.studentId">
-                          <span class="material-icons-round">{{ printingId() === s.studentId ? 'refresh' : 'print' }}</span>
-                        </button>
+                      } @else {
+                        <a [routerLink]="['/students/view', s.studentId]" class="icon-btn" title="Student profile">
+                          <span class="material-icons-round">person</span>
+                        </a>
+                        <a [routerLink]="['/students/edit', s.studentId]" class="icon-btn" title="Edit student">
+                          <span class="material-icons-round">edit</span>
+                        </a>
+                        <a class="icon-btn act-card" title="Print Student Card"
+                           [routerLink]="['/students', s.studentId, 'card']" target="_blank">
+                          <span class="material-icons-round">badge</span>
+                        </a>
+                        @if (s.isActive) {
+                          <button class="icon-btn act-card" title="Transfer / Promote" (click)="openTransfer(s, 'Transfer')">
+                            <span class="material-icons-round">swap_horiz</span>
+                          </button>
+                          <button class="icon-btn act-leave" title="Mark as Leaving" (click)="openLeave(s)">
+                            <span class="material-icons-round">exit_to_app</span>
+                          </button>
+                        }
+                        @if (!s.isActive) {
+                          <button class="icon-btn act-card" title="Re-admit" (click)="openTransfer(s, 'Readmit')">
+                            <span class="material-icons-round">person_add</span>
+                          </button>
+                          <button class="icon-btn act-cert" title="Print Leaving Certificate" (click)="printCertificate(s.studentId)" [disabled]="printingId() === s.studentId">
+                            <span class="material-icons-round">{{ printingId() === s.studentId ? 'refresh' : 'print' }}</span>
+                          </button>
+                        }
                       }
                     </div>
                   </td>
@@ -152,12 +185,12 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
                   } @else {
                     <div class="stu-card-fallback">{{ s.fullName[0] }}</div>
                   }
-                  <span class="stu-card-status badge" [class.active]="s.isActive" [class.inactive]="!s.isActive">
-                    {{ s.isActive ? 'Active' : 'Inactive' }}
+                  <span class="stu-card-status badge" [class.active]="s.isActive && !s.isDeleted" [class.inactive]="!s.isActive || !!s.isDeleted">
+                    {{ s.isDeleted ? 'Deleted' : (s.isActive ? 'Active' : 'Inactive') }}
                   </span>
                 </div>
                 <div class="stu-card-body">
-                  <h3 class="stu-card-name">{{ s.fullName }}</h3>
+                  <a class="stu-card-name" [routerLink]="['/students/view', s.studentId]">{{ s.fullName }}</a>
                   <span class="adm-pill">{{ s.admissionNo }}</span>
                   <div class="stu-card-meta">
                     <span><span class="material-icons-round">class</span>{{ s.className || '—' }} {{ s.section }}</span>
@@ -165,22 +198,37 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
                     <span><span class="material-icons-round">call</span>{{ s.phone ?? '—' }}</span>
                   </div>
                   <div class="stu-card-actions actions">
-                    <a [routerLink]="['/students/edit', s.studentId]" class="icon-btn" title="Edit student">
-                      <span class="material-icons-round">edit</span>
-                    </a>
-                    <a class="icon-btn act-card" title="Print Student Card"
-                       [routerLink]="['/students', s.studentId, 'card']" target="_blank">
-                      <span class="material-icons-round">badge</span>
-                    </a>
-                    @if (s.isActive) {
-                      <button class="icon-btn act-leave" title="Mark as Leaving" (click)="openLeave(s)">
-                        <span class="material-icons-round">exit_to_app</span>
+                    @if (s.isDeleted) {
+                      <button class="icon-btn act-card" title="Restore student" (click)="restoreStudent(s)">
+                        <span class="material-icons-round">restore_from_trash</span>
                       </button>
-                    }
-                    @if (!s.isActive) {
-                      <button class="icon-btn act-cert" title="Print Leaving Certificate" (click)="printCertificate(s.studentId)" [disabled]="printingId() === s.studentId">
-                        <span class="material-icons-round">{{ printingId() === s.studentId ? 'refresh' : 'print' }}</span>
-                      </button>
+                    } @else {
+                      <a [routerLink]="['/students/view', s.studentId]" class="icon-btn" title="Student profile">
+                        <span class="material-icons-round">person</span>
+                      </a>
+                      <a [routerLink]="['/students/edit', s.studentId]" class="icon-btn" title="Edit student">
+                        <span class="material-icons-round">edit</span>
+                      </a>
+                      <a class="icon-btn act-card" title="Print Student Card"
+                         [routerLink]="['/students', s.studentId, 'card']" target="_blank">
+                        <span class="material-icons-round">badge</span>
+                      </a>
+                      @if (s.isActive) {
+                        <button class="icon-btn act-card" title="Transfer / Promote" (click)="openTransfer(s, 'Transfer')">
+                          <span class="material-icons-round">swap_horiz</span>
+                        </button>
+                        <button class="icon-btn act-leave" title="Mark as Leaving" (click)="openLeave(s)">
+                          <span class="material-icons-round">exit_to_app</span>
+                        </button>
+                      }
+                      @if (!s.isActive) {
+                        <button class="icon-btn act-card" title="Re-admit" (click)="openTransfer(s, 'Readmit')">
+                          <span class="material-icons-round">person_add</span>
+                        </button>
+                        <button class="icon-btn act-cert" title="Print Leaving Certificate" (click)="printCertificate(s.studentId)" [disabled]="printingId() === s.studentId">
+                          <span class="material-icons-round">{{ printingId() === s.studentId ? 'refresh' : 'print' }}</span>
+                        </button>
+                      }
                     }
                   </div>
                 </div>
@@ -213,6 +261,21 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
         [admissionNo]="leavingStudent()!.admissionNo"
         (closed)="onLeavingClosed($event)" />
     }
+    @if (transferStudent(); as ts) {
+      <app-student-transfer-dialog
+        [studentId]="ts.student.studentId"
+        [studentName]="ts.student.fullName"
+        [admissionNo]="ts.student.admissionNo"
+        [isActive]="ts.student.isActive"
+        [initialMode]="ts.mode"
+        (closed)="onTransferClosed($event)" />
+    }
+    @if (showPromoteBulk()) {
+      <app-student-promote-bulk-dialog
+        [presetSourceYearId]="selectedYear"
+        [presetSourceClassId]="selectedClass"
+        (closed)="onPromoteBulkClosed($event)" />
+    }
   `,
   styles: [`
     /* .tbl-meta and .pager removed: .os-stage-foot now provides the row
@@ -241,7 +304,6 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
       background: var(--surface-2); border: 1px solid var(--border);
     }
     .s-name { font-weight: 600; color: var(--t1); font-size: 13.5px; }
-    a.icon-btn { text-decoration: none; }
 
     /* .btn-edit / .btn-leave / .btn-cert removed — the global .icon-btn now
        supplies size, hover, disabled and focus. Only the two semantic hover
@@ -314,10 +376,14 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
     }
     .stu-card-name {
       margin: 0; font-size: 14.5px; font-weight: 700; color: var(--t1);
-      line-height: 1.3;
+      line-height: 1.3; text-decoration: none;
       display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
       overflow: hidden;
     }
+    .stu-card-name:hover { color: var(--accent); }
+    .s-name { text-decoration: none; }
+    a.icon-btn { text-decoration: none; }
+    .s-name:hover { color: var(--accent); }
     .stu-card-meta {
       display: flex; flex-direction: column; gap: 5px;
       font-size: 12.5px; color: var(--t3);
@@ -346,16 +412,20 @@ export class StudentListComponent implements OnInit {
   private studentSvc   = inject(StudentService);
   private academicSvc  = inject(AcademicService);
   private instituteSvc = inject(InstituteService);
+  private auth         = inject(AuthService);
 
   students       = signal<StudentListDto[]>([]);
   years          = signal<AcademicYear[]>([]);
   classes        = signal<ClassDto[]>([]);
   loading        = signal(false);
   leavingStudent = signal<StudentListDto | null>(null);
+  transferStudent = signal<{ student: StudentListDto; mode: 'Transfer' | 'Promote' | 'Readmit' } | null>(null);
+  showPromoteBulk = signal(false);
+  exporting      = signal(false);
   printingId     = signal<number | null>(null);
-  printingCardId = signal<number | null>(null);
   brokenPhotos   = signal(new Set<number>());
   viewMode       = signal<'list' | 'cards'>(StudentListComponent.readStoredView());
+  statusFilter   = signal<'active' | 'inactive' | 'all' | 'deleted'>('active');
 
   private static readStoredView(): 'list' | 'cards' {
     try {
@@ -410,6 +480,54 @@ export class StudentListComponent implements OnInit {
     if (withdrawn) this.load();
   }
 
+  setStatusFilter(v: 'active' | 'inactive' | 'all' | 'deleted'): void {
+    this.statusFilter.set(v);
+    this.onFilterChange();
+  }
+
+  restoreStudent(s: StudentListDto): void {
+    if (!confirm(`Restore ${s.fullName}? They will appear as inactive until re-admitted.`)) return;
+    this.studentSvc.restore(s.studentId).subscribe({ next: () => this.load() });
+  }
+
+  openTransfer(s: StudentListDto, mode: 'Transfer' | 'Promote' | 'Readmit'): void {
+    this.transferStudent.set({ student: s, mode });
+  }
+
+  onTransferClosed(changed: boolean): void {
+    this.transferStudent.set(null);
+    if (changed) this.load();
+  }
+
+  onPromoteBulkClosed(changed: boolean): void {
+    this.showPromoteBulk.set(false);
+    if (changed) this.load();
+  }
+
+  exportList(): void {
+    if (this.exporting()) return;
+    this.exporting.set(true);
+    const isActive = this.statusFilter() === 'all' ? null
+      : this.statusFilter() === 'active';
+    this.studentSvc.export(
+      this.selectedClass ?? undefined,
+      this.selectedYear ?? undefined,
+      this.search.trim() || undefined,
+      isActive
+    ).subscribe({
+      next: blob => {
+        this.exporting.set(false);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Students_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => this.exporting.set(false)
+    });
+  }
+
   printCertificate(studentId: number) {
     if (this.printingId()) return;
     this.printingId.set(studentId);
@@ -427,23 +545,6 @@ export class StudentListComponent implements OnInit {
     });
   }
 
-  printStudentCard(studentId: number) {
-    if (this.printingCardId()) return;
-    this.printingCardId.set(studentId);
-    this.studentSvc.getById(studentId).subscribe({
-      next: (r: any) => {
-        this.instituteSvc.getMyInstitute().subscribe({
-          next: (inst: any) => {
-            this.printingCardId.set(null);
-            this.openIdCardWindow(r, inst);
-          },
-          error: () => { this.printingCardId.set(null); this.openIdCardWindow(r, null); }
-        });
-      },
-      error: () => this.printingCardId.set(null)
-    });
-  }
-
   private esc(v: unknown): string {
     return String(v ?? '')
       .replace(/&/g, '&amp;')
@@ -452,190 +553,30 @@ export class StudentListComponent implements OnInit {
       .replace(/"/g, '&quot;');
   }
 
-  private openIdCardWindow(r: any, inst: any) {
-    const schoolName = this.esc(inst?.name ?? 'School');
-    const schoolPhone = this.esc(inst?.phone ?? '');
-    const schoolEmail = this.esc(inst?.email ?? '');
-    const schoolAddr  = this.esc(inst?.address ?? '');
-    const logoUrl = inst?.logoUrl
-      ? (inst.logoUrl.startsWith('http') ? inst.logoUrl : `${environment.serverUrl}${inst.logoUrl}`)
-      : '';
-    const initials = String(inst?.name ?? 'S')
-      .split(' ').filter(Boolean).slice(0, 2).map((w: string) => w[0]).join('').toUpperCase();
-    const logoHtml = logoUrl
-      ? `<img src="${this.esc(logoUrl)}" class="sch-logo" alt="logo"/>`
-      : `<div class="sch-logo-av">${this.esc(initials)}</div>`;
-
-    const fullName = this.esc(`${r.firstName ?? ''} ${r.lastName ?? ''}`.trim());
-    const admissionNo = this.esc(r.admissionNo ?? '—');
-    const className = this.esc([r.currentClassName, r.currentSection].filter(Boolean).join(' ') || '—');
-    const yearLabel = this.esc(r.currentAcademicYearLabel ?? '—');
-    const gender = this.esc(r.gender ?? '—');
-    const blood = this.esc(r.bloodGroup ?? '—');
-    const address = this.esc(r.address ?? '—');
-    const phone = this.esc(r.phone ?? '—');
-    const guardian = r.guardians?.[0] ?? null;
-    const guardianName = this.esc(guardian?.fullName ?? '—');
-    const guardianPhone = this.esc(guardian?.phone ?? '—');
-    const guardianRel = this.esc(guardian?.relation ?? 'Guardian');
-
-    const fmt = (d: string | null | undefined) => {
-      if (!d) return '—';
-      const dt = new Date(d);
-      return isNaN(dt.getTime())
-        ? this.esc(d)
-        : dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  /** getMyInstitute() returns the full HTTP response, so the school lives on `.body`. */
+  private schoolBrand(inst: any) {
+    const body = inst?.body ?? inst;
+    const user = this.auth.currentUser();
+    return {
+      name: String(body?.name || user?.instituteName || 'School'),
+      logoUrl: String(body?.logoUrl || user?.logoUrl || ''),
+      phone: String(body?.phone || ''),
+      email: String(body?.email || ''),
+      address: String(body?.address || ''),
     };
-    const dob = fmt(r.dateOfBirth);
-    const admDate = fmt(r.admissionDate);
+  }
 
-    const photoUrl = r.photoFileId
-      ? `${environment.fileServerUrl}/files/${r.photoFileId}`
-      : '';
-    const photoHtml = photoUrl
-      ? `<img class="stu-photo" src="${this.esc(photoUrl)}" alt="photo"/>`
-      : `<div class="stu-photo-av">${this.esc((r.firstName?.[0] ?? 'S').toUpperCase())}</div>`;
-
-    const win = window.open('', '_blank');
-    if (!win) { alert('Allow popups to print the student card.'); return; }
-    win.document.write(`<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/>
-<title>Student Card — ${fullName}</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:'Segoe UI',system-ui,sans-serif;background:#e8eef7;padding:24px;color:#0f172a;}
-  .toolbar{display:flex;justify-content:space-between;align-items:center;background:#1e3a5f;color:#fff;padding:12px 18px;border-radius:10px;margin-bottom:22px;max-width:920px;margin-left:auto;margin-right:auto;}
-  .toolbar h2{font-size:15px;font-weight:700;}
-  .toolbar p{font-size:11px;color:rgba(255,255,255,.72);margin-top:2px;}
-  .tbr{display:flex;gap:8px;}
-  .btn-p{padding:8px 18px;background:#fff;color:#1e3a5f;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;}
-  .btn-c{padding:8px 14px;background:rgba(255,255,255,.14);color:#fff;border:1.5px solid rgba(255,255,255,.35);border-radius:7px;font-size:13px;cursor:pointer;}
-  .sheet{display:flex;flex-wrap:wrap;gap:22px;justify-content:center;align-items:flex-start;}
-  .face-label{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#64748b;margin-bottom:8px;text-align:center;}
-  .card{
-    width:85.6mm;height:54mm;border-radius:3.2mm;overflow:hidden;position:relative;
-    background:#fff;box-shadow:0 10px 28px rgba(15,23,42,.16);border:1px solid #cbd5e1;
-  }
-  .front{display:flex;flex-direction:column;background:linear-gradient(160deg,#f8fbff 0%,#ffffff 48%,#eef4ff 100%);}
-  .front-head{
-    display:flex;align-items:center;gap:8px;padding:5px 8px;
-    background:linear-gradient(90deg,#1e3a5f,#2563eb);color:#fff;min-height:14mm;
-  }
-  .sch-logo{width:9.5mm;height:9.5mm;object-fit:contain;border-radius:2mm;background:#fff;padding:1px;flex-shrink:0;}
-  .sch-logo-av{width:9.5mm;height:9.5mm;border-radius:2mm;background:#fff;color:#1e3a5f;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;}
-  .sch-meta{min-width:0;flex:1;}
-  .sch-name{font-size:10.5px;font-weight:800;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .sch-tag{font-size:7.5px;opacity:.85;letter-spacing:.6px;text-transform:uppercase;margin-top:1px;}
-  .front-body{display:flex;gap:8px;padding:6px 8px 5px;flex:1;min-height:0;}
-  .stu-photo,.stu-photo-av{
-    width:22mm;height:26mm;border-radius:2mm;object-fit:cover;flex-shrink:0;
-    border:1.5px solid #93c5fd;background:#dbeafe;
-  }
-  .stu-photo-av{display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#1e3a5f;}
-  .stu-info{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:2.5px;}
-  .stu-name{font-size:12px;font-weight:800;color:#0f172a;line-height:1.2;max-height:2.4em;overflow:hidden;}
-  .row{display:flex;gap:5px;font-size:8px;line-height:1.25;}
-  .lbl{color:#64748b;font-weight:700;min-width:18mm;text-transform:uppercase;letter-spacing:.3px;}
-  .val{color:#0f172a;font-weight:650;word-break:break-word;}
-  .front-foot{
-    margin-top:auto;padding:3px 8px 4px;border-top:1px solid #dbeafe;
-    display:flex;justify-content:space-between;align-items:center;
-    font-size:7px;color:#475569;font-weight:600;
-  }
-  .adm-chip{
-    background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;
-    padding:1px 6px;border-radius:99px;font-family:ui-monospace,Consolas,monospace;font-weight:700;
-  }
-  .back{display:flex;flex-direction:column;background:linear-gradient(180deg,#1e3a5f 0 11mm,#ffffff 11mm);}
-  .back-banner{color:#fff;padding:5px 9px 4px;}
-  .back-banner h4{font-size:10px;font-weight:800;letter-spacing:.4px;}
-  .back-banner p{font-size:7px;opacity:.85;margin-top:1px;}
-  .back-body{padding:6px 9px 5px;flex:1;display:flex;flex-direction:column;gap:3px;}
-  .back .row{font-size:8px;}
-  .back .lbl{min-width:22mm;}
-  .rules{
-    margin-top:auto;padding:5px 9px 6px;background:#f8fafc;border-top:1px solid #e2e8f0;
-    font-size:6.8px;color:#64748b;line-height:1.35;
-  }
-  .rules strong{color:#1e3a5f;}
-  @media print{
-    body{background:#fff!important;padding:8mm!important;}
-    .toolbar{display:none!important;}
-    .face-label{display:none!important;}
-    .sheet{gap:10mm;}
-    .card{box-shadow:none;page-break-inside:avoid;}
-    @page{size:A4 portrait;margin:10mm;}
-  }
-</style></head><body>
-<div class="toolbar">
-  <div>
-    <h2>Student Identity Card</h2>
-    <p>${fullName} — ${admissionNo}</p>
-  </div>
-  <div class="tbr">
-    <button class="btn-p" onclick="window.print()">Print / Save PDF</button>
-    <button class="btn-c" onclick="window.close()">Close</button>
-  </div>
-</div>
-<div class="sheet">
-  <div>
-    <div class="face-label">Front</div>
-    <div class="card front">
-      <div class="front-head">
-        ${logoHtml}
-        <div class="sch-meta">
-          <div class="sch-name">${schoolName}</div>
-          <div class="sch-tag">Student Identity Card</div>
-        </div>
-      </div>
-      <div class="front-body">
-        ${photoHtml}
-        <div class="stu-info">
-          <div class="stu-name">${fullName}</div>
-          <div class="row"><span class="lbl">Class</span><span class="val">${className}</span></div>
-          <div class="row"><span class="lbl">DOB</span><span class="val">${dob}</span></div>
-          <div class="row"><span class="lbl">Gender</span><span class="val">${gender}</span></div>
-          <div class="row"><span class="lbl">Session</span><span class="val">${yearLabel}</span></div>
-        </div>
-      </div>
-      <div class="front-foot">
-        <span class="adm-chip">${admissionNo}</span>
-        <span>Valid while enrolled</span>
-      </div>
-    </div>
-  </div>
-  <div>
-    <div class="face-label">Back</div>
-    <div class="card back">
-      <div class="back-banner">
-        <h4>Student Details</h4>
-        <p>${schoolName}</p>
-      </div>
-      <div class="back-body">
-        <div class="row"><span class="lbl">Blood Group</span><span class="val">${blood}</span></div>
-        <div class="row"><span class="lbl">Phone</span><span class="val">${phone}</span></div>
-        <div class="row"><span class="lbl">Address</span><span class="val">${address}</span></div>
-        <div class="row"><span class="lbl">${guardianRel}</span><span class="val">${guardianName}</span></div>
-        <div class="row"><span class="lbl">Guardian Ph</span><span class="val">${guardianPhone}</span></div>
-        <div class="row"><span class="lbl">Admitted</span><span class="val">${admDate}</span></div>
-      </div>
-      <div class="rules">
-        <strong>If found,</strong> please return to ${schoolName}${schoolAddr ? ' · ' + schoolAddr : ''}${schoolPhone ? ' · ' + schoolPhone : ''}${schoolEmail ? ' · ' + schoolEmail : ''}.
-        This card remains school property.
-      </div>
-    </div>
-  </div>
-</div>
-</body></html>`);
-    win.document.close();
+  private resolveLogo(url: string): string {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
+    return `${environment.serverUrl}${url.startsWith('/') ? '' : '/'}${url}`;
   }
 
   private openCertWindow(r: any, inst: any) {
-    const schoolName = inst?.name ?? 'School';
-    const logoUrl    = inst?.logoUrl
-      ? (inst.logoUrl.startsWith('http') ? inst.logoUrl : `${environment.serverUrl}${inst.logoUrl}`)
-      : '';
-    const initials   = schoolName.split(' ').slice(0,2).map((w: string) => w[0]).join('').toUpperCase();
+    const brand      = this.schoolBrand(inst);
+    const schoolName = brand.name;
+    const logoUrl    = this.resolveLogo(brand.logoUrl);
+    const initials   = schoolName.split(' ').filter(Boolean).slice(0,2).map((w: string) => w[0]).join('').toUpperCase();
     const logoHtml   = logoUrl
       ? `<img src="${logoUrl}" class="logo" alt="logo"/>`
       : `<div class="logo-av">${initials}</div>`;
@@ -761,12 +702,17 @@ export class StudentListComponent implements OnInit {
 
   load() {
     this.loading.set(true);
+    const deleted = this.statusFilter() === 'deleted';
+    const isActive = deleted || this.statusFilter() === 'all' ? null
+      : this.statusFilter() === 'active';
     this.studentSvc.getStudents(
       this.selectedClass ?? undefined,
       this.selectedYear ?? undefined,
       this.search.trim() || undefined,
       this.page(),
-      this.pageSize
+      this.pageSize,
+      isActive,
+      deleted
     ).subscribe({
       next: r => { this.students.set(r.items); this.totalCount.set(r.totalCount); this.loading.set(false); },
       error: () => this.loading.set(false)

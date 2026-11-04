@@ -1,9 +1,12 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { ReportService } from '../../core/services/report.service';
 import { AcademicService } from '../../core/services/academic.service';
+import { StudentService } from '../../core/services/student.service';
 import { ClassDto, AcademicYear } from '../../core/models/academic.model';
+import { StudentListDto } from '../../core/models/student.model';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { LoadingComponent } from '../../shared/components/loading/loading.component';
 import { DatePickerComponent } from '../../shared/components/date-picker/date-picker.component';
@@ -196,8 +199,22 @@ type Tab = 'daily' | 'monthly' | 'student' | 'enrollment' | 'homework' | 'worklo
           <h4>Parameters</h4>
           <div class="params-row">
             <div class="field">
-              <label>Student ID *</label>
-              <input type="number" [(ngModel)]="p.studentId" placeholder="e.g. 5" style="width:110px" />
+              <label>Class</label>
+              <select [(ngModel)]="p.classId" (change)="loadStudentOptions()">
+                <option [ngValue]="null">All classes</option>
+                @for (c of classes(); track c.classId) {
+                  <option [ngValue]="c.classId">{{ c.className }} {{ c.section }}</option>
+                }
+              </select>
+            </div>
+            <div class="field">
+              <label>Student *</label>
+              <select [(ngModel)]="p.studentId" style="min-width:220px">
+                <option [ngValue]="null">Select student</option>
+                @for (s of studentOptions(); track s.studentId) {
+                  <option [ngValue]="s.studentId">{{ s.fullName }} ({{ s.admissionNo }})</option>
+                }
+              </select>
             </div>
             <div class="field">
               <label>From Date</label>
@@ -634,10 +651,13 @@ type Tab = 'daily' | 'monthly' | 'student' | 'enrollment' | 'homework' | 'worklo
 export class ReportsComponent implements OnInit {
   private reportSvc   = inject(ReportService);
   private academicSvc = inject(AcademicService);
+  private studentSvc  = inject(StudentService);
+  private route       = inject(ActivatedRoute);
 
   activeTab  = signal<Tab>('daily');
   years      = signal<AcademicYear[]>([]);
   classes    = signal<ClassDto[]>([]);
+  studentOptions = signal<StudentListDto[]>([]);
   loading    = signal(false);
   pdfLoading = signal(false);
   data       = signal<any>(null);
@@ -663,21 +683,48 @@ export class ReportsComponent implements OnInit {
   ngOnInit() {
     this.academicSvc.getYears().subscribe(y => {
       this.years.set(y);
-      // Pre-load classes for convenience
-      this.academicSvc.getClasses().subscribe(c => this.classes.set(c));
+      this.academicSvc.getClasses().subscribe(c => {
+        this.classes.set(c);
+        this.loadStudentOptions();
+      });
     });
+
+    const qp = this.route.snapshot.queryParamMap;
+    const sid = Number(qp.get('studentId'));
+    const tab = qp.get('tab') as Tab | null;
+    if (tab && this.tabs.some(t => t.id === tab)) this.activeTab.set(tab);
+    if (sid) {
+      this.activeTab.set('student');
+      this.p.studentId = sid;
+    }
   }
 
   switchTab(t: Tab) {
     this.activeTab.set(t);
     this.data.set(null);
     this.p = this.freshParams();
+    if (t === 'student') this.loadStudentOptions();
   }
 
   loadClasses() {
     if (this.p.yearId) this.academicSvc.getClasses(this.p.yearId).subscribe(c => this.classes.set(c));
     else this.academicSvc.getClasses().subscribe(c => this.classes.set(c));
     this.p.classId = null;
+    if (this.activeTab() === 'student') this.loadStudentOptions();
+  }
+
+  loadStudentOptions() {
+    this.studentSvc.getStudents(
+      this.p.classId ?? undefined,
+      this.p.yearId ?? undefined,
+      undefined,
+      1,
+      200,
+      true
+    ).subscribe({
+      next: r => this.studentOptions.set(r.items),
+      error: () => this.studentOptions.set([])
+    });
   }
 
   // ── Runners ─────────────────────────────────────────────────────────────────

@@ -130,4 +130,14 @@ export class AcademicService {
       tap(() => { this.classes$ = undefined; })
     );
   }
+
+  /** Homeroom / full-day class teacher — also assigns that teacher to all subjects of the class. */
+  setClassTeacher(classId: number, teacherId: number | null) {
+    return this.http.put<ClassDto>(`${this.base}/classes/${classId}/class-teacher`, { teacherId }).pipe(
+      tap(() => { this.classes$ = undefined; })
+    );
+  }
+  getClassesByClassTeacher(teacherId: number) {
+    return this.http.get<ClassDto[]>(`${this.base}/classes/by-class-teacher/${teacherId}`);
+  }
 }
