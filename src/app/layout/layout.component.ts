@@ -32,8 +32,9 @@ import { environment } from '../../environments/environment';
 
         <div class="brand">
           <div class="brand-mark">
-            @if (instituteLogo()) {
-              <img [src]="instituteLogo()" alt="logo" class="brand-logo-img" />
+            @if (instituteLogo() && !logoBroken()) {
+              <img [src]="instituteLogo()" alt="logo" class="brand-logo-img"
+                   (error)="logoBroken.set(true)" />
             } @else {
               <img src="/branding/oneskool-logo.png" alt="OneSkool" class="brand-logo-img" />
             }
@@ -1063,6 +1064,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
   instituteName    = computed(() => this.auth.currentUser()?.instituteName ?? 'OneSkool');
   instituteTagline = computed(() => this.auth.currentUser()?.tagline ?? 'School Management System');
   instituteLogo    = computed(() => this.resolveLogoUrl(this.auth.currentUser()?.logoUrl));
+  /** True when institute logo URL 404s (e.g. wiped by Hub clean-slate deploy). */
+  logoBroken       = signal(false);
   isSuperAdmin     = computed(() => this.auth.currentUser()?.role === 'superadmin');
   /** Pure teacher role — enables the phone bottom dock / app shell. */
   isTeacherApp     = computed(() => (this.auth.currentUser()?.role ?? '').toLowerCase() === 'teacher');
@@ -1172,6 +1175,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
         if (this.shellDestroyed || res.status === 204 || !res.body) return;
         const body = res.body;
         const hadInstitute = !!this.auth.currentUser()?.instituteId;
+        this.logoBroken.set(false);
         this.auth.patchCurrentUser({
           instituteId: body.instituteId,
           instituteName: body.name,
