@@ -19,7 +19,7 @@ jobs:
 
       - name: Install Dependencies
         # This replaces the need to have node_modules committed
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Build Project
         # This builds your app into the 'dist' folder
