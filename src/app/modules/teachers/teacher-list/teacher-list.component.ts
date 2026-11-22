@@ -1,7 +1,13 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+﻿import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Button } from 'primeng/button';
+import { InputText } from 'primeng/inputtext';
+import { IconField } from 'primeng/iconfield';
+import { InputIcon } from 'primeng/inputicon';
+import { Select } from 'primeng/select';
+import { Tag } from 'primeng/tag';
 import { UserService } from '../../../core/services/user.service';
 
 import { UserListDto } from '../../../core/models/user.model';
@@ -12,26 +18,23 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
 @Component({
   selector: 'app-teacher-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, LoadingComponent, EmptyStateComponent, PageHeaderComponent],
+  imports: [
+    CommonModule, FormsModule, LoadingComponent, EmptyStateComponent, PageHeaderComponent,
+    Button, InputText, IconField, InputIcon, Select, Tag
+  ],
   template: `
     <app-page-header title="Teachers" subtitle="Manage teaching staff and their profiles">
-      <button class="btn-primary" (click)="router.navigate(['/teachers/new'])">
-        <span class="material-icons-round">person_add</span>
-        Add Teacher
-      </button>
+<p-button label="Add Teacher" icon="pi pi-user-plus" (onClick)="router.navigate(['/teachers/new'])" />
     </app-page-header>
 
     <!-- Filter Bar -->
-    <div class="filter-bar">
-      <div class="search-wrap">
-        <span class="material-icons-round search-icon">search</span>
-        <input class="search-input" placeholder="Search by name, email or CNIC..." [(ngModel)]="search" />
-      </div>
-      <select class="filter-select" [(ngModel)]="statusFilter">
-        <option value="">All Status</option>
-        <option value="active">Active</option>
-        <option value="inactive">Inactive</option>
-      </select>
+    <div class="card mb-4 flex flex-wrap items-center gap-2.5 px-4 py-3.5">
+      <p-iconfield class="min-w-[200px] flex-1">
+        <p-inputicon class="pi pi-search" />
+        <input pInputText class="w-full" placeholder="Search by name, email or CNIC..." [(ngModel)]="search" />
+      </p-iconfield>
+      <p-select class="w-full sm:w-44" [options]="statusOptions" optionLabel="label" optionValue="value"
+        placeholder="All Status" [showClear]="true" [(ngModel)]="statusFilter" />
     </div>
 
     <!-- Teacher Cards -->
@@ -51,9 +54,8 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
                 <div class="tc-name">{{ t.fullName }}</div>
                 <div class="tc-email">{{ t.email }}</div>
               </div>
-              <span class="badge ml" [class.active]="t.isActive" [class.inactive]="!t.isActive">
-                {{ t.isActive ? 'Active' : 'Inactive' }}
-              </span>
+              <p-tag class="ml" [value]="t.isActive ? 'Active' : 'Inactive'"
+                [severity]="t.isActive ? 'success' : 'secondary'" [rounded]="true" />
             </div>
             <div class="tc-chips">
               @if (t.specialization) {
@@ -76,9 +78,8 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
               </div>
             }
             <div class="tc-footer">
-              <button class="tc-edit-btn" (click)="router.navigate(['/teachers/edit', t.userId])">
-                <span class="material-icons-round">edit</span> Edit Profile
-              </button>
+              <p-button label="Edit Profile" icon="pi pi-pencil" severity="secondary" [outlined]="true"
+                styleClass="w-full" class="block" (onClick)="router.navigate(['/teachers/edit', t.userId])" />
             </div>
           </div>
         }
@@ -135,18 +136,6 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
       padding: 10px 18px 14px;
       border-top: 1px solid var(--border);
     }
-    .tc-edit-btn {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 7px 16px; border-radius: 8px; width: 100%; justify-content: center;
-      border: 1.5px solid var(--border-2); background: var(--surface-2);
-      font-size: 13px; font-weight: 600; color: var(--t2); cursor: pointer;
-      transition: all 0.18s;
-      .material-icons-round { font-size: 15px; }
-    }
-    .tc-edit-btn:hover { background: var(--accent-s); border-color: var(--accent); color: var(--accent); }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .spin { animation: spin 0.8s linear infinite; display: inline-block; }
   `]
 })
 export class TeacherListComponent implements OnInit {
@@ -156,7 +145,11 @@ export class TeacherListComponent implements OnInit {
   teachers     = signal<UserListDto[]>([]);
   loading      = signal(true);
   search       = '';
-  statusFilter = '';
+  statusFilter: string | null = '';
+  readonly statusOptions = [
+    { label: 'Active', value: 'active' },
+    { label: 'Inactive', value: 'inactive' }
+  ];
 
   ngOnInit() {
     this.load();

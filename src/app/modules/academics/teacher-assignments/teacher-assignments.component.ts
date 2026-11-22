@@ -3,6 +3,13 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import Swal from 'sweetalert2';
+import { Button } from 'primeng/button';
+import { InputText } from 'primeng/inputtext';
+import { Tag } from 'primeng/tag';
+import { Dialog } from 'primeng/dialog';
+import { IconField } from 'primeng/iconfield';
+import { InputIcon } from 'primeng/inputicon';
+import { Tooltip } from 'primeng/tooltip';
 
 import { AcademicService } from '../../../core/services/academic.service';
 import { UserService } from '../../../core/services/user.service';
@@ -18,30 +25,36 @@ const ICONS  = ['menu_book','calculate','science','language','mosque','computer'
 @Component({
   selector: 'app-teacher-assignments',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent, EmptyStateComponent, LoadingComponent],
+  imports: [
+    CommonModule, FormsModule, PageHeaderComponent, EmptyStateComponent, LoadingComponent,
+    Button, InputText, Tag, Dialog, IconField, InputIcon, Tooltip
+  ],
   template: `
-    <app-page-header title="Teacher Assignments" subtitle="Assign classes &amp; subjects to teachers" />
+    <div class="os-page compact">
+    <app-page-header title="Teacher Assignments" [dense]="true" routeUrl="/academics/teacher-assignments" />
+    <p class="flow-hint">Subject teachers per class. Use Class Teachers only for homeroom / unassigned subjects — it does not replace specialists.</p>
 
     <div class="two-col">
 
       <!-- ═══ LEFT: Teacher List ═══ -->
-      <div class="panel card">
-        <div class="panel-head">
-          <div class="panel-title">
-            <span class="material-icons-round">people</span>
-            Teachers
+      <div class="os-stage">
+        <div class="os-stage-bar">
+          <div class="os-toolbar-group grow">
+            <p-iconfield class="search-field">
+              <p-inputicon class="pi pi-search" />
+              <input pInputText class="w-full" placeholder="Search teacher…" [ngModel]="teacherSearch()" (ngModelChange)="teacherSearch.set($event)" />
+            </p-iconfield>
           </div>
+          <span class="count">{{ filteredTeachers().length }} of {{ teachers().length }}</span>
         </div>
 
-        <div class="search-wrap" style="padding: 10px 12px;">
-          <span class="material-icons-round search-icon">search</span>
-          <input class="search-input" placeholder="Search teacher..." [(ngModel)]="teacherSearch" />
-        </div>
-
+        <div class="os-stage-body">
         @if (loadingTeachers()) {
-          <app-loading />
+          <div class="state-pad"><app-loading /></div>
         } @else if (filteredTeachers().length === 0) {
-          <app-empty-state icon="people" title="No teachers" message="No teachers found." />
+          <div class="state-pad">
+            <app-empty-state icon="people" title="No teachers" message="No teachers found." />
+          </div>
         } @else {
           <div class="teacher-list">
             @for (t of filteredTeachers(); track t.userId) {
@@ -52,29 +65,35 @@ const ICONS  = ['menu_book','calculate','science','language','mosque','computer'
                   <span class="t-name">{{ t.fullName }}</span>
                   <span class="t-meta">{{ t.specialization || t.qualification || 'Teacher' }}</span>
                 </div>
-                <div class="t-count" [class.has]="assignmentCountFor(t.userId) > 0">
-                  {{ assignmentCountFor(t.userId) }}
-                </div>
+                <p-tag
+                  [value]="'' + assignmentCountFor(t.userId)"
+                  [severity]="assignmentCountFor(t.userId) > 0 ? 'info' : 'secondary'"
+                  [rounded]="true" />
               </button>
             }
           </div>
         }
+        </div>
       </div>
 
       <!-- ═══ RIGHT: Assignments Panel ═══ -->
-      <div class="panel card">
+      <div class="os-stage">
 
         @if (!selectedTeacher()) {
-          <div class="panel-head">
+          <div class="os-stage-bar">
             <div class="panel-title">
               <span class="material-icons-round">assignment_ind</span>
               Assignments
             </div>
           </div>
-          <app-empty-state icon="touch_app" title="Select a teacher" message="Pick a teacher on the left to manage their class & subject assignments" />
+          <div class="os-stage-body">
+            <div class="state-pad">
+              <app-empty-state icon="touch_app" title="Select a teacher" message="Pick a teacher on the left to manage their class & subject assignments" />
+            </div>
+          </div>
 
         } @else {
-          <div class="panel-head">
+          <div class="os-stage-bar">
             <div class="teacher-selected-info">
               <div class="t-av lg" [style.background]="avatarColor(selectedTeacher()!.fullName)">{{ initials(selectedTeacher()!.fullName) }}</div>
               <div>
@@ -82,16 +101,17 @@ const ICONS  = ['menu_book','calculate','science','language','mosque','computer'
                 <div class="sel-meta">{{ selectedTeacher()!.specialization || selectedTeacher()!.qualification || 'Teacher' }}</div>
               </div>
             </div>
-            <button class="btn-primary btn-sm" (click)="openAssignModal()">
-              <span class="material-icons-round">add</span> Assign
-            </button>
+            <p-button label="Assign" icon="pi pi-plus" size="small" (onClick)="openAssignModal()" />
           </div>
 
+          <div class="os-stage-body">
           @if (loadingAssignments()) {
-            <app-loading />
+            <div class="state-pad"><app-loading /></div>
           } @else if (assignments().length === 0) {
-            <app-empty-state icon="assignment_ind" title="No assignments yet"
-              message="Click Assign to give this teacher classes and subjects" />
+            <div class="state-pad">
+              <app-empty-state icon="assignment_ind" title="No assignments yet"
+                message="Click Assign to give this teacher classes and subjects" />
+            </div>
           } @else {
             <!-- Group by class -->
             @for (group of groupedAssignments(); track group.classId) {
@@ -99,7 +119,9 @@ const ICONS  = ['menu_book','calculate','science','language','mosque','computer'
                 <div class="class-group-header">
                   <span class="material-icons-round">class</span>
                   {{ group.className }}{{ group.classSection ? ' — ' + group.classSection : '' }}
-                  <span class="group-count">{{ group.subjects.length }} subject{{ group.subjects.length !== 1 ? 's' : '' }}</span>
+                  <p-tag class="ml-auto"
+                    [value]="group.subjects.length + ' subject' + (group.subjects.length !== 1 ? 's' : '')"
+                    severity="secondary" [rounded]="true" />
                 </div>
                 <div class="assignment-list">
                   @for (a of group.subjects; track a.id; let i = $index) {
@@ -108,39 +130,52 @@ const ICONS  = ['menu_book','calculate','science','language','mosque','computer'
                         <span class="material-icons-round">{{ ICONS[i % ICONS.length] }}</span>
                       </div>
                       <span class="a-subject">{{ a.subjectName }}</span>
-                      <span class="badge ml-auto" [class.active]="a.isActive" [class.inactive]="!a.isActive">
-                        {{ a.isActive ? 'Active' : 'Inactive' }}
-                      </span>
-                      <button class="icon-act danger" (click)="unassign(a)" title="Remove assignment">
-                        <span class="material-icons-round">person_remove</span>
-                      </button>
+                      <p-tag class="ml-auto"
+                        [value]="a.isActive ? 'Active' : 'Inactive'"
+                        [severity]="a.isActive ? 'success' : 'danger'"
+                        [rounded]="true" />
+                      <p-button
+                        icon="pi pi-user-minus"
+                        [text]="true"
+                        [rounded]="true"
+                        size="small"
+                        severity="danger"
+                        ariaLabel="Remove assignment"
+                        pTooltip="Remove assignment"
+                        (onClick)="unassign(a)" />
                     </div>
                   }
                 </div>
               </div>
             }
           }
+          </div>
         }
       </div>
     </div>
+    </div>
 
     <!-- ═══ Assign Modal ═══ -->
-    @if (showAssign()) {
-      <div class="modal-overlay" (click)="showAssign.set(false)">
-        <div class="modal assign-modal" (click)="$event.stopPropagation()">
+    <p-dialog
+      [visible]="showAssign()"
+      (visibleChange)="showAssign.set($event)"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [contentStyle]="{ padding: '0' }"
+      [style]="{ width: '36rem' }"
+      [breakpoints]="{ '640px': '96vw' }">
 
-          <div class="assign-modal-header">
+          <ng-template #header>
             <div>
-              <h3>Assign Classes &amp; Subjects</h3>
+              <h3 class="assign-title">Assign Classes &amp; Subjects</h3>
               <p class="assign-sub">{{ selectedTeacher()?.fullName }} — tick subjects across any class</p>
             </div>
-            <button class="icon-act" (click)="showAssign.set(false)">
-              <span class="material-icons-round">close</span>
-            </button>
-          </div>
+          </ng-template>
 
           @if (loadingModalSubjects()) {
-            <div style="padding:24px"><app-loading /></div>
+            <div class="p-6"><app-loading /></div>
           } @else {
             <div class="modal-class-list">
               @for (cls of modalClassList(); track cls.classId) {
@@ -152,13 +187,16 @@ const ICONS  = ['menu_book','calculate','science','language','mosque','computer'
                     </span>
                     <span class="mcl-class-name">{{ cls.className }}{{ cls.section ? ' ' + cls.section : '' }}</span>
                     @if (cls.availableSubjects.length === 0) {
-                      <span class="mcl-all-done">All assigned</span>
+                      <p-tag value="All assigned" severity="success" [rounded]="true" />
                     } @else {
-                      <button class="sel-all-btn" (click)="$event.stopPropagation(); toggleClassSelectAll(cls)">
-                        {{ classSelectionCount(cls.classId) === cls.availableSubjects.length ? 'Deselect All' : 'Select All' }}
-                      </button>
+                      <p-button
+                        [label]="classSelectionCount(cls.classId) === cls.availableSubjects.length ? 'Deselect All' : 'Select All'"
+                        [link]="true"
+                        size="small"
+                        (onClick)="toggleClassSelectAll(cls)"
+                        (click)="$event.stopPropagation()" />
                       @if (classSelectionCount(cls.classId) > 0) {
-                        <span class="mcl-count">{{ classSelectionCount(cls.classId) }} selected</span>
+                        <p-tag [value]="classSelectionCount(cls.classId) + ' selected'" severity="info" [rounded]="true" />
                       }
                     }
                   </div>
@@ -166,13 +204,19 @@ const ICONS  = ['menu_book','calculate','science','language','mosque','computer'
                   @if (expandedClasses.has(cls.classId) && cls.availableSubjects.length > 0) {
                     <div class="mcl-subjects">
                       @for (s of cls.availableSubjects; track s.id; let i = $index) {
-                        <label class="mcl-subject-row" [class.checked]="modalSelectedSubjectIds.has(s.id)">
+                        <label class="mcl-subject-row" [class.checked]="modalSelectedSubjectIds.has(s.id)"
+                               [class.has-other]="isHeldByOther(s)">
                           <input type="checkbox" [checked]="modalSelectedSubjectIds.has(s.id)"
                                  (change)="toggleModalSubjectWithClass(s.id, cls.classId)" />
                           <div class="mcl-s-icon" [style.background]="COLORS[i % COLORS.length]">
                             <span class="material-icons-round">{{ ICONS[i % ICONS.length] }}</span>
                           </div>
-                          <span class="mcl-s-name">{{ s.subjectName }}</span>
+                          <div class="mcl-s-text">
+                            <span class="mcl-s-name">{{ s.subjectName }}</span>
+                            @if (isHeldByOther(s)) {
+                              <span class="mcl-s-held">Assigned to {{ s.teacherName }}</span>
+                            }
+                          </div>
                           @if (modalSelectedSubjectIds.has(s.id)) {
                             <span class="material-icons-round mcl-check">check_circle</span>
                           }
@@ -186,35 +230,47 @@ const ICONS  = ['menu_book','calculate','science','language','mosque','computer'
           }
 
           @if (assignError()) {
-            <p class="error-msg" style="padding: 0 22px 8px">{{ assignError() }}</p>
+            <p class="error-msg px-5 py-2">{{ assignError() }}</p>
           }
 
-          <div class="modal-actions">
-            <span class="total-selected">
-              @if (totalSelectedCount() > 0) {
-                {{ totalSelectedCount() }} subject{{ totalSelectedCount() > 1 ? 's' : '' }} selected
-              }
-            </span>
-            <button class="btn-secondary" (click)="showAssign.set(false)">Cancel</button>
-            <button class="btn-primary" [disabled]="totalSelectedCount() === 0 || assigning()" (click)="doAssign()">
-              @if (assigning()) { Assigning… }
-              @else { Assign {{ totalSelectedCount() > 0 ? totalSelectedCount() + ' Subject' + (totalSelectedCount() > 1 ? 's' : '') : '' }} }
-            </button>
-          </div>
-        </div>
-      </div>
-    }
+          <ng-template #footer>
+            <div class="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
+              <span class="total-selected">
+                @if (totalSelectedCount() > 0) {
+                  {{ totalSelectedCount() }} subject{{ totalSelectedCount() > 1 ? 's' : '' }} selected
+                }
+              </span>
+              <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="showAssign.set(false)" />
+              <p-button
+                [label]="assigning()
+                  ? 'Assigning…'
+                  : 'Assign ' + (totalSelectedCount() > 0 ? totalSelectedCount() + ' Subject' + (totalSelectedCount() > 1 ? 's' : '') : '')"
+                icon="pi pi-check"
+                [loading]="assigning()"
+                [disabled]="totalSelectedCount() === 0 || assigning()"
+                (onClick)="doAssign()" />
+            </div>
+          </ng-template>
+    </p-dialog>
   `,
   styles: [`
     :host { display: block; width: 100%; }
+    .flow-hint {
+      margin: -4px 0 8px;
+      font-size: 12px;
+      font-weight: 550;
+      color: var(--t3);
+      line-height: 1.35;
+    }
 
     .two-col {
       display: grid;
       grid-template-columns: minmax(260px, 320px) 1fr;
-      gap: 20px;
+      gap: 12px;
       align-items: start;
       width: 100%;
     }
+    .two-col > .os-stage { min-width: 0; }
     @media (max-width: 860px) {
       .two-col {
         grid-template-columns: 1fr !important;
@@ -224,21 +280,20 @@ const ICONS  = ['menu_book','calculate','science','language','mosque','computer'
         width: 100% !important;
         align-items: stretch !important;
       }
-      .panel {
+      .two-col > .os-stage {
         width: 100% !important;
         max-width: 100% !important;
       }
+      .search-field { max-width: none; }
     }
 
-    .panel {
-      width: 100%;
-      box-sizing: border-box;
-      overflow: hidden;
+    .os-toolbar-group.grow { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 8px; }
+    .search-field { flex: 1 1 160px; min-width: 0; max-width: 360px; display: block; }
+    .count {
+      flex-shrink: 0; font-size: 12px; font-weight: 650; color: var(--t4);
+      font-variant-numeric: tabular-nums;
     }
-    .panel-head {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 16px; border-bottom: 1px solid var(--border);
-    }
+    .state-pad { padding: 28px 16px; }
     .panel-title {
       display: flex; align-items: center; gap: 8px;
       font-size: 13px; font-weight: 700; color: var(--t1);
@@ -249,7 +304,7 @@ const ICONS  = ['menu_book','calculate','science','language','mosque','computer'
     .teacher-list { display: flex; flex-direction: column; max-height: 560px; overflow-y: auto; }
     .teacher-row {
       display: flex; align-items: center; gap: 10px;
-      padding: 10px 14px; border: none; background: transparent;
+      padding: 7px 14px; border: none; background: transparent;
       cursor: pointer; text-align: left; width: 100%;
       border-bottom: 1px solid var(--border); font-family: inherit;
       transition: background 0.12s;
@@ -259,23 +314,14 @@ const ICONS  = ['menu_book','calculate','science','language','mosque','computer'
     .teacher-row.active { background: var(--accent-s); }
 
     .t-av {
-      width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0;
+      width: 32px; height: 32px; border-radius: 4px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
-      font-size: 13px; font-weight: 800; color: #fff;
+      font-size: 12px; font-weight: 800; color: #fff;
     }
-    .t-av.lg { width: 42px; height: 42px; border-radius: 12px; font-size: 15px; }
+    .t-av.lg { width: 36px; height: 36px; border-radius: 4px; font-size: 13px; }
     .t-info { flex: 1; min-width: 0; }
     .t-name { display: block; font-size: 13.5px; font-weight: 700; color: var(--t1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .t-meta { display: block; font-size: 11.5px; color: var(--t4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .t-count {
-      min-width: 22px; height: 22px; border-radius: 99px;
-      background: var(--surface-3); color: var(--t4);
-      font-size: 11px; font-weight: 700;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    .t-count.has { background: var(--accent-s); color: var(--accent); }
-
     /* Selected teacher header */
     .teacher-selected-info { display: flex; align-items: center; gap: 10px; }
     .sel-name { font-size: 14px; font-weight: 800; color: var(--t1); }
@@ -286,55 +332,31 @@ const ICONS  = ['menu_book','calculate','science','language','mosque','computer'
     .class-group:last-child { border-bottom: none; }
     .class-group-header {
       display: flex; align-items: center; gap: 7px;
-      padding: 10px 16px; background: var(--surface-2);
+      padding: 7px 14px; background: var(--surface-2);
       font-size: 12.5px; font-weight: 700; color: var(--t2);
       border-bottom: 1px solid var(--border);
     }
     .class-group-header .material-icons-round { font-size: 16px; color: var(--accent); }
-    .group-count {
-      margin-left: auto; font-size: 11px; font-weight: 600;
-      color: var(--t4); background: var(--surface-3);
-      padding: 2px 8px; border-radius: 99px;
-    }
-
     .assignment-list { display: flex; flex-direction: column; }
     .assignment-row {
       display: flex; align-items: center; gap: 10px;
-      padding: 10px 16px; border-bottom: 1px solid var(--border);
+      padding: 6px 14px; border-bottom: 1px solid var(--border);
       transition: background 0.1s;
     }
     .assignment-row:last-child { border-bottom: none; }
     .assignment-row:hover { background: var(--surface-2); }
 
     .a-icon {
-      width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+      width: 28px; height: 28px; border-radius: 4px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
     }
-    .a-icon .material-icons-round { font-size: 17px; color: #fff; font-variation-settings: 'FILL' 1; }
+    .a-icon .material-icons-round { font-size: 16px; color: #fff; font-variation-settings: 'FILL' 1; }
     .a-subject { font-size: 13.5px; font-weight: 600; color: var(--t1); flex: 1; }
     .ml-auto { margin-left: auto; }
 
-    .icon-act {
-      width: 30px; height: 30px; border-radius: 8px;
-      border: none; background: transparent; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      color: var(--t4); transition: background 0.15s, color 0.15s; flex-shrink: 0;
-    }
-    .icon-act:hover { background: var(--surface-3); color: var(--t1); }
-    .icon-act.danger:hover { background: color-mix(in srgb, #ef4444 12%, transparent); color: #ef4444; }
-    .icon-act .material-icons-round { font-size: 17px; }
-
-    .btn-sm { padding: 6px 13px; font-size: 12px; }
-    .btn-sm .material-icons-round { font-size: 15px; }
-
-    /* Assign modal */
-    .assign-modal { max-width: 560px; width: 100%; padding: 0; overflow: hidden; }
-    .assign-modal-header {
-      display: flex; align-items: flex-start; justify-content: space-between;
-      padding: 18px 22px 14px; border-bottom: 1px solid var(--border);
-    }
-    .assign-modal-header h3 { font-size: 16px; font-weight: 800; color: var(--t1); margin: 0; }
-    .assign-sub { font-size: 12px; color: var(--t4); margin-top: 3px; }
+    /* Assign dialog */
+    .assign-title { font-size: 16px; font-weight: 800; color: var(--t1); margin: 0; }
+    .assign-sub { font-size: 12px; color: var(--t4); margin: 3px 0 0; }
 
     /* Class list inside modal */
     .modal-class-list { max-height: 420px; overflow-y: auto; }
@@ -352,15 +374,6 @@ const ICONS  = ['menu_book','calculate','science','language','mosque','computer'
     .mcl-class-header:hover { background: var(--surface-3); }
     .expand-icon { font-size: 18px; color: var(--t4); flex-shrink: 0; }
     .mcl-class-name { font-size: 13.5px; font-weight: 700; color: var(--t1); flex: 1; }
-    .mcl-all-done { font-size: 11px; color: var(--green); font-weight: 600; background: var(--green-s); padding: 2px 8px; border-radius: 99px; }
-    .mcl-count { font-size: 11px; font-weight: 700; color: var(--accent); background: var(--accent-s); padding: 2px 8px; border-radius: 99px; }
-
-    .sel-all-btn {
-      font-size: 11.5px; font-weight: 600; color: var(--accent);
-      background: none; border: none; cursor: pointer; font-family: inherit; flex-shrink: 0;
-    }
-    .sel-all-btn:hover { text-decoration: underline; }
-
     .mcl-subjects { display: flex; flex-direction: column; background: var(--surface); }
     .mcl-subject-row {
       display: flex; align-items: center; gap: 10px;
@@ -376,38 +389,17 @@ const ICONS  = ['menu_book','calculate','science','language','mosque','computer'
       display: flex; align-items: center; justify-content: center;
     }
     .mcl-s-icon .material-icons-round { font-size: 15px; color: #fff; font-variation-settings: 'FILL' 1; }
-    .mcl-s-name { font-size: 13px; font-weight: 600; color: var(--t1); flex: 1; }
+    .mcl-s-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+    .mcl-s-name { font-size: 13px; font-weight: 600; color: var(--t1); }
+    .mcl-s-held { font-size: 11px; font-weight: 600; color: var(--t4); }
+    .mcl-subject-row.has-other { background: color-mix(in srgb, #f59e0b 8%, var(--surface)); }
     .mcl-check { font-size: 16px; color: var(--accent); flex-shrink: 0; }
 
-    .modal-actions {
-      padding: 12px 22px; border-top: 1px solid var(--border);
-      display: flex; align-items: center; gap: 10px;
-    }
     .total-selected { font-size: 12px; font-weight: 600; color: var(--accent); flex: 1; }
-
-    .search-wrap { position: relative; }
-    .search-icon { position: absolute; left: 22px; top: 50%; transform: translateY(-50%); font-size: 17px; color: var(--t4); pointer-events: none; }
-    .search-input {
-      width: 100%; padding: 8px 12px 8px 42px;
-      background: var(--surface-2); border: 1.5px solid var(--border);
-      border-radius: 8px; font-size: 13px; font-family: inherit; color: var(--t1);
-      outline: none; transition: border-color 0.15s;
-    }
-    .search-input:focus { border-color: var(--accent); }
+    .error-msg { color: #ef4444; font-size: 12.5px; margin: 0; }
 
     @media (max-width: 768px) {
-      .two-col { display: flex !important; flex-direction: column !important; gap: 16px !important; }
-      .assign-modal {
-        max-width: 100vw;
-        border-radius: var(--r-2xl) var(--r-2xl) 0 0;
-        position: fixed;
-        bottom: 0; left: 0; right: 0;
-      }
-      .modal-actions {
-        flex-direction: column-reverse;
-        gap: 8px;
-        .btn-primary, .btn-secondary { width: 100%; justify-content: center; min-height: 42px; }
-      }
+      .two-col { display: flex !important; flex-direction: column !important; gap: 12px !important; }
     }
   `]
 })
@@ -427,7 +419,7 @@ export class TeacherAssignmentsComponent implements OnInit {
   loadingAssignments = signal(false);
 
   selectedTeacher = signal<UserListDto | null>(null);
-  teacherSearch   = '';
+  teacherSearch   = signal('');
 
   showAssign              = signal(false);
   loadingModalSubjects    = signal(false);
@@ -438,12 +430,10 @@ export class TeacherAssignmentsComponent implements OnInit {
   assignError             = signal('');
   assigning               = signal(false);
 
-  filteredTeachers = computed(() =>
-    this.teachers().filter(t =>
-      !this.teacherSearch ||
-      t.fullName.toLowerCase().includes(this.teacherSearch.toLowerCase())
-    )
-  );
+  filteredTeachers = computed(() => {
+    const q = this.teacherSearch().trim().toLowerCase();
+    return this.teachers().filter(t => !q || t.fullName.toLowerCase().includes(q));
+  });
 
   groupedAssignments = computed(() => {
     const map = new Map<number, { classId: number; className: string; classSection: string | undefined; subjects: ClassSubjectDto[] }>();
@@ -555,31 +545,62 @@ export class TeacherAssignmentsComponent implements OnInit {
     this.modalSelectedSubjectIds = s;
   }
 
+  isHeldByOther(s: ClassSubjectDto): boolean {
+    const teacher = this.selectedTeacher();
+    return !!s.teacherId && s.teacherId > 0 && (!teacher || s.teacherId !== teacher.userId);
+  }
+
   doAssign() {
     const teacher = this.selectedTeacher();
     if (!teacher || this.modalSelectedSubjectIds.size === 0) return;
 
-    this.assigning.set(true);
-
-    // Group selected subjects by class
-    const byClass = new Map<number, ClassSubjectDto[]>();
+    const selected: ClassSubjectDto[] = [];
     for (const cls of this.modalClassList()) {
-      const selected = cls.availableSubjects.filter(s => this.modalSelectedSubjectIds.has(s.id));
-      if (selected.length > 0) byClass.set(cls.classId, selected);
+      for (const s of cls.availableSubjects) {
+        if (this.modalSelectedSubjectIds.has(s.id)) selected.push(s);
+      }
+    }
+    const conflicts = selected.filter(s => this.isHeldByOther(s));
+
+    if (conflicts.length > 0) {
+      const names = conflicts.slice(0, 3).map(s => s.subjectName + (s.teacherName ? ` (${s.teacherName})` : '')).join(', ');
+      const more = conflicts.length > 3 ? ` +${conflicts.length - 3} more` : '';
+      Swal.fire({
+        title: 'Replace existing teachers?',
+        html: `<p style="font-size:13.5px;line-height:1.5;margin:0">${conflicts.length} selected subject${conflicts.length > 1 ? 's are' : ' is'} already assigned:<br><b>${names}${more}</b></p>`,
+        showCancelButton: true,
+        confirmButtonText: `Replace ${conflicts.length}`,
+        cancelButtonText: 'Cancel',
+        reverseButtons: true,
+        focusCancel: true,
+        customClass: { popup: 'swal-app-popup', confirmButton: 'swal-btn-danger', cancelButton: 'swal-btn-cancel', actions: 'swal-actions' },
+        buttonsStyling: false,
+      }).then(result => {
+        if (result.isConfirmed) this.runAssign(teacher.userId, selected, true);
+      });
+      return;
     }
 
-    const calls: import('rxjs').Observable<ClassSubjectDto>[] = [];
-    byClass.forEach((subjects, classId) => {
-      subjects.forEach(s => {
-        calls.push(this.svc.assignSubjectToClass(classId, { subjectId: s.subjectId, teacherId: teacher.userId }));
-      });
-    });
+    this.runAssign(teacher.userId, selected, false);
+  }
+
+  private runAssign(teacherId: number, selected: ClassSubjectDto[], replaceExisting: boolean) {
+    this.assigning.set(true);
+    this.assignError.set('');
+
+    const calls = selected.map(s =>
+      this.svc.assignSubjectToClass(s.classId, {
+        subjectId: s.subjectId,
+        teacherId,
+        replaceExisting
+      })
+    );
 
     forkJoin(calls).subscribe({
       next: (results: ClassSubjectDto[]) => {
         this.assignments.update(list => [...list, ...results]);
         const m = new Map(this.allAssignments());
-        m.set(teacher.userId, (m.get(teacher.userId) ?? 0) + results.length);
+        m.set(teacherId, (m.get(teacherId) ?? 0) + results.length);
         this.allAssignments.set(m);
         this.showAssign.set(false);
         this.assigning.set(false);

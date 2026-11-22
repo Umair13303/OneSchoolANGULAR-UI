@@ -7,11 +7,13 @@ import { AcademicService } from '../../../core/services/academic.service';
 import { ClassDto, AcademicYear } from '../../../core/models/academic.model';
 import { DatePickerComponent } from '../../../shared/components/date-picker/date-picker.component';
 import { SwalNotificationService } from '../../../core/services/swal-notification.service';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
 
 @Component({
   selector: 'app-add-student',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, DatePickerComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, DatePickerComponent, Button, Select],
   template: `
     @if (success()) {
       <div class="success-screen">
@@ -25,13 +27,10 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
             <span class="an-label">Admission No.</span>
             <span class="an-value">{{ admissionNo() }}</span>
           </div>
-          <div class="success-actions">
-            <button class="btn-secondary" (click)="router.navigate(['/students/list'])">
-              <span class="material-icons-round">list</span> View All
-            </button>
-            <button class="btn-primary" (click)="resetForm()">
-              <span class="material-icons-round">person_add_alt</span> Add Another
-            </button>
+          <div class="success-actions flex flex-wrap items-center justify-center gap-2">
+            <p-button label="View All" icon="pi pi-list" severity="secondary" [outlined]="true"
+                      (onClick)="router.navigate(['/students/list'])" />
+            <p-button label="Add Another" icon="pi pi-user-plus" (onClick)="resetForm()" />
           </div>
         </div>
       </div>
@@ -71,11 +70,11 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
               </div>
             </div>
           </div>
-          <div class="sw-footer">
-            <button class="btn-secondary" type="button" (click)="setupWarningDismissed.set(true)">Remind Me Later</button>
-            <button class="btn-primary" type="button" (click)="router.navigate(['/academics/years'])">
-              Start Setup <span class="material-icons-round">arrow_forward</span>
-            </button>
+          <div class="sw-footer flex flex-wrap items-center justify-end gap-2">
+            <p-button label="Remind Me Later" severity="secondary" [outlined]="true"
+                      (onClick)="setupWarningDismissed.set(true)" />
+            <p-button label="Start Setup" icon="pi pi-arrow-right" iconPos="right"
+                      (onClick)="router.navigate(['/academics/years'])" />
           </div>
         </div>
       </div>
@@ -96,11 +95,10 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
             <p class="adm-sub">Register an existing student with personal, contact, and guardian details</p>
           </div>
         </div>
-        <div class="adm-header-right">
+        <div class="adm-header-right flex items-center gap-2">
           <span class="adm-step-badge">Step {{ activeTab() + 1 }} of 4</span>
-          <button class="adm-back-btn" type="button" (click)="router.navigate(['/students/list'])" title="Cancel &amp; Exit">
-            <span class="material-icons-round">close</span>
-          </button>
+          <p-button icon="pi pi-times" severity="secondary" [outlined]="true" size="small"
+                    ariaLabel="Cancel and exit" (onClick)="router.navigate(['/students/list'])" />
         </div>
       </div>
 
@@ -199,26 +197,14 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
 
                 <div class="form-field">
                   <label>Gender</label>
-                  <div class="input-wrap select-wrap">
-                    <span class="material-icons-round field-icon">wc</span>
-                    <select formControlName="gender">
-                      <option value="">Select</option>
-                      <option>Male</option>
-                      <option>Female</option>
-                      <option>Other</option>
-                    </select>
-                  </div>
+                  <p-select class="w-full" formControlName="gender" [options]="genders"
+                            [showClear]="true" placeholder="Select" ariaLabel="Gender" />
                 </div>
 
                 <div class="form-field">
                   <label>Blood Group</label>
-                  <div class="input-wrap select-wrap">
-                    <span class="material-icons-round field-icon">bloodtype</span>
-                    <select formControlName="bloodGroup">
-                      <option value="">Select</option>
-                      @for (bg of bloodGroups; track bg) { <option>{{ bg }}</option> }
-                    </select>
-                  </div>
+                  <p-select class="w-full" formControlName="bloodGroup" [options]="bloodGroups"
+                            [showClear]="true" placeholder="Select" ariaLabel="Blood group" />
                 </div>
               </div>
 
@@ -240,10 +226,8 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
                 </div>
               </div>
 
-              <div class="tab-nav">
-                <button type="button" class="btn-primary btn-next" (click)="next()">
-                  Next Step <span class="material-icons-round">arrow_forward</span>
-                </button>
+              <div class="tab-nav flex items-center justify-end gap-2">
+                <p-button label="Next Step" icon="pi pi-arrow-right" iconPos="right" (onClick)="next()" />
               </div>
             </div>
           }
@@ -282,13 +266,9 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
                 </div>
               </div>
 
-              <div class="tab-nav">
-                <button type="button" class="btn-secondary" (click)="activeTab.set(0)">
-                  <span class="material-icons-round">arrow_back</span> Back
-                </button>
-                <button type="button" class="btn-primary btn-next" (click)="next()">
-                  Next Step <span class="material-icons-round">arrow_forward</span>
-                </button>
+              <div class="tab-nav flex items-center justify-between gap-2">
+                <p-button label="Back" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="activeTab.set(0)" />
+                <p-button label="Next Step" icon="pi pi-arrow-right" iconPos="right" (onClick)="next()" />
               </div>
             </div>
           }
@@ -341,15 +321,11 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
               <div class="form-grid-2">
                 <div class="form-field" [class.has-error]="f['academicYearId'].invalid && f['academicYearId'].touched">
                   <label>Academic Year <span class="req">*</span></label>
-                  <div class="input-wrap select-wrap">
-                    <span class="material-icons-round field-icon">calendar_month</span>
-                    <select formControlName="academicYearId" (change)="onYearChange()">
-                      <option [ngValue]="null">Select year</option>
-                      @for (y of years(); track y.academicYearId) {
-                        <option [ngValue]="y.academicYearId">{{ y.yearLabel }}</option>
-                      }
-                    </select>
-                  </div>
+                  <p-select class="w-full" formControlName="academicYearId" [options]="years()"
+                            optionLabel="yearLabel" optionValue="academicYearId"
+                            placeholder="Select year" ariaLabel="Academic year"
+                            [invalid]="f['academicYearId'].invalid && f['academicYearId'].touched"
+                            (onChange)="onYearChange()" />
                   @if (f['academicYearId'].invalid && f['academicYearId'].touched) {
                     <span class="ferr">
                       <span class="material-icons-round">error</span> Academic year is required
@@ -359,15 +335,10 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
 
                 <div class="form-field" [class.has-error]="f['classId'].invalid && f['classId'].touched">
                   <label>Class <span class="req">*</span></label>
-                  <div class="input-wrap select-wrap">
-                    <span class="material-icons-round field-icon">class</span>
-                    <select formControlName="classId">
-                      <option [ngValue]="null">Select class</option>
-                      @for (c of classes(); track c.classId) {
-                        <option [ngValue]="c.classId">{{ c.className }}{{ c.section ? ' ' + c.section : '' }}</option>
-                      }
-                    </select>
-                  </div>
+                  <p-select class="w-full" formControlName="classId" [options]="classOptions()"
+                            optionLabel="label" optionValue="value"
+                            placeholder="Select class" ariaLabel="Class"
+                            [invalid]="f['classId'].invalid && f['classId'].touched" />
                   @if (f['classId'].invalid && f['classId'].touched) {
                     <span class="ferr">
                       <span class="material-icons-round">error</span> Class is required
@@ -402,13 +373,9 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
                 </div>
               }
 
-              <div class="tab-nav">
-                <button type="button" class="btn-secondary" (click)="activeTab.set(1)">
-                  <span class="material-icons-round">arrow_back</span> Back
-                </button>
-                <button type="button" class="btn-primary btn-next" (click)="next()">
-                  Next Step <span class="material-icons-round">arrow_forward</span>
-                </button>
+              <div class="tab-nav flex items-center justify-between gap-2">
+                <p-button label="Back" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="activeTab.set(1)" />
+                <p-button label="Next Step" icon="pi pi-arrow-right" iconPos="right" (onClick)="next()" />
               </div>
             </div>
           }
@@ -425,14 +392,7 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
                 <div class="form-grid-2">
                   <div class="form-field">
                     <label>Relation <span class="req">*</span></label>
-                    <div class="input-wrap select-wrap">
-                      <span class="material-icons-round field-icon">family_restroom</span>
-                      <select formControlName="relation">
-                        <option>Father</option>
-                        <option>Mother</option>
-                        <option>Guardian</option>
-                      </select>
-                    </div>
+                    <p-select class="w-full" formControlName="relation" [options]="relations" ariaLabel="Relation" />
                   </div>
 
                   <div class="form-field" [class.has-error]="gf['fullName'].invalid && gf['fullName'].touched">
@@ -486,17 +446,10 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
                   </div>
                 }
 
-                <div class="tab-nav">
-                  <button type="button" class="btn-secondary" (click)="activeTab.set(2)">
-                    <span class="material-icons-round">arrow_back</span> Back
-                  </button>
-                  <button type="submit" class="btn-primary btn-submit" [disabled]="saving()">
-                    @if (saving()) {
-                      <span class="material-icons-round spin">sync</span> Saving...
-                    } @else {
-                      <span class="material-icons-round">save</span> Save Student
-                    }
-                  </button>
+                <div class="tab-nav flex items-center justify-between gap-2">
+                  <p-button label="Back" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="activeTab.set(2)" />
+                  <p-button type="submit" [label]="saving() ? 'Saving...' : 'Save Student'" icon="pi pi-save"
+                            [loading]="saving()" [disabled]="saving()" />
                 </div>
               </ng-container>
             </div>
@@ -899,6 +852,12 @@ export class AddStudentComponent implements OnInit {
   nextAdmissionNo = signal('');   // suggestion from institute/campus settings
 
   readonly bloodGroups = ['A+','A-','B+','B-','O+','O-','AB+','AB-'];
+  readonly genders = ['Male', 'Female', 'Other'];
+  readonly relations = ['Father', 'Mother', 'Guardian'];
+  classOptions = () => this.classes().map(c => ({
+    value: c.classId,
+    label: `${c.className}${c.section ? ' ' + c.section : ''}`
+  }));
   readonly COLORS = ['#7c3aed','#059669','#0891b2','#d97706','#db2777','#ea580c'];
 
   form = this.fb.group({

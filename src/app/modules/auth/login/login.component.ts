@@ -3,6 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { Button } from 'primeng/button';
+import { InputText } from 'primeng/inputtext';
+import { Password } from 'primeng/password';
 import { AuthService } from '../../../core/services/auth.service';
 import { SettingsService } from '../../../core/services/settings.service';
 import { SwalNotificationService } from '../../../core/services/swal-notification.service';
@@ -10,7 +13,7 @@ import { SwalNotificationService } from '../../../core/services/swal-notificatio
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, Button, InputText, Password],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss']
 })

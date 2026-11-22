@@ -1,6 +1,13 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormsModule, FormBuilder, Validators } from '@angular/forms';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
+import { Tag } from 'primeng/tag';
+import { Dialog } from 'primeng/dialog';
+import { Tooltip } from 'primeng/tooltip';
+import { Message } from 'primeng/message';
 import { ExamService } from '../../../core/services/exam.service';
 import { AcademicService } from '../../../core/services/academic.service';
 import { MenuService } from '../../../core/services/menu.service';
@@ -9,40 +16,47 @@ import { ConfirmDeleteComponent } from '../../../shared/components/confirm-delet
 import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/confirm-delete.service';
 import { DatePickerComponent } from '../../../shared/components/date-picker/date-picker.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
-import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+
+interface SelectOpt<T> { value: T; label: string; }
 
 @Component({
   selector: 'app-exam-schedule',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, ConfirmDeleteComponent, DatePickerComponent, PageHeaderComponent, OsSelectComponent, LoadingComponent, EmptyStateComponent],
+  imports: [
+    CommonModule, ReactiveFormsModule, FormsModule, ConfirmDeleteComponent, DatePickerComponent,
+    PageHeaderComponent, LoadingComponent, EmptyStateComponent,
+    Button, Select, InputText, Tag, Dialog, Tooltip, Message
+  ],
   template: `
     <div class="os-page compact exam-schedule-page">
     <app-page-header [dense]="true" [title]="pageTitle()" routeUrl="/exams/schedule">
-      <button class="btn-primary" (click)="openForm()">
-        <span class="material-icons-round">add</span> Schedule Exam
-      </button>
+      <p-button label="Schedule Exam" icon="pi pi-plus" (onClick)="openForm()" />
     </app-page-header>
 
     <div class="os-stage">
       <div class="os-stage-bar">
-        <div class="os-toolbar-group">
-          <div class="os-field inline grow">
+        <div class="flex flex-wrap items-end gap-3 w-full">
+          <div class="flex min-w-[200px] flex-1 flex-col gap-1">
             <label class="os-field-label">Class</label>
-            <app-os-select
-              icon="school"
+            <p-select
+              class="w-full"
               placeholder="All classes"
-              [searchable]="classFilterOptions().length > 6"
               [options]="classFilterOptions()"
-              [value]="filterClass"
-              (valueChange)="filterClass = $event ?? ''; load()" />
+              optionLabel="label"
+              optionValue="value"
+              [filter]="classFilterOptions().length > 6"
+              filterBy="label"
+              [ngModel]="filterClass"
+              [ngModelOptions]="{standalone:true}"
+              (ngModelChange)="filterClass = $event ?? ''; load()" />
           </div>
-          <div class="os-field inline">
+          <div class="flex flex-col gap-1">
             <label class="os-field-label">From</label>
             <div class="os-date-wrap"><app-date-picker [(ngModel)]="filterFrom" (dateChange)="load()" [ngModelOptions]="{standalone:true}" /></div>
           </div>
-          <div class="os-field inline">
+          <div class="flex flex-col gap-1">
             <label class="os-field-label">To</label>
             <div class="os-date-wrap"><app-date-picker [(ngModel)]="filterTo" (dateChange)="load()" [ngModelOptions]="{standalone:true}" /></div>
           </div>
@@ -85,13 +99,15 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
                     </div>
                   </td>
                   <td>{{ s.className }}</td>
-                  <td><span class="type-badge">{{ s.examType }}</span></td>
+                  <td><p-tag [value]="s.examType" severity="info" [rounded]="true" /></td>
                   <td>{{ s.roomOrHall || '—' }}</td>
-                  <td><span class="status-badge" [ngClass]="statusClass(s.status)">{{ s.status }}</span></td>
+                  <td><p-tag [value]="s.status" [severity]="statusSeverity(s.status)" [rounded]="true" /></td>
                   <td>
-                    <div class="row-actions">
-                      <button class="btn-sm btn-outline" (click)="openForm(s)" title="Edit"><span class="material-icons-round">edit</span></button>
-                      <button class="btn-sm btn-danger"  (click)="deleteSchedule(s)" title="Delete"><span class="material-icons-round">delete</span></button>
+                    <div class="flex gap-1.5">
+                      <p-button icon="pi pi-pencil" size="small" severity="secondary" [outlined]="true"
+                        pTooltip="Edit" ariaLabel="Edit" (onClick)="openForm(s)" />
+                      <p-button icon="pi pi-trash" size="small" severity="danger" [outlined]="true"
+                        pTooltip="Delete" ariaLabel="Delete" (onClick)="deleteSchedule(s)" />
                     </div>
                   </td>
                 </tr>
@@ -102,89 +118,79 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
       }
     </div>
 
-    <!-- Form Modal -->
-    @if (showForm()) {
-      <div class="modal-backdrop" (click)="closeForm()">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <div class="modal-header">
-            <h2>{{ editSchedule() ? 'Edit Schedule' : 'Schedule Exam' }}</h2>
-            <button class="icon-btn" (click)="closeForm()"><span class="material-icons-round">close</span></button>
+    <!-- Form dialog -->
+    <p-dialog
+      [visible]="showForm()"
+      (visibleChange)="$event ? null : closeForm()"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [header]="editSchedule() ? 'Edit Schedule' : 'Schedule Exam'"
+      [style]="{ width: '36rem' }"
+      [breakpoints]="{ '640px': '96vw' }">
+      <form [formGroup]="form" (ngSubmit)="save()" class="flex flex-col gap-3">
+        <div class="flex flex-col gap-1">
+          <label class="fl">Exam Paper *</label>
+          <p-select
+            class="w-full"
+            formControlName="examPaperId"
+            placeholder="Select paper"
+            [options]="paperOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [filter]="paperOptions().length > 6"
+            filterBy="label"
+            appendTo="body"
+            [overlayOptions]="overlayOpts" />
+        </div>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div class="flex flex-col gap-1">
+            <label class="fl">Exam Date *</label>
+            <app-date-picker formControlName="examDate" />
           </div>
-          <div class="modal-body">
-            <form [formGroup]="form" (ngSubmit)="save()">
-              <div class="fg">
-                <div class="fi full">
-                  <label>Exam Paper *</label>
-                  <select formControlName="examPaperId">
-                    <option value="">Select paper</option>
-                    @for (p of papers(); track p.examPaperId) { <option [value]="p.examPaperId">{{ p.title }} – {{ p.className }}</option> }
-                  </select>
-                </div>
-              </div>
-              <div class="fg two">
-                <div class="fi">
-                  <label>Exam Date *</label>
-                  <app-date-picker formControlName="examDate" />
-                </div>
-                <div class="fi">
-                  <label>Start Time *</label>
-                  <input type="time" formControlName="startTime" />
-                </div>
-              </div>
-              <div class="fg two">
-                <div class="fi">
-                  <label>End Time</label>
-                  <input type="time" formControlName="endTime" />
-                </div>
-                <div class="fi">
-                  <label>Room / Hall</label>
-                  <input formControlName="roomOrHall" placeholder="e.g. Hall A" />
-                </div>
-              </div>
-              <div class="fg two">
-                <div class="fi">
-                  <label>Status</label>
-                  <select formControlName="status">
-                    @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }
-                  </select>
-                </div>
-                <div class="fi">
-                  <label>Remarks</label>
-                  <input formControlName="remarks" placeholder="Optional remarks" />
-                </div>
-              </div>
-              @if (formError()) { <div class="alert-error"><span class="material-icons-round">error_outline</span> {{ formError() }}</div> }
-              <div class="modal-footer">
-                <button type="button" class="btn-secondary" (click)="closeForm()">Cancel</button>
-                <button type="submit" class="btn-primary" [disabled]="saving()">
-                  @if (saving()) { <span class="material-icons-round spin">refresh</span> Saving… }
-                  @else { <span class="material-icons-round">save</span> Save }
-                </button>
-              </div>
-            </form>
+          <div class="flex flex-col gap-1">
+            <label class="fl">Start Time *</label>
+            <input pInputText class="w-full" type="time" formControlName="startTime" />
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="fl">End Time</label>
+            <input pInputText class="w-full" type="time" formControlName="endTime" />
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="fl">Room / Hall</label>
+            <input pInputText class="w-full" formControlName="roomOrHall" placeholder="e.g. Hall A" />
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="fl">Status</label>
+            <p-select
+              class="w-full"
+              formControlName="status"
+              [options]="statuses"
+              appendTo="body"
+              [overlayOptions]="overlayOpts" />
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="fl">Remarks</label>
+            <input pInputText class="w-full" formControlName="remarks" placeholder="Optional remarks" />
           </div>
         </div>
-      </div>
-    }
+        @if (formError()) {
+          <p-message severity="error" icon="pi pi-exclamation-circle" [text]="formError()" />
+        }
+      </form>
+      <ng-template #footer>
+        <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="closeForm()" />
+        <p-button label="Save" icon="pi pi-save" [loading]="saving()" [disabled]="saving()" (onClick)="save()" />
+      </ng-template>
+    </p-dialog>
 
     <app-confirm-delete />
     </div>
   `,
   styles: [`
     :host { display:block; min-width:0; }
-    .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
-    .ph-left { display:flex; align-items:center; gap:12px; }
-    .ph-icon { width:44px; height:44px; border-radius:12px; background:var(--accent-s); display:flex; align-items:center; justify-content:center; }
-    .ph-icon .material-icons-round { color:var(--accent); font-size:22px; }
-    .ph-left h1 { font-size:18px; font-weight:700; color:var(--t1); margin:0 0 2px; }
-    .ph-left p  { font-size:12px; color:var(--t3); margin:0; }
-
-    .filter-bar { display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
-    .filter-bar select, .filter-bar input { padding:8px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; background:var(--surface); color:var(--t1); outline:none; }
-    .filter-bar select:focus, .filter-bar input:focus { border-color:var(--accent); }
-
-    .loading-state, .empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px; color:var(--t4); gap:10px; }
-    .empty-state .material-icons-round { font-size:48px; opacity:.3; }
+    .fl { font-size:11px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.4px; }
 
     .schedule-table-wrap { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:auto; }
     .schedule-table { width:100%; border-collapse:collapse; font-size:13px; }
@@ -198,41 +204,6 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
     .paper-info { display:flex; flex-direction:column; }
     .paper-name { font-weight:600; }
     .subject-name { font-size:11.5px; color:var(--t3); }
-    .type-badge { font-size:11px; font-weight:700; padding:3px 8px; border-radius:99px; background:var(--accent-s); color:var(--accent); }
-    .status-badge { font-size:11px; font-weight:700; padding:3px 8px; border-radius:99px; }
-    .status-scheduled { background:#dbeafe; color:#1d4ed8; }
-    .status-ongoing   { background:#fef3c7; color:#92400e; }
-    .status-completed { background:var(--green-s); color:var(--green); }
-    .status-postponed, .status-cancelled { background:var(--red-s); color:var(--red); }
-
-    .row-actions { display:flex; gap:6px; }
-    .btn-sm { display:flex; align-items:center; gap:4px; padding:5px 8px; border-radius:7px; font-size:12px; border:none; cursor:pointer; transition:all .15s; }
-    .btn-sm .material-icons-round { font-size:14px; }
-    .btn-outline { background:var(--surface); color:var(--t2); border:1px solid var(--border) !important; }
-    .btn-outline:hover { border-color:var(--accent) !important; color:var(--accent); }
-    .btn-danger  { background:var(--red-s); color:var(--red); border:1px solid var(--red-b) !important; }
-    .btn-danger:hover  { background:var(--red); color:#fff; }
-
-    .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; z-index:1000; padding:16px; }
-    .modal { background:var(--surface); border-radius:16px; width:100%; max-width:560px; max-height:90vh; overflow-y:auto; box-shadow:var(--sh-xl); }
-    .modal-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--border); }
-    .modal-header h2 { font-size:16px; font-weight:700; color:var(--t1); margin:0; }
-    .modal-body { padding:20px; }
-    .modal-footer { display:flex; justify-content:flex-end; gap:10px; padding-top:16px; border-top:1px solid var(--border); margin-top:8px; }
-    .icon-btn { width:30px; height:30px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--t3); cursor:pointer; display:flex; align-items:center; justify-content:center; }
-    .icon-btn .material-icons-round { font-size:16px; }
-
-    .fg { display:flex; gap:12px; margin-bottom:12px; }
-    .fg.two .fi { flex:1; }
-    .fi { display:flex; flex-direction:column; gap:5px; }
-    .fi.full { flex:1; }
-    label { font-size:11px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.4px; }
-    input, select { padding:8px 11px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; background:var(--surface); color:var(--t1); outline:none; width:100%; transition:border-color .15s; }
-    input:focus, select:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-g); }
-    .alert-error { display:flex; align-items:center; gap:8px; padding:10px 14px; background:var(--red-s); border:1px solid var(--red-b); border-radius:8px; font-size:12.5px; color:var(--red); margin-bottom:10px; }
-    .alert-error .material-icons-round { font-size:16px; }
-    @keyframes spin { to { transform:rotate(360deg); } }
-    .spin { animation:spin .8s linear infinite; display:inline-block; }
   `]
 })
 export class ExamScheduleComponent implements OnInit {
@@ -256,18 +227,24 @@ export class ExamScheduleComponent implements OnInit {
   filterTo    = '';
 
   readonly statuses = EXAM_STATUSES;
+  /** Dialog-hosted selects: overlay must sit above p-dialog. */
+  readonly overlayOpts = { baseZIndex: 1200 };
 
   pageTitle = computed(() =>
     this.menuSvc.titleForRoute('/exams/schedule', 'Exam Schedule')
   );
 
-  classFilterOptions = computed<OsSelectOption<string>[]>(() => [
+  classFilterOptions = computed<SelectOpt<string>[]>(() => [
     { value: '', label: 'All classes' },
     ...this.classes().map(c => ({ value: String(c.classId), label: c.className as string }))
   ]);
 
+  paperOptions = computed<SelectOpt<number>[]>(() =>
+    this.papers().map(p => ({ value: p.examPaperId as number, label: `${p.title} – ${p.className}` }))
+  );
+
   form = this.fb.group({
-    examPaperId: ['', Validators.required],
+    examPaperId: ['' as string | number | null, Validators.required],
     examDate:    ['', Validators.required],
     startTime:   ['', Validators.required],
     endTime:     [''],
@@ -292,9 +269,11 @@ export class ExamScheduleComponent implements OnInit {
     ).subscribe({ next: s => { this.schedules.set(s); this.loading.set(false); }, error: () => this.loading.set(false) });
   }
 
-  statusClass(s: string) {
-    const m: Record<string, string> = { Scheduled:'status-scheduled', Ongoing:'status-ongoing', Completed:'status-completed', Postponed:'status-postponed', Cancelled:'status-cancelled' };
-    return m[s] ?? '';
+  statusSeverity(s: string): 'info' | 'warn' | 'success' | 'danger' | 'secondary' {
+    const m: Record<string, 'info' | 'warn' | 'success' | 'danger'> = {
+      Scheduled: 'info', Ongoing: 'warn', Completed: 'success', Postponed: 'danger', Cancelled: 'danger'
+    };
+    return m[s] ?? 'secondary';
   }
 
   openForm(schedule?: ExamScheduleDto) {

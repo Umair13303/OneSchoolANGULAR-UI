@@ -1,6 +1,9 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { Tag } from 'primeng/tag';
 import { FeeService } from '../../../core/services/fee.service';
 import { AcademicService } from '../../../core/services/academic.service';
 import { FeeReportRowDto } from '../../../core/models/fee.model';
@@ -10,35 +13,45 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
 @Component({
   selector: 'app-fee-report',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent],
+  imports: [CommonModule, FormsModule, PageHeaderComponent, Button, Select, Tag],
   template: `
     <app-page-header title="Fee Report" subtitle="Outstanding and collection summary by class or school-wide">
-      <button class="btn-secondary" (click)="print()">🖨️ Print</button>
+      <p-button label="Print" icon="pi pi-print" severity="secondary" [outlined]="true" (onClick)="print()" />
     </app-page-header>
 
     <!-- Filters -->
-    <div class="filter-bar card no-print">
+    <div class="filter-bar card no-print flex flex-wrap items-end gap-3">
       <div class="field">
         <label>Academic Year *</label>
-        <select [(ngModel)]="yearId" (change)="onYearChange()">
-          <option [ngValue]="null">Select year</option>
-          @for (y of years(); track y.academicYearId) {
-            <option [ngValue]="y.academicYearId">{{ y.yearLabel }}</option>
-          }
-        </select>
+        <p-select
+          class="min-w-[180px]"
+          [options]="years()"
+          optionLabel="yearLabel"
+          optionValue="academicYearId"
+          placeholder="Select year"
+          appendTo="body"
+          [(ngModel)]="yearId"
+          (onChange)="onYearChange()" />
       </div>
       <div class="field">
         <label>Class (optional)</label>
-        <select [(ngModel)]="classId" (change)="load()">
-          <option [ngValue]="null">All Classes</option>
-          @for (c of classes(); track c.classId) {
-            <option [ngValue]="c.classId">{{ c.className }} {{ c.section }}</option>
-          }
-        </select>
+        <p-select
+          class="min-w-[180px]"
+          [options]="classOptions()"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="All Classes"
+          [showClear]="true"
+          appendTo="body"
+          [(ngModel)]="classId"
+          (onChange)="load()" />
       </div>
-      <button class="btn-primary" (click)="load()" [disabled]="!yearId || loading()">
-        @if (loading()) { Loading... } @else { Generate Report }
-      </button>
+      <p-button
+        [label]="loading() ? 'Loading...' : 'Generate Report'"
+        icon="pi pi-chart-bar"
+        [loading]="loading()"
+        [disabled]="!yearId || loading()"
+        (onClick)="load()" />
     </div>
 
     @if (rows().length) {
@@ -109,7 +122,7 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
                 <td style="text-align:right">{{ row.totalDiscount ? (row.totalDiscount | number:'1.0-0') : '—' }}</td>
                 <td class="paid-col" style="text-align:right">{{ row.totalPaid | number:'1.0-0' }}</td>
                 <td [class.balance-col]="row.balance > 0" style="text-align:right"><strong>{{ row.balance | number:'1.0-0' }}</strong></td>
-                <td style="text-align:center"><span [class]="rowStatusClass(row)">{{ rowStatus(row) }}</span></td>
+                <td style="text-align:center"><p-tag [value]="rowStatus(row)" [severity]="rowSeverity(row)" [rounded]="true" /></td>
                 <td style="text-align:center"><span class="pill red">{{ row.unpaidCount }}</span></td>
                 <td style="text-align:center"><span class="pill orange">{{ row.partialCount }}</span></td>
                 <td style="text-align:center"><span class="pill green">{{ row.paidCount }}</span></td>
@@ -123,7 +136,7 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
               <td style="text-align:right"><strong>{{ totalDiscount() | number:'1.0-0' }}</strong></td>
               <td style="text-align:right"><strong>{{ totalPaid() | number:'1.0-0' }}</strong></td>
               <td style="text-align:right"><strong>{{ totalBalance() | number:'1.0-0' }}</strong></td>
-              <td style="text-align:center"><span [class]="'pill ' + (totalBalance() === 0 ? 'green' : totalPaid() > 0 ? 'orange' : 'red')">{{ totalBalance() === 0 ? 'Paid' : totalPaid() > 0 ? 'Partial' : 'Unpaid' }}</span></td>
+              <td style="text-align:center"><p-tag [value]="totalBalance() === 0 ? 'Paid' : totalPaid() > 0 ? 'Partial' : 'Unpaid'" [severity]="totalBalance() === 0 ? 'success' : totalPaid() > 0 ? 'warn' : 'danger'" [rounded]="true" /></td>
               <td style="text-align:center"><strong>{{ unpaidStudents() }}</strong></td>
               <td style="text-align:center"><strong>{{ partialStudents() }}</strong></td>
               <td style="text-align:center"><strong>{{ paidStudents() }}</strong></td>
@@ -144,11 +157,9 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
     }
   `,
   styles: [`
-    .filter-bar { display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:16px; padding:16px 20px; }
+    .filter-bar { margin-bottom:16px; padding:16px 20px; }
     .field { display:flex; flex-direction:column; gap:5px; min-width:160px; }
     label { font-size:11px; font-weight:600; color:var(--t3); text-transform:uppercase; letter-spacing:.5px; }
-    select { padding:9px 12px; border:1.5px solid var(--border); border-radius:7px; font-size:13.5px; font-family:inherit; background:var(--surface); color:var(--t1); }
-    select:focus { outline:none; border-color:var(--accent); }
 
     .summary-strip { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:16px; }
     .stat-card { background:var(--surface); border-radius:10px; padding:14px 16px; box-shadow:var(--sh); border-left:4px solid var(--accent); }
@@ -210,6 +221,14 @@ export class FeeReportComponent implements OnInit {
     if (row.balance === 0)                    return 'Paid';
     if (row.totalPaid > 0 && row.balance > 0) return 'Partial';
     return 'Unpaid';
+  }
+
+  classOptions = computed(() =>
+    this.classes().map(c => ({ label: `${c.className} ${c.section ?? ''}`.trim(), value: c.classId })));
+
+  rowSeverity(row: FeeReportRowDto): 'success' | 'warn' | 'danger' {
+    const s = this.rowStatus(row);
+    return s === 'Paid' ? 'success' : s === 'Partial' ? 'warn' : 'danger';
   }
 
   rowStatusClass(row: FeeReportRowDto) {

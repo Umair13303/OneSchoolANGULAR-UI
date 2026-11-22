@@ -1,6 +1,14 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
+import { InputNumber } from 'primeng/inputnumber';
+import { Tag } from 'primeng/tag';
+import { Dialog } from 'primeng/dialog';
+import { TableModule } from 'primeng/table';
+import { Tooltip } from 'primeng/tooltip';
 import { FeeService } from '../../../core/services/fee.service';
 import { DiscountPolicyDto, DISCOUNT_TYPES, VALUE_TYPES } from '../../../core/models/fee.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -10,11 +18,14 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
 @Component({
   selector: 'app-fee-discounts',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, PageHeaderComponent, ConfirmDeleteComponent],
+  imports: [
+    CommonModule, ReactiveFormsModule, PageHeaderComponent, ConfirmDeleteComponent,
+    Button, Select, InputText, InputNumber, Tag, Dialog, TableModule, Tooltip
+  ],
   template: `
     <app-page-header title="Discount Policies" subtitle="Reusable discount rules applied automatically during fee generation" />
 
-    <div class="card">
+    <div class="card table-card">
       <div class="card-head">
         <div class="head-meta">
           <span class="material-icons-round head-icon">local_offer</span>
@@ -23,9 +34,7 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
             <p>{{ policies().length }} polic{{ policies().length !== 1 ? 'ies' : 'y' }} defined</p>
           </div>
         </div>
-        <button class="btn-primary" (click)="openModal()">
-          <span class="material-icons-round">add</span> Add Policy
-        </button>
+        <p-button label="Add Policy" icon="pi pi-plus" (onClick)="openModal()" />
       </div>
 
       <!-- Legend -->
@@ -35,129 +44,157 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
         }
       </div>
 
-      <table class="table">
-        <thead>
-          <tr><th>Policy Name</th><th>Type</th><th>Value</th><th>Description</th><th>Sibling</th><th>Status</th><th>Actions</th></tr>
-        </thead>
-        <tbody>
-          @for (dp of policies(); track dp.discountPolicyId) {
+      <div class="w-full overflow-x-auto">
+        <p-table [value]="policies()" dataKey="discountPolicyId" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '100%' }">
+          <ng-template #header>
+            <tr>
+              <th>Policy Name</th><th>Type</th><th>Value</th><th>Description</th><th>Sibling</th><th>Status</th>
+              <th class="text-right">Actions</th>
+            </tr>
+          </ng-template>
+          <ng-template #body let-dp>
             <tr>
               <td><strong>{{ dp.name }}</strong></td>
               <td><span class="dt-chip dt-{{ dp.discountType.toLowerCase() }}">{{ typeLabel(dp.discountType) }}</span></td>
               <td><strong>{{ dp.valueType === 'Percentage' ? dp.value + '%' : 'PKR ' + (dp.value | number:'1.0-0') }}</strong></td>
               <td class="desc-cell">{{ dp.description || '—' }}</td>
               <td>{{ dp.maxSiblingOrder ? dp.maxSiblingOrder + ordinalSuffix(dp.maxSiblingOrder) + ' child' : '—' }}</td>
-              <td><span [class]="'badge ' + (dp.isActive ? 'badge-green' : 'badge-gray')">{{ dp.isActive ? 'Active' : 'Inactive' }}</span></td>
-              <td class="actions">
-                <button class="icon-btn" (click)="editPolicy(dp)" title="Edit"><span class="material-icons-round">edit</span></button>
-                <button class="icon-btn danger" (click)="deletePolicy(dp.discountPolicyId)" title="Delete"><span class="material-icons-round">delete</span></button>
+              <td><p-tag [value]="dp.isActive ? 'Active' : 'Inactive'" [severity]="dp.isActive ? 'success' : 'secondary'" [rounded]="true" /></td>
+              <td>
+                <div class="flex items-center justify-end gap-1 whitespace-nowrap">
+                  <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" severity="secondary" ariaLabel="Edit" pTooltip="Edit" (onClick)="editPolicy(dp)" />
+                  <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Delete" pTooltip="Delete" (onClick)="deletePolicy(dp.discountPolicyId)" />
+                </div>
               </td>
             </tr>
-          }
-          @if (!policies().length) {
+          </ng-template>
+          <ng-template #emptymessage>
             <tr><td colspan="7" class="empty-cell">
               <span class="material-icons-round">local_offer</span>
               <p>No discount policies yet. Add one to enable automatic discounts.</p>
             </td></tr>
-          }
-        </tbody>
-      </table>
+          </ng-template>
+        </p-table>
+      </div>
     </div>
 
-    <!-- Modal -->
-    @if (showModal()) {
-      <div class="overlay" (click)="closeModal()">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <div class="modal-head">
-            <div class="modal-icon"><span class="material-icons-round">local_offer</span></div>
-            <div>
-              <h3>{{ editingId() ? 'Edit' : 'Add' }} Discount Policy</h3>
-              <p>{{ editingId() ? 'Update this discount rule.' : 'Create a reusable discount rule.' }}</p>
-            </div>
-            <button class="close-btn" (click)="closeModal()"><span class="material-icons-round">close</span></button>
+    <p-dialog
+      [header]="(editingId() ? 'Edit' : 'Add') + ' Discount Policy'"
+      [visible]="showModal()"
+      (visibleChange)="showModal.set($event)"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '36rem' }"
+      [breakpoints]="{ '640px': '96vw' }">
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <p class="sub mb-3">{{ editingId() ? 'Update this discount rule.' : 'Create a reusable discount rule.' }}</p>
+        <div class="row-2">
+          <div class="field flex-2">
+            <label for="dp-name">Policy Name <span class="req">*</span></label>
+            <input pInputText id="dp-name" class="w-full" formControlName="name" placeholder="e.g. Sibling Discount – 2nd Child" />
+            @if (f('name')?.invalid && f('name')?.touched) { <span class="err">Name is required.</span> }
           </div>
-          <form [formGroup]="form" (ngSubmit)="save()" class="modal-body">
-            <div class="row-2">
-              <div class="field flex-2" [class.invalid]="f('name')?.invalid && f('name')?.touched">
-                <label>Policy Name <span class="req">*</span></label>
-                <input formControlName="name" placeholder="e.g. Sibling Discount – 2nd Child" />
-                @if (f('name')?.invalid && f('name')?.touched) { <span class="err">Name is required.</span> }
-              </div>
-              <div class="field flex-1" [class.invalid]="f('discountType')?.invalid && f('discountType')?.touched">
-                <label>Type <span class="req">*</span></label>
-                <select formControlName="discountType" (change)="onTypeChange()">
-                  <option value="">Select…</option>
-                  @for (dt of discountTypes; track dt.value) {
-                    <option [value]="dt.value">{{ dt.label }}</option>
-                  }
-                </select>
-                @if (f('discountType')?.invalid && f('discountType')?.touched) { <span class="err">Required.</span> }
-              </div>
-            </div>
-
-            <div class="row-2">
-              <div class="field flex-1">
-                <label>Value Type <span class="req">*</span></label>
-                <select formControlName="valueType">
-                  @for (vt of valueTypes; track vt.value) { <option [value]="vt.value">{{ vt.label }}</option> }
-                </select>
-              </div>
-              <div class="field flex-1" [class.invalid]="f('value')?.invalid && f('value')?.touched">
-                <label>Value {{ form.value.valueType === 'Percentage' ? '(%)' : '(PKR)' }} <span class="req">*</span></label>
-                <input type="number" formControlName="value" min="0"
-                  [max]="form.value.valueType === 'Percentage' ? 100 : 9999999"
-                  [placeholder]="form.value.valueType === 'Percentage' ? 'e.g. 25' : 'e.g. 1500'" />
-                @if (f('value')?.invalid && f('value')?.touched) { <span class="err">Valid value required.</span> }
-              </div>
-              @if (showSiblingOrder) {
-                <div class="field flex-1">
-                  <label>Applies to (Child #)</label>
-                  <select formControlName="maxSiblingOrder">
-                    <option [ngValue]="null">Any sibling</option>
-                    <option [ngValue]="2">2nd child</option>
-                    <option [ngValue]="3">3rd child</option>
-                    <option [ngValue]="4">4th child</option>
-                    <option [ngValue]="5">5th child+</option>
-                  </select>
-                </div>
-              }
-            </div>
-
-            <div class="field">
-              <label>Description</label>
-              <input formControlName="description" placeholder="Brief description of this discount policy" />
-            </div>
-
-            @if (editingId()) {
-              <div class="field">
-                <label>Status</label>
-                <select formControlName="isActive">
-                  <option [ngValue]="true">Active</option>
-                  <option [ngValue]="false">Inactive</option>
-                </select>
-              </div>
-            }
-
-            @if (form.value.discountType === 'FullWaiver') {
-              <div class="info-box">
-                <strong>Full Waiver</strong> — set Value to 100% to waive the entire fee for assigned students.
-              </div>
-            }
-
-            @if (modalError()) { <div class="alert-err"><span class="material-icons-round">error_outline</span> {{ modalError() }}</div> }
-            <div class="modal-footer">
-              <button type="button" class="btn-secondary" (click)="closeModal()">Cancel</button>
-              <button type="submit" class="btn-primary" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
-            </div>
-          </form>
+          <div class="field flex-1">
+            <label>Type <span class="req">*</span></label>
+            <p-select
+              class="w-full"
+              [options]="discountTypes"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Select…"
+              appendTo="body"
+              [overlayOptions]="{ baseZIndex: 10050 }"
+              [invalid]="!!(f('discountType')?.invalid && f('discountType')?.touched)"
+              formControlName="discountType"
+              (onChange)="onTypeChange()" />
+            @if (f('discountType')?.invalid && f('discountType')?.touched) { <span class="err">Required.</span> }
+          </div>
         </div>
-      </div>
-    }
+
+        <div class="row-2">
+          <div class="field flex-1">
+            <label>Value Type <span class="req">*</span></label>
+            <p-select
+              class="w-full"
+              [options]="valueTypes"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              [overlayOptions]="{ baseZIndex: 10050 }"
+              formControlName="valueType" />
+          </div>
+          <div class="field flex-1">
+            <label>Value {{ form.value.valueType === 'Percentage' ? '(%)' : '(PKR)' }} <span class="req">*</span></label>
+            <p-inputnumber
+              formControlName="value"
+              [min]="0"
+              [max]="form.value.valueType === 'Percentage' ? 100 : 9999999"
+              [useGrouping]="false"
+              [maxFractionDigits]="2"
+              [placeholder]="form.value.valueType === 'Percentage' ? 'e.g. 25' : 'e.g. 1500'"
+              [invalid]="!!(f('value')?.invalid && f('value')?.touched)"
+              styleClass="w-full"
+              inputStyleClass="w-full" />
+            @if (f('value')?.invalid && f('value')?.touched) { <span class="err">Valid value required.</span> }
+          </div>
+          @if (showSiblingOrder) {
+            <div class="field flex-1">
+              <label>Applies to (Child #)</label>
+              <p-select
+                class="w-full"
+                [options]="siblingOrderOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Any sibling"
+                [showClear]="true"
+                appendTo="body"
+                [overlayOptions]="{ baseZIndex: 10050 }"
+                formControlName="maxSiblingOrder" />
+            </div>
+          }
+        </div>
+
+        <div class="field">
+          <label for="dp-desc">Description</label>
+          <input pInputText id="dp-desc" class="w-full" formControlName="description" placeholder="Brief description of this discount policy" />
+        </div>
+
+        @if (editingId()) {
+          <div class="field">
+            <label>Status</label>
+            <p-select
+              class="w-full"
+              [options]="statusOptions"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              [overlayOptions]="{ baseZIndex: 10050 }"
+              formControlName="isActive" />
+          </div>
+        }
+
+        @if (form.value.discountType === 'FullWaiver') {
+          <div class="info-box">
+            <strong>Full Waiver</strong> — set Value to 100% to waive the entire fee for assigned students.
+          </div>
+        }
+
+        @if (modalError()) { <div class="alert-err"><span class="material-icons-round">error_outline</span> {{ modalError() }}</div> }
+      </form>
+      <ng-template #footer>
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="closeModal()" />
+          <p-button [label]="saving() ? 'Saving…' : 'Save'" icon="pi pi-check" [loading]="saving()" [disabled]="saving()" (onClick)="save()" />
+        </div>
+      </ng-template>
+    </p-dialog>
 
     <app-confirm-delete />
   `,
   styles: [`
-    .card { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; margin-top:16px; }
+    .table-card { padding:0; overflow:hidden; margin-top:16px; }
     .card-head {
       display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
       padding:16px 20px; border-bottom:1px solid var(--border); background:var(--surface-2);
@@ -166,8 +203,6 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
     .head-icon { font-size:22px; color:#065f46; }
     .card-head h3 { font-size:15px; font-weight:700; color:var(--t1); margin:0; }
     .card-head p  { font-size:12px; color:var(--t4); margin:2px 0 0; }
-    .btn-primary { display:inline-flex; align-items:center; gap:6px; }
-    .btn-primary .material-icons-round { font-size:17px; }
 
     .legend { display:flex; flex-wrap:wrap; gap:6px; padding:12px 20px; border-bottom:1px solid var(--border); }
 
@@ -185,45 +220,18 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
     .dt-earlypayment { background:#ede9fe; color:#6d28d9; }
     .dt-custom       { background:#f3f4f6; color:#374151; }
 
-    .badge { padding:3px 9px; border-radius:12px; font-size:11.5px; font-weight:600; }
-    .badge-green { background:var(--green-s); color:var(--green); }
-    .badge-gray  { background:var(--surface-2); color:var(--t4); }
-
-    .actions { display:flex; gap:2px; }
-    .icon-btn { border:none; background:transparent; cursor:pointer; padding:6px; color:var(--t3); display:flex; align-items:center; border-radius:6px; transition:all .15s; }
-    .icon-btn:hover { color:var(--t1); background:var(--surface-2); }
-    .icon-btn .material-icons-round { font-size:18px; }
-    .icon-btn.danger:hover { color:#ef4444; background:rgba(239,68,68,.08); }
-
-    /* Modal */
-    .overlay { position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; padding:16px; }
-    .modal { background:var(--surface); border-radius:14px; width:100%; max-width:560px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 40px rgba(0,0,0,.2); animation:fp .18s cubic-bezier(.34,1.4,.64,1); }
-    @keyframes fp { from { transform:scale(.93); opacity:0 } to { transform:scale(1); opacity:1 } }
-    .modal-head { display:flex; align-items:center; gap:12px; padding:18px 20px; border-bottom:1px solid var(--border); background:var(--surface-2); position:sticky; top:0; }
-    .modal-icon { width:38px; height:38px; border-radius:9px; background:#d1fae5; color:#065f46; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-    .modal-icon .material-icons-round { font-size:20px; }
-    .modal-head h3 { font-size:15px; font-weight:700; color:var(--t1); margin:0; }
-    .modal-head p  { font-size:12px; color:var(--t4); margin:2px 0 0; }
-    .close-btn { margin-left:auto; border:none; background:transparent; cursor:pointer; color:var(--t4); padding:6px; border-radius:7px; display:flex; align-items:center; transition:all .15s; }
-    .close-btn:hover { background:var(--surface-2); color:var(--t1); }
-    .close-btn .material-icons-round { font-size:20px; }
-
-    .modal-body { padding:20px; }
+    .sub { font-size:12px; color:var(--t4); }
     .row-2 { display:flex; gap:12px; flex-wrap:wrap; }
     .field { display:flex; flex-direction:column; gap:5px; margin-bottom:14px; min-width:120px; }
     .field.flex-1 { flex:1; }
     .field.flex-2 { flex:2; }
     label { font-size:11px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.5px; }
     .req { color:var(--red); }
-    input, select { padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13.5px; font-family:inherit; background:var(--surface); color:var(--t1); transition:border-color .15s, box-shadow .15s; }
-    input:focus, select:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-g); }
-    .field.invalid input, .field.invalid select { border-color:var(--red); }
     .err { font-size:11.5px; color:var(--red); }
 
     .info-box { background:var(--accent-g); border:1px solid var(--accent); border-radius:7px; padding:10px 14px; font-size:12.5px; color:var(--t2); margin-bottom:14px; }
     .alert-err { display:flex; align-items:center; gap:8px; background:#fee2e2; color:#dc2626; border:1px solid #dc2626; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:12px; }
     .alert-err .material-icons-round { font-size:17px; flex-shrink:0; }
-    .modal-footer { display:flex; justify-content:flex-end; gap:10px; padding-top:12px; border-top:1px solid var(--border); margin-top:4px; }
   `]
 })
 export class FeeDiscountsComponent implements OnInit {
@@ -238,6 +246,13 @@ export class FeeDiscountsComponent implements OnInit {
   modalError  = signal('');
   discountTypes = DISCOUNT_TYPES;
   valueTypes    = VALUE_TYPES;
+  statusOptions = [{ label: 'Active', value: true }, { label: 'Inactive', value: false }];
+  siblingOrderOptions = [
+    { label: '2nd child',  value: 2 },
+    { label: '3rd child',  value: 3 },
+    { label: '4th child',  value: 4 },
+    { label: '5th child+', value: 5 }
+  ];
 
   form = this.fb.group({
     name:            ['', Validators.required],

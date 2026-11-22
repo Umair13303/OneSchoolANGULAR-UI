@@ -59,7 +59,10 @@
             "styles": [
               "node_modules/quill/dist/quill.snow.css",
               "node_modules/katex/dist/katex.min.css",
-              "src/styles.scss"
+              "node_modules/primeicons/primeicons.css",
+              "src/styles.tailwind.css",
+              "src/styles.scss",
+              "src/styles.primeng-bridge.scss"
             ],
             "loader": {
               ".woff": "file",

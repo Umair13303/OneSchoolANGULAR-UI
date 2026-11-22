@@ -14,11 +14,13 @@ import { ChatService } from '../core/services/chat.service';
 import { SwalNotificationService } from '../core/services/swal-notification.service';
 import { MenuItemTree } from '../core/models/menu.model';
 import { environment } from '../../environments/environment';
+import { Toast } from 'primeng/toast';
+import { ConfirmDialog } from 'primeng/confirmdialog';
 
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [CommonModule, RouterModule, ChatPanelComponent],
+  imports: [CommonModule, RouterModule, ChatPanelComponent, Toast, ConfirmDialog],
   template: `
     <div class="shell" [class.is-teacher]="isTeacherApp()" [class.sb-collapsed]="collapsed()">
 
@@ -329,6 +331,10 @@ import { environment } from '../../environments/environment';
     @if (showChatPanel()) {
       <app-chat-panel />
     }
+
+    <!-- Global PrimeNG feedback hosts (MessageService / ConfirmationService in app.config) -->
+    <p-toast position="top-right" />
+    <p-confirmDialog />
   `,
   styles: [`
     .shell {
@@ -337,28 +343,60 @@ import { environment } from '../../environments/environment';
       background: transparent;
     }
 
-    /* ═══ SIDEBAR ═══════════════════════════════════════ */
+    /* ═══ SIDEBAR — light by default, ink only in dark ══════════════ */
     .sidebar {
       --sb-pad-x: 12px;
-      width: 260px;
+      --sb-bg: #ffffff;
+      --sb-bg-2: #f8fafc;
+      --sb-text: #0f172a;
+      --sb-muted: #475569;
+      --sb-faint: #94a3b8;
+      --sb-hover: rgba(15, 23, 42, 0.05);
+      --sb-active: rgba(79, 110, 247, 0.12);
+      --sb-active-text: #2f4fd6;
+      --sb-active-icon: #3d5ce5;
+      --sb-line: rgba(15, 23, 42, 0.08);
+      --sb-well: rgba(15, 23, 42, 0.04);
+      --sb-well-hover: rgba(15, 23, 42, 0.07);
+      --sb-well-active: rgba(79, 110, 247, 0.16);
+      --sb-glow: rgba(79, 110, 247, 0.12);
+      --sb-shadow: 8px 0 24px rgba(15, 23, 42, 0.06);
+      width: 256px;
       background:
-        linear-gradient(180deg, color-mix(in srgb, var(--accent) 4%, var(--surface)) 0%, var(--surface) 28%, var(--surface-2) 100%);
-      border-right: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+        radial-gradient(120% 60% at 0% 0%, var(--sb-glow), transparent 55%),
+        linear-gradient(180deg, var(--sb-bg-2) 0%, var(--sb-bg) 100%);
+      border-right: 1px solid var(--sb-line);
       display: flex; flex-direction: column;
       flex-shrink: 0;
-      transition: width 0.28s cubic-bezier(.4,0,.2,1);
+      transition: width 0.28s cubic-bezier(.4,0,.2,1), background 0.2s ease, color 0.2s ease;
       position: relative; z-index: var(--z-sidebar);
-      box-shadow:
-        1px 0 0 color-mix(in srgb, var(--accent) 6%, transparent),
-        8px 0 28px rgba(15, 23, 42, 0.04);
+      box-shadow: var(--sb-shadow);
       overflow: hidden;
+      color: var(--sb-text);
+    }
+    :host-context([data-theme="dark"]) .sidebar {
+      --sb-bg: #070b14;
+      --sb-bg-2: #0c1220;
+      --sb-text: #f1f5f9;
+      --sb-muted: #94a3b8;
+      --sb-faint: #64748b;
+      --sb-hover: rgba(255, 255, 255, 0.06);
+      --sb-active: rgba(79, 110, 247, 0.22);
+      --sb-active-text: #ffffff;
+      --sb-active-icon: #a5b8ff;
+      --sb-line: rgba(148, 163, 184, 0.12);
+      --sb-well: rgba(255, 255, 255, 0.04);
+      --sb-well-hover: rgba(255, 255, 255, 0.08);
+      --sb-well-active: rgba(79, 110, 247, 0.28);
+      --sb-glow: rgba(79, 110, 247, 0.28);
+      --sb-shadow: 8px 0 28px rgba(0, 0, 0, 0.35);
     }
     .sidebar-glow {
       pointer-events: none;
       position: absolute; inset: 0 auto auto 0;
-      width: 180px; height: 160px;
-      background: radial-gradient(circle at 20% 10%, rgba(var(--accent-rgb), 0.16), transparent 68%);
-      opacity: 0.9;
+      width: 200px; height: 180px;
+      background: radial-gradient(circle at 15% 10%, var(--sb-glow), transparent 68%);
+      opacity: 0.95;
     }
     .sidebar.collapsed { width: 76px; }
     .sidebar.collapsed .brand {
@@ -382,45 +420,40 @@ import { environment } from '../../environments/environment';
     /* Brand */
     .brand {
       position: relative;
-      display: flex; align-items: center; gap: 12px;
-      padding: 18px 14px 16px 16px;
-      overflow: hidden; white-space: nowrap; min-height: 72px;
+      display: flex; align-items: center; gap: 10px;
+      padding: 16px 12px 14px 14px;
+      overflow: hidden; white-space: nowrap; min-height: 64px;
       flex-shrink: 0;
     }
     .brand::after {
       content: '';
-      position: absolute; left: 16px; right: 16px; bottom: 0;
+      position: absolute; left: 14px; right: 14px; bottom: 0;
       height: 1px;
-      background: linear-gradient(90deg, transparent, var(--border) 18%, var(--border) 82%, transparent);
+      background: linear-gradient(90deg, transparent, var(--sb-line) 12%, var(--sb-line) 88%, transparent);
     }
     .brand-mark {
-      width: 40px; height: 40px; border-radius: 12px;
-      background:
-        linear-gradient(145deg, color-mix(in srgb, var(--accent) 18%, var(--surface)), color-mix(in srgb, var(--accent-h) 12%, var(--surface)));
-      border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+      width: 38px; height: 38px; border-radius: 11px;
+      background: linear-gradient(145deg, #5b7cff, #3d5ce5);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
-      box-shadow:
-        0 1px 0 color-mix(in srgb, var(--surface) 70%, transparent) inset,
-        0 8px 18px rgba(var(--accent-rgb), 0.18);
-      transition: transform 0.22s ease, box-shadow 0.22s ease;
+      box-shadow: 0 8px 20px rgba(79, 110, 247, 0.35);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
     .sidebar:not(.collapsed) .brand:hover .brand-mark {
       transform: translateY(-1px);
-      box-shadow:
-        0 1px 0 color-mix(in srgb, var(--surface) 75%, transparent) inset,
-        0 10px 22px rgba(var(--accent-rgb), 0.24);
+      box-shadow: 0 10px 24px rgba(79, 110, 247, 0.42);
     }
-    .brand-mark .material-icons-round { font-size: 20px; color: #fff; font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; }
-    .brand-logo-img { width: 28px; height: 28px; object-fit: contain; border-radius: 7px; }
-    .brand-copy { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+    .brand-mark .material-icons-round { font-size: 18px; color: #fff; font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; }
+    .brand-logo-img { width: 24px; height: 24px; object-fit: contain; border-radius: 6px; background: #fff; padding: 2px; }
+    .brand-copy { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
     .brand-name {
-      font-size: 14.5px; font-weight: 700; color: var(--t1);
-      letter-spacing: -0.35px; display: block; line-height: 1.2;
+      font-size: 13.75px; font-weight: 700; color: var(--sb-text);
+      letter-spacing: -0.3px; display: block; line-height: 1.2;
       overflow: hidden; text-overflow: ellipsis;
     }
     .brand-tag {
-      font-size: 9.5px; color: var(--t4); letter-spacing: 0.72px;
+      font-size: 9px; color: var(--sb-faint); letter-spacing: 0.7px;
       text-transform: uppercase; display: block; font-weight: 600;
       overflow: hidden; text-overflow: ellipsis;
     }
@@ -429,106 +462,97 @@ import { environment } from '../../environments/environment';
     .nav {
       position: relative;
       flex: 1;
-      padding: 12px var(--sb-pad-x) 8px;
+      padding: 10px var(--sb-pad-x) 8px;
       overflow-y: auto; overflow-x: hidden;
-      display: flex; flex-direction: column; gap: 3px;
+      display: flex; flex-direction: column; gap: 2px;
       scrollbar-width: thin;
-      scrollbar-color: color-mix(in srgb, var(--t5) 70%, transparent) transparent;
+      scrollbar-color: color-mix(in srgb, var(--t5) 60%, transparent) transparent;
     }
-    .nav::-webkit-scrollbar { width: 5px; }
+    .nav::-webkit-scrollbar { width: 4px; }
     .nav::-webkit-scrollbar-thumb {
-      background: color-mix(in srgb, var(--t5) 75%, transparent);
+      background: color-mix(in srgb, var(--t5) 65%, transparent);
       border-radius: 99px;
     }
     .nav-section-label {
-      font-size: 10px; font-weight: 700; color: var(--t4);
-      text-transform: uppercase; letter-spacing: 1.05px;
-      padding: 12px 10px 6px;
+      font-size: 9.5px; font-weight: 700; color: var(--sb-faint);
+      text-transform: uppercase; letter-spacing: 1px;
+      padding: 16px 10px 6px;
     }
     .nav-divider {
-      height: 1px; margin: 8px 8px;
-      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      height: 1px; margin: 10px 8px;
+      background: linear-gradient(90deg, transparent, var(--sb-line), transparent);
     }
 
     .nav-item {
       display: flex; align-items: center; gap: 10px;
-      padding: 8px 8px 8px 8px;
-      color: var(--t3);
+      padding: 8px 10px;
+      color: var(--sb-muted);
       text-decoration: none; font-size: 13.25px; font-weight: 500;
-      border-radius: 12px; white-space: nowrap;
+      border-radius: 11px; white-space: nowrap;
       border: 1px solid transparent; background: transparent;
       cursor: pointer; width: 100%; text-align: left;
-      transition:
-        color 0.16s ease,
-        background 0.16s ease,
-        border-color 0.16s ease,
-        box-shadow 0.18s ease,
-        transform 0.16s ease;
+      transition: color 0.14s ease, background 0.14s ease, border-color 0.14s ease;
       position: relative; font-family: inherit;
     }
     .nav-item:hover {
-      color: var(--t1);
-      background: color-mix(in srgb, var(--surface) 70%, transparent);
-      border-color: color-mix(in srgb, var(--border) 70%, transparent);
+      color: var(--sb-text);
+      background: var(--sb-hover);
+      border-color: transparent;
     }
     .nav-item.active {
-      color: var(--accent-d);
-      background: linear-gradient(135deg, var(--accent-s), color-mix(in srgb, var(--accent-s) 55%, var(--surface)));
-      border-color: color-mix(in srgb, var(--accent) 18%, transparent);
-      font-weight: 600;
-      box-shadow:
-        0 1px 0 color-mix(in srgb, var(--surface) 65%, transparent) inset,
-        0 6px 14px rgba(var(--accent-rgb), 0.10);
+      color: var(--sb-active-text);
+      background: var(--sb-active);
+      border-color: rgba(79, 110, 247, 0.28);
+      font-weight: 650;
+      box-shadow: inset 0 0 0 1px rgba(79, 110, 247, 0.12);
     }
     .nav-item.active::before {
       content: '';
       position: absolute; left: 0; top: 18%; bottom: 18%;
-      width: 3px; border-radius: 0 4px 4px 0;
-      background: linear-gradient(180deg, var(--accent), var(--accent-h));
-      box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.35);
+      width: 3px; border-radius: 0 3px 3px 0;
+      background: var(--sb-active-icon);
+      box-shadow: 0 0 12px color-mix(in srgb, var(--sb-active-icon) 45%, transparent);
     }
 
     .ni-well {
       width: 30px; height: 30px; border-radius: 9px;
       display: inline-flex; align-items: center; justify-content: center;
       flex-shrink: 0;
-      background: color-mix(in srgb, var(--surface-3) 70%, transparent);
-      transition: background 0.16s ease, transform 0.16s ease;
+      background: var(--sb-well);
+      transition: background 0.14s ease;
     }
     .nav-item:hover .ni-well {
-      background: color-mix(in srgb, var(--accent) 10%, var(--surface-2));
-      transform: translateY(-0.5px);
+      background: var(--sb-well-hover);
     }
     .nav-item.active .ni-well {
-      background: color-mix(in srgb, var(--accent) 16%, var(--surface));
-      box-shadow: 0 1px 0 color-mix(in srgb, var(--surface) 70%, transparent) inset;
+      background: var(--sb-well-active);
     }
     .ni {
       font-size: 18px; line-height: 1;
-      color: var(--t4);
+      color: var(--sb-muted);
       transition: color 0.15s;
-      font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+      font-variation-settings: 'FILL' 0, 'wght' 350, 'GRAD' 0, 'opsz' 24;
     }
-    .nav-item:hover .ni { color: var(--t2); }
+    .nav-item:hover .ni { color: var(--sb-text); }
     .nav-item.active .ni {
-      color: var(--accent);
-      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      color: var(--sb-active-icon);
+      font-variation-settings: 'FILL' 1, 'wght' 450, 'GRAD' 0, 'opsz' 24;
     }
     .nl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
     .caret {
-      font-size: 18px; margin-left: auto; color: var(--t5);
+      font-size: 18px; margin-left: auto; color: var(--sb-faint);
       transition: transform 0.24s cubic-bezier(.4,0,.2,1), color 0.16s;
     }
     .nav-parent.open .caret,
-    .nav-parent.active .caret { color: var(--accent); }
+    .nav-parent.active .caret { color: var(--sb-active-icon); }
     .nav-parent.open .caret { transform: rotate(180deg); }
 
     .nav-group { position: relative; }
 
     .nav-sub {
-      margin: 2px 0 6px 23px;
+      margin: 2px 0 6px 22px;
       display: flex; flex-direction: column; gap: 2px;
-      border-left: 2px solid color-mix(in srgb, var(--accent) 16%, var(--border));
+      border-left: 2px solid rgba(79, 110, 247, 0.28);
       padding: 2px 0 2px 10px;
       animation: navSubIn 0.2s cubic-bezier(.22,1,.36,1);
     }
@@ -539,31 +563,29 @@ import { environment } from '../../environments/environment';
     .nav-sub-item {
       display: flex; align-items: center; gap: 8px;
       padding: 8px 10px;
-      color: var(--t3);
+      color: var(--sb-muted);
       font-size: 12.75px; font-weight: 500;
-      text-decoration: none; border-radius: 10px;
+      text-decoration: none; border-radius: 9px;
       border: 1px solid transparent;
-      transition: color 0.15s, background 0.15s, border-color 0.15s;
+      transition: color 0.15s, background 0.15s;
     }
     .nav-sub-item:hover {
-      color: var(--t1);
-      background: color-mix(in srgb, var(--surface) 80%, transparent);
-      border-color: color-mix(in srgb, var(--border) 65%, transparent);
+      color: var(--sb-text);
+      background: var(--sb-hover);
     }
     .nav-sub-item.active {
-      color: var(--accent-d);
-      font-weight: 600;
-      background: var(--accent-s);
-      border-color: color-mix(in srgb, var(--accent) 14%, transparent);
+      color: var(--sb-active-text);
+      font-weight: 650;
+      background: var(--sb-active);
     }
     .sub-icon {
-      font-size: 15px; color: var(--t4);
+      font-size: 15px; color: var(--sb-faint);
       font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
       transition: color 0.15s;
     }
-    .nav-sub-item:hover .sub-icon { color: var(--t2); }
+    .nav-sub-item:hover .sub-icon { color: var(--sb-text); }
     .nav-sub-item.active .sub-icon {
-      color: var(--accent);
+      color: var(--sb-active-icon);
       font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20;
     }
     .sub-label { overflow: hidden; text-overflow: ellipsis; }
@@ -578,26 +600,24 @@ import { environment } from '../../environments/environment';
       content: '';
       position: absolute; left: 16px; right: 16px; top: 0;
       height: 1px;
-      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      background: linear-gradient(90deg, transparent, var(--sb-line), transparent);
     }
     .toggle-btn {
       margin-top: 8px;
       width: 100%;
       padding: 9px 12px;
-      border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
-      background: color-mix(in srgb, var(--surface) 85%, transparent);
-      color: var(--t3); border-radius: 11px; cursor: pointer;
+      border: 1px solid var(--sb-line);
+      background: var(--sb-well);
+      color: var(--sb-muted); border-radius: 11px; cursor: pointer;
       display: flex; align-items: center; justify-content: flex-start; gap: 8px;
       transition: all 0.16s ease; font-family: inherit;
-      backdrop-filter: blur(6px);
     }
     .toggle-btn .material-icons-round { font-size: 18px; }
     .toggle-label { font-size: 12px; font-weight: 600; letter-spacing: 0.01em; }
     .toggle-btn:hover {
-      background: var(--accent-s);
-      color: var(--accent);
-      border-color: color-mix(in srgb, var(--accent) 22%, transparent);
-      box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.10);
+      background: var(--sb-active);
+      color: var(--sb-active-text);
+      border-color: rgba(79, 110, 247, 0.35);
     }
 
     /* ═══ MAIN ═══════════════════════════════════════ */
@@ -608,36 +628,34 @@ import { environment } from '../../environments/environment';
       min-width: 0;
       background-color: var(--bg);
       background-image:
-        radial-gradient(900px 420px at 80% -8%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 55%),
-        linear-gradient(180deg, color-mix(in srgb, var(--bg-glow, #f5f8fc) 80%, transparent), transparent 220px);
+        radial-gradient(820px 380px at 82% -10%, color-mix(in srgb, var(--accent) 3.5%, transparent), transparent 58%),
+        linear-gradient(180deg, color-mix(in srgb, var(--bg-glow) 70%, transparent), transparent 200px);
     }
 
     /* 62px -> 56px. The bar carries a date string, theme, notifications and
        the user pill; 56px holds all of it and returns 6px to content. */
     .topbar {
-      height: 56px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      /* Gutter matches .page-content so the bar's contents line up with the
-         page title below it; previously 28px against a 28px page padding,
-         now both 20px. */
-      padding: 0 20px;
+      height: 54px;
+      background: color-mix(in srgb, var(--surface) 92%, transparent);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
+      /* Gutter matches .page-content */
+      padding: 0 24px;
       display: flex; align-items: center; justify-content: space-between;
-      /* Was z-index 10, which a sticky form footer (100) painted over.
-         The ladder in styles.scss now orders these deliberately. */
       position: sticky; top: 0; z-index: var(--z-topbar); flex-shrink: 0;
-      box-shadow: var(--sh-xs);
+      box-shadow: none;
     }
     .topbar-l { display: flex; align-items: center; gap: 12px; }
-    .page-date { font-size: 12px; color: var(--t4); font-weight: 500; }
-    .topbar-r { display: flex; align-items: center; gap: 8px; }
+    .page-date { font-size: 12px; color: var(--t4); font-weight: 500; letter-spacing: 0.01em; }
+    .topbar-r { display: flex; align-items: center; gap: 6px; }
 
     /* User pill */
     .user-wrap { position: relative; }
     .user-pill {
-      display: flex; align-items: center; gap: 9px;
-      padding: 5px 12px 5px 5px;
-      background: var(--surface-2); border: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+      padding: 4px 10px 4px 4px;
+      background: var(--surface-2);
+      border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
       border-radius: 99px; cursor: pointer;
       transition: all 0.15s; font: inherit;
     }
@@ -677,9 +695,10 @@ import { environment } from '../../environments/environment';
 
     /* Icon buttons */
     .icon-btn, .sign-out {
-      width: 36px; height: 36px;
-      border: 1px solid var(--border); background: var(--surface);
-      color: var(--t3); border-radius: 10px; cursor: pointer;
+      width: 34px; height: 34px;
+      border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+      background: var(--surface);
+      color: var(--t3); border-radius: 9px; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       transition: all 0.15s;
     }
@@ -743,7 +762,7 @@ import { environment } from '../../environments/environment';
        The pages that compensated for the old 28px with a local
        :host margin-top of -16px have had that workaround removed in
        the same change, so every page now aligns at one offset. */
-    .page-content { padding: 20px; flex: 1; overflow-y: auto; }
+    .page-content { padding: 14px 20px 20px; flex: 1; overflow-y: auto; }
 
     /* ═══ NOTIFICATION BELL ═══════════════════════════ */
     .notif-wrap { position: relative; }
@@ -989,15 +1008,15 @@ import { environment } from '../../environments/environment';
       }
       .mob-menu-btn .material-icons-round { font-size: 20px; }
 
-      /* Close X inside sidebar */
+      /* Close X inside ink sidebar */
       .mob-close {
         display: flex; align-items: center; justify-content: center;
         margin-left: auto; width: 30px; height: 30px;
         border: none; background: none; cursor: pointer;
-        color: var(--t4); border-radius: 8px;
+        color: var(--sb-muted); border-radius: 8px;
         flex-shrink: 0;
       }
-      .mob-close:hover { background: var(--surface-2); color: var(--t1); }
+      .mob-close:hover { background: var(--sb-hover); color: var(--sb-text); }
       .mob-close .material-icons-round { font-size: 20px; }
 
       /* Desktop collapse button hidden on mobile */

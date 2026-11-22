@@ -3,6 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { Tag } from 'primeng/tag';
+import { Dialog } from 'primeng/dialog';
+import { InputNumber } from 'primeng/inputnumber';
+import { Tooltip } from 'primeng/tooltip';
 import { FeeService } from '../../../core/services/fee.service';
 import { AcademicService } from '../../../core/services/academic.service';
 import { FeeStructureDto, FEE_CATEGORIES } from '../../../core/models/fee.model';
@@ -26,29 +32,38 @@ interface StructureGroup {
 @Component({
   selector: 'app-fee-structures',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, PageHeaderComponent, ConfirmDeleteComponent],
+  imports: [
+    CommonModule, FormsModule, ReactiveFormsModule, PageHeaderComponent, ConfirmDeleteComponent,
+    Button, Select, Tag, Dialog, InputNumber, Tooltip
+  ],
   template: `
     <app-page-header title="Fee Structures" subtitle="Assign fee amounts to classes per academic year" />
 
     <!-- Toolbar -->
-    <div class="toolbar">
-      <div class="filters">
-        <select [(ngModel)]="filterYearId" (change)="load()">
-          <option [ngValue]="null">All Years</option>
-          @for (y of years(); track y.academicYearId) {
-            <option [ngValue]="y.academicYearId">{{ y.yearLabel }}</option>
-          }
-        </select>
-        <select [(ngModel)]="filterClassId" (change)="load()">
-          <option [ngValue]="null">All Classes</option>
-          @for (c of classes(); track c.classId) {
-            <option [ngValue]="c.classId">{{ c.className }}</option>
-          }
-        </select>
+    <div class="toolbar mb-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <p-select
+          class="w-full sm:w-52"
+          [options]="years()"
+          optionLabel="yearLabel"
+          optionValue="academicYearId"
+          placeholder="All Years"
+          [showClear]="true"
+          appendTo="body"
+          [(ngModel)]="filterYearId"
+          (onChange)="load()" />
+        <p-select
+          class="w-full sm:w-52"
+          [options]="classes()"
+          optionLabel="className"
+          optionValue="classId"
+          placeholder="All Classes"
+          [showClear]="true"
+          appendTo="body"
+          [(ngModel)]="filterClassId"
+          (onChange)="load()" />
       </div>
-      <button class="btn-primary" (click)="goCreate()">
-        <span class="material-icons-round">add</span> Add Structure
-      </button>
+      <p-button label="Add Structure" icon="pi pi-plus" (onClick)="goCreate()" />
     </div>
 
     <!-- Table card -->
@@ -88,9 +103,7 @@ interface StructureGroup {
                   <strong class="total-amt">{{ g.grandTotal | number:'1.0-0' }}</strong>
                 </td>
                 <td class="td-actions" (click)="$event.stopPropagation()">
-                  <button class="icon-btn danger" (click)="deleteGroup(g)" title="Delete all lines">
-                    <span class="material-icons-round">delete</span>
-                  </button>
+                  <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Delete all lines" pTooltip="Delete all lines" (onClick)="deleteGroup(g)" />
                 </td>
               </tr>
 
@@ -113,20 +126,14 @@ interface StructureGroup {
                               </div>
                             </div>
                             <div class="dl-status">
-                              <span [class]="'badge ' + (fs.isActive ? 'badge-green' : 'badge-gray')">
-                                {{ fs.isActive ? 'Active' : 'Inactive' }}
-                              </span>
+                              <p-tag [value]="fs.isActive ? 'Active' : 'Inactive'" [severity]="fs.isActive ? 'success' : 'secondary'" [rounded]="true" />
                             </div>
                             <div class="dl-amount">
                               <span class="dl-val">{{ fs.amount | number:'1.0-0' }}</span>
                             </div>
                             <div class="dl-btns">
-                              <button class="icon-btn" (click)="openEdit(fs)" title="Edit">
-                                <span class="material-icons-round">edit</span>
-                              </button>
-                              <button class="icon-btn danger" (click)="deleteLine(fs.feeStructureId)" title="Delete">
-                                <span class="material-icons-round">delete</span>
-                              </button>
+                              <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" severity="secondary" ariaLabel="Edit" pTooltip="Edit" (onClick)="openEdit(fs)" />
+                              <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Delete" pTooltip="Delete" (onClick)="deleteLine(fs.feeStructureId)" />
                             </div>
                           </div>
                         }
@@ -157,47 +164,53 @@ interface StructureGroup {
     </div>
 
     <!-- Edit Modal -->
-    @if (showModal()) {
-      <div class="overlay" (click)="closeModal()">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <div class="modal-hd">
-            <div class="modal-icon"><span class="material-icons-round">edit_note</span></div>
-            <div><h3>Edit Fee Line</h3><p>Update amount or status.</p></div>
-            <button class="close-btn" (click)="closeModal()"><span class="material-icons-round">close</span></button>
-          </div>
-          <form [formGroup]="editForm" (ngSubmit)="saveEdit()" class="modal-body">
-            <div class="field" [class.invalid]="ef('amount')?.invalid && ef('amount')?.touched">
-              <label>Amount (PKR) <span class="req">*</span></label>
-              <input type="number" formControlName="amount" placeholder="e.g. 5000" min="1" />
-              @if (ef('amount')?.invalid && ef('amount')?.touched) { <span class="err">Valid amount required.</span> }
-            </div>
-            <div class="field">
-              <label>Status</label>
-              <select formControlName="isActive">
-                <option [ngValue]="true">Active</option>
-                <option [ngValue]="false">Inactive</option>
-              </select>
-            </div>
-            @if (modalError()) { <div class="alert-err">{{ modalError() }}</div> }
-            <div class="modal-ft">
-              <button type="button" class="btn-secondary" (click)="closeModal()">Cancel</button>
-              <button type="submit" class="btn-primary" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
-            </div>
-          </form>
+    <p-dialog
+      header="Edit Fee Line"
+      [visible]="showModal()"
+      (visibleChange)="showModal.set($event)"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '24rem' }"
+      [breakpoints]="{ '640px': '96vw' }">
+      <form [formGroup]="editForm" (ngSubmit)="saveEdit()">
+        <p class="mb-3 text-xs text-[var(--t4)]">Update amount or status.</p>
+        <div class="field">
+          <label>Amount (PKR) <span class="req">*</span></label>
+          <p-inputnumber
+            formControlName="amount"
+            placeholder="e.g. 5000"
+            [min]="1"
+            [useGrouping]="false"
+            styleClass="w-full"
+            inputStyleClass="w-full" />
+          @if (ef('amount')?.invalid && ef('amount')?.touched) { <span class="err">Valid amount required.</span> }
         </div>
-      </div>
-    }
+        <div class="field">
+          <label>Status</label>
+          <p-select
+            class="w-full"
+            [options]="statusOptions"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+            [overlayOptions]="{ baseZIndex: 10050 }"
+            formControlName="isActive" />
+        </div>
+        @if (modalError()) { <div class="alert-err">{{ modalError() }}</div> }
+      </form>
+      <ng-template #footer>
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="closeModal()" />
+          <p-button [label]="saving() ? 'Saving…' : 'Save'" icon="pi pi-check" [loading]="saving()" [disabled]="saving()" (onClick)="saveEdit()" />
+        </div>
+      </ng-template>
+    </p-dialog>
 
     <app-confirm-delete />
   `,
   styles: [`
-    .toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
-    .filters { display:flex; gap:8px; flex-wrap:wrap; }
-    .filters select { padding:8px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; background:var(--surface); color:var(--t1); }
-    .filters select:focus { outline:none; border-color:var(--accent); }
-    .btn-primary { display:inline-flex; align-items:center; gap:6px; }
-    .btn-primary .material-icons-round { font-size:16px; }
-
     .card { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
 
     .empty-state { display:flex; flex-direction:column; align-items:center; gap:10px; text-align:center; padding:48px 20px; color:var(--t4); }
@@ -269,36 +282,9 @@ interface StructureGroup {
     .cat-ondemand          { background:#fef9c3; color:#854d0e; }
     .cat-refundabledeposit { background:#fce7f3; color:#be185d; }
 
-    .badge { padding:2px 8px; border-radius:12px; font-size:11.5px; font-weight:600; }
-    .badge-green { background:var(--green-s); color:var(--green); }
-    .badge-gray  { background:var(--surface-2); color:var(--t4); }
-
-    .icon-btn { border:none; background:transparent; cursor:pointer; padding:5px; color:var(--t3); display:flex; align-items:center; border-radius:6px; transition:all .15s; }
-    .icon-btn:hover { color:var(--t1); background:rgba(0,0,0,.06); }
-    .icon-btn .material-icons-round { font-size:17px; }
-    .icon-btn.danger:hover { color:#ef4444; background:rgba(239,68,68,.08); }
-
-    /* Modal */
-    .overlay { position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; padding:16px; }
-    .modal { background:var(--surface); border-radius:14px; width:100%; max-width:380px; box-shadow:0 24px 48px rgba(0,0,0,.2); overflow:hidden; animation:pop .18s cubic-bezier(.34,1.4,.64,1); }
-    @keyframes pop { from { transform:scale(.93); opacity:0 } to { transform:scale(1); opacity:1 } }
-    .modal-hd { display:flex; align-items:center; gap:12px; padding:16px 18px; border-bottom:1px solid var(--border); background:var(--surface-2); }
-    .modal-icon { width:36px; height:36px; border-radius:9px; background:var(--accent-s); color:var(--accent); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-    .modal-icon .material-icons-round { font-size:19px; }
-    .modal-hd h3 { font-size:14.5px; font-weight:700; color:var(--t1); margin:0; }
-    .modal-hd p  { font-size:11.5px; color:var(--t4); margin:2px 0 0; }
-    .close-btn { margin-left:auto; border:none; background:transparent; cursor:pointer; color:var(--t4); padding:5px; border-radius:7px; display:flex; transition:all .15s; }
-    .close-btn:hover { background:var(--surface); color:var(--t1); }
-    .close-btn .material-icons-round { font-size:19px; }
-    .modal-body { padding:18px; }
-    .modal-ft { display:flex; justify-content:flex-end; gap:10px; padding-top:12px; border-top:1px solid var(--border); margin-top:4px; }
-
     .field { display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
     label { font-size:10.5px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.5px; }
     .req  { color:var(--red); }
-    input, select { padding:9px 11px; border:1.5px solid var(--border); border-radius:8px; font-size:13.5px; font-family:inherit; background:var(--surface); color:var(--t1); transition:border-color .15s; }
-    input:focus, select:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-g); }
-    .field.invalid input { border-color:var(--red); }
     .err { font-size:11px; color:var(--red); }
     .alert-err { background:#fee2e2; color:#dc2626; border:1px solid #dc2626; border-radius:8px; padding:9px 13px; font-size:13px; margin-bottom:10px; }
   `]
@@ -318,6 +304,7 @@ export class FeeStructuresComponent implements OnInit {
   filterClassId: number | null = null;
 
   expandedKeys = new Set<string>();
+  statusOptions = [{ label: 'Active', value: true }, { label: 'Inactive', value: false }];
 
   showModal  = signal(false);
   editingId  = signal<number | null>(null);

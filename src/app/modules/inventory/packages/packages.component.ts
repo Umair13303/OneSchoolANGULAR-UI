@@ -1,6 +1,14 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormArray, FormGroup, Validators } from '@angular/forms';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
+import { InputNumber } from 'primeng/inputnumber';
+import { Textarea } from 'primeng/textarea';
+import { Tag } from 'primeng/tag';
+import { Dialog } from 'primeng/dialog';
+import { Tooltip } from 'primeng/tooltip';
 import { InventoryService } from '../../../core/services/inventory.service';
 import { PackageDto, ItemDto } from '../../../core/models/inventory.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -10,10 +18,13 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
 @Component({
   selector: 'app-packages',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, PageHeaderComponent, ConfirmDeleteComponent],
+  imports: [
+    CommonModule, ReactiveFormsModule, PageHeaderComponent, ConfirmDeleteComponent,
+    Button, Select, InputText, InputNumber, Textarea, Tag, Dialog, Tooltip
+  ],
   template: `
     <app-page-header title="Packages (Book Sets)" subtitle="Bundle multiple items into one sellable package">
-      <button class="btn-primary" (click)="openAdd()"><span class="material-icons-round">add</span> Add Package</button>
+      <p-button label="Add Package" icon="pi pi-plus" (onClick)="openAdd()" />
     </app-page-header>
 
     <div class="grid">
@@ -24,16 +35,16 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
               <h3>{{ p.packageName }}</h3>
               <p>{{ p.packageCode }} · {{ p.details.length }} item{{ p.details.length !== 1 ? 's' : '' }}</p>
             </div>
-            <span [class]="'badge ' + (p.isActive ? 'badge-green' : 'badge-gray')">{{ p.isActive ? 'Active' : 'Inactive' }}</span>
+            <p-tag [value]="p.isActive ? 'Active' : 'Inactive'" [severity]="p.isActive ? 'success' : 'secondary'" [rounded]="true" />
           </div>
           <ul class="pkg-items">
             @for (d of p.details; track d.packageDetailId) { <li>{{ d.itemName }} <span>× {{ d.quantity }}</span></li> }
           </ul>
           <div class="pkg-ft">
             <strong>Rs. {{ p.packagePrice | number:'1.2-2' }}</strong>
-            <div class="actions">
-              <button class="icon-btn" (click)="openEdit(p)" title="Edit"><span class="material-icons-round">edit</span></button>
-              <button class="icon-btn danger" (click)="deletePkg(p)" title="Delete"><span class="material-icons-round">delete</span></button>
+            <div class="flex items-center gap-1">
+              <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" severity="secondary" ariaLabel="Edit" pTooltip="Edit" (onClick)="openEdit(p)" />
+              <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Delete" pTooltip="Delete" (onClick)="deletePkg(p)" />
             </div>
           </div>
         </div>
@@ -41,43 +52,55 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
       @if (!packages().length) { <p class="empty">No packages yet. Click <strong>Add Package</strong> to bundle items like a "Class 1 Book Set".</p> }
     </div>
 
-    @if (showModal()) {
-      <div class="overlay" (click)="showModal.set(false)">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <div class="modal-hd"><h3>{{ editingId() ? 'Edit' : 'Add' }} Package</h3><button class="close-btn" (click)="showModal.set(false)"><span class="material-icons-round">close</span></button></div>
-          <form [formGroup]="form" (ngSubmit)="save()" class="modal-body">
-            <div class="grid2">
-              <div class="field"><label>Package Name <span class="req">*</span></label><input formControlName="packageName" /></div>
-              <div class="field"><label>Package Code</label><input formControlName="packageCode" placeholder="auto if blank" /></div>
-              <div class="field"><label>Package Price <span class="req">*</span></label><input type="number" step="0.01" formControlName="packagePrice" /></div>
-              @if (editingId()) { <div class="field"><label>Status</label><select formControlName="isActive"><option [ngValue]="true">Active</option><option [ngValue]="false">Inactive</option></select></div> }
+    <p-dialog
+      [header]="(editingId() ? 'Edit' : 'Add') + ' Package'"
+      [visible]="showModal()"
+      (visibleChange)="showModal.set($event)"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '38rem' }"
+      [breakpoints]="{ '640px': '96vw' }">
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <div class="grid grid-cols-1 gap-x-3.5 sm:grid-cols-2">
+          <div class="field"><label for="pk-name">Package Name <span class="req">*</span></label><input pInputText id="pk-name" class="w-full" formControlName="packageName" /></div>
+          <div class="field"><label for="pk-code">Package Code</label><input pInputText id="pk-code" class="w-full" formControlName="packageCode" placeholder="auto if blank" /></div>
+          <div class="field"><label for="pk-price">Package Price <span class="req">*</span></label>
+            <p-inputnumber inputId="pk-price" styleClass="w-full" inputStyleClass="w-full" [minFractionDigits]="0" [maxFractionDigits]="2" formControlName="packagePrice" />
+          </div>
+          @if (editingId()) {
+            <div class="field"><label>Status</label>
+              <p-select class="w-full" [options]="statusOptions" optionLabel="label" optionValue="value"
+                        appendTo="body" [overlayOptions]="{ baseZIndex: 10050 }" formControlName="isActive" />
             </div>
-            <div class="field"><label>Description</label><textarea formControlName="description" rows="2"></textarea></div>
-
-            <label>Package Contents <span class="req">*</span></label>
-            <div formArrayName="details" class="lines">
-              @for (line of details.controls; track $index; let i = $index) {
-                <div [formGroupName]="i" class="line">
-                  <select formControlName="itemId" class="line-item">
-                    <option [ngValue]="null">Select item…</option>
-                    @for (it of allItems(); track it.itemId) { <option [ngValue]="it.itemId">{{ it.itemName }}</option> }
-                  </select>
-                  <input type="number" step="0.01" formControlName="quantity" class="line-qty" placeholder="Qty" />
-                  <button type="button" class="icon-btn danger" (click)="removeLine(i)"><span class="material-icons-round">close</span></button>
-                </div>
-              }
-            </div>
-            <button type="button" class="btn-secondary add-line" (click)="addLine()"><span class="material-icons-round">add</span> Add Item</button>
-
-            @if (modalError()) { <div class="alert-err">{{ modalError() }}</div> }
-            <div class="modal-ft">
-              <button type="button" class="btn-secondary" (click)="showModal.set(false)">Cancel</button>
-              <button type="submit" class="btn-primary" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
-            </div>
-          </form>
+          }
         </div>
-      </div>
-    }
+        <div class="field"><label for="pk-desc">Description</label><textarea pTextarea id="pk-desc" class="w-full" formControlName="description" rows="2"></textarea></div>
+
+        <label class="block-label">Package Contents <span class="req">*</span></label>
+        <div formArrayName="details" class="lines">
+          @for (line of details.controls; track $index; let i = $index) {
+            <div [formGroupName]="i" class="flex items-center gap-2">
+              <p-select class="min-w-0 flex-1" [options]="allItems()" optionLabel="itemName" optionValue="itemId"
+                        placeholder="Select item…" [filter]="true" filterBy="itemName"
+                        appendTo="body" [overlayOptions]="{ baseZIndex: 10050 }" formControlName="itemId" />
+              <p-inputnumber styleClass="w-24" inputStyleClass="w-24" placeholder="Qty" [minFractionDigits]="0" [maxFractionDigits]="2" formControlName="quantity" />
+              <p-button type="button" icon="pi pi-times" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Remove item" pTooltip="Remove" (onClick)="removeLine(i)" />
+            </div>
+          }
+        </div>
+        <p-button type="button" class="add-line" label="Add Item" icon="pi pi-plus" severity="secondary" [outlined]="true" size="small" (onClick)="addLine()" />
+
+        @if (modalError()) { <div class="alert-err">{{ modalError() }}</div> }
+      </form>
+      <ng-template #footer>
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="showModal.set(false)" />
+          <p-button [label]="saving() ? 'Saving…' : 'Save'" icon="pi pi-check" [loading]="saving()" [disabled]="saving()" (onClick)="save()" />
+        </div>
+      </ng-template>
+    </p-dialog>
 
     <app-confirm-delete />
   `,
@@ -93,30 +116,12 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
     .pkg-ft { display:flex; justify-content:space-between; align-items:center; padding-top:10px; border-top:1px solid var(--border); }
     .pkg-ft strong { font-size:14px; color:var(--t1); }
     .empty { text-align:center; color:var(--t4); padding:32px 0; font-size:13px; grid-column:1/-1; }
-    .actions { display:flex; gap:2px; }
-    .icon-btn { border:none; background:transparent; cursor:pointer; padding:6px; color:var(--t3); border-radius:6px; }
-    .icon-btn:hover { color:var(--t1); background:var(--surface-2); }
-    .icon-btn.danger:hover { color:#ef4444; background:rgba(239,68,68,.08); }
-    .badge { padding:3px 9px; border-radius:12px; font-size:11.5px; font-weight:600; white-space:nowrap; }
-    .badge-green { background:var(--green-s); color:var(--green); }
-    .badge-gray { background:var(--surface-2); color:var(--t4); }
-    .overlay { position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; padding:16px; overflow-y:auto; }
-    .modal { background:var(--surface); border-radius:16px; width:100%; max-width:560px; margin:auto; }
-    .modal-hd { display:flex; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid var(--border); background:var(--surface-2); }
-    .modal-hd h3 { font-size:15px; font-weight:700; margin:0; }
-    .close-btn { margin-left:auto; border:none; background:transparent; cursor:pointer; color:var(--t4); padding:6px; border-radius:8px; }
-    .modal-body { padding:20px; max-height:75vh; overflow-y:auto; }
-    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:0 14px; }
-    .modal-ft { display:flex; justify-content:flex-end; gap:10px; padding-top:12px; border-top:1px solid var(--border); margin-top:4px; }
     .field { display:flex; flex-direction:column; gap:5px; margin-bottom:14px; }
-    label { font-size:11px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.5px; display:block; margin-bottom:6px; }
+    .field > label, .block-label { font-size:11px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.5px; }
+    .block-label { display:block; margin-bottom:6px; }
     .req { color:var(--red); }
-    input, select, textarea { padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13.5px; font-family:inherit; background:var(--surface); color:var(--t1); width:100%; }
     .lines { display:flex; flex-direction:column; gap:8px; margin-bottom:8px; }
-    .line { display:flex; gap:8px; align-items:center; }
-    .line-item { flex:1; }
-    .line-qty { width:90px; }
-    .add-line { display:inline-flex; align-items:center; gap:6px; margin-bottom:16px; }
+    .add-line { display:inline-block; margin-bottom:16px; }
     .alert-err { background:#fee2e2; color:#dc2626; border:1px solid #dc2626; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:10px; }
   `]
 })
@@ -125,6 +130,7 @@ export class PackagesComponent implements OnInit {
   private confirmDelete = inject(ConfirmDeleteService);
   private fb = inject(FormBuilder);
 
+  statusOptions = [{ label: 'Active', value: true }, { label: 'Inactive', value: false }];
   packages = signal<PackageDto[]>([]);
   allItems = signal<ItemDto[]>([]);
   showModal = signal(false);

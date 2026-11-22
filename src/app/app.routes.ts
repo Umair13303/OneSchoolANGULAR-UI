@@ -108,9 +108,15 @@ export const routes: Routes = [
         loadComponent: () => import('./modules/academics/academic-years/academic-years.component').then(m => m.AcademicYearsComponent)
       },
       {
+        path: 'academics/calendar',
+        canActivate: [roleGuard],
+        data: { roles: ['superadmin','admin','principal','teacher','parent'] },
+        loadComponent: () => import('./modules/academics/academic-calendar/academic-calendar.component').then(m => m.AcademicCalendarComponent)
+      },
+      {
         path: 'academics/years/:yearId/calendar',
         canActivate: [roleGuard],
-        data: { roles: ['superadmin','admin','principal'] },
+        data: { roles: ['superadmin','admin','principal','teacher','parent'] },
         loadComponent: () => import('./modules/academics/academic-calendar/academic-calendar.component').then(m => m.AcademicCalendarComponent)
       },
 

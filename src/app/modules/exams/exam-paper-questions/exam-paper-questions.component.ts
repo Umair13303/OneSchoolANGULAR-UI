@@ -2,6 +2,10 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
+import { Textarea } from 'primeng/textarea';
 import { ExamService } from '../../../core/services/exam.service';
 import { AssessmentService } from '../../../core/services/assessment.service';
 import {
@@ -40,7 +44,7 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
 @Component({
   selector: 'app-exam-paper-questions',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, Button, Select, InputText, Textarea],
   styles: [`
     :host { display:block; font-family:inherit; }
 
@@ -52,17 +56,6 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
     .ph-icon .material-icons-round { font-size:22px; }
     .ph-left h1 { margin:0; font-size:1.3rem; font-weight:700; color:var(--t1,#1e293b); }
     .ph-left p  { margin:0; font-size:.82rem; color:var(--t3,#64748b); }
-
-    /* ── Buttons ── */
-    .btn-primary   { display:flex; align-items:center; gap:.4rem; padding:.5rem 1.1rem; border:none; border-radius:8px;
-                     background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; font-weight:600; cursor:pointer; font-size:.88rem; }
-    .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
-    .btn-secondary { display:flex; align-items:center; gap:.4rem; padding:.45rem 1rem; border:1.5px solid #e2e8f0;
-                     border-radius:8px; background:#fff; color:#475569; font-weight:500; cursor:pointer; font-size:.88rem; }
-    .btn-ghost { background:transparent; border:none; cursor:pointer; color:#94a3b8; padding:.25rem; border-radius:6px;
-                 display:flex; align-items:center; transition:.15s; }
-    .btn-ghost:hover { background:#f1f5f9; color:#475569; }
-    .btn-ghost:disabled { opacity:.3; cursor:not-allowed; }
 
     /* ── Paper info banner ── */
     .paper-info { background:linear-gradient(135deg,#f8faff,#f0f4ff); border:1px solid #e0e7ff; border-radius:12px;
@@ -91,12 +84,6 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
                border-bottom:1.5px solid #e2e8f0; background:#fafafa; flex-wrap:wrap; gap:.5rem; }
     .add-bar-left { font-size:.82rem; color:#475569; }
     .add-bar-left strong { color:#1e293b; }
-    .btn-add-questions { display:flex; align-items:center; gap:.35rem; padding:.4rem .9rem; border:none; border-radius:8px;
-                         background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; font-size:.82rem; font-weight:600;
-                         cursor:pointer; transition:.15s; }
-    .btn-add-questions:hover { opacity:.88; }
-    .btn-add-questions .material-icons-round { font-size:.95rem; }
-
     /* ── Questions inside section ── */
     .q-list-inner { padding:.75rem 1rem; display:flex; flex-direction:column; gap:.65rem; }
     .q-list-inner:empty { display:none; }
@@ -124,25 +111,12 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
     /* Question text */
     .q-text-row { margin-bottom:.75rem; }
     .q-text-row label { font-size:.75rem; font-weight:600; color:#64748b; display:block; margin-bottom:.3rem; }
-    .q-text-row textarea, .q-text-row select {
-      width:100%; padding:.5rem .75rem; border:1.5px solid #e2e8f0; border-radius:8px;
-      font-size:.88rem; color:#374151; background:#fff; box-sizing:border-box;
-      font-family:inherit;
-    }
-    .q-text-row textarea { resize:vertical; min-height:62px; }
-    .q-text-row textarea:focus, .q-text-row select:focus {
-      outline:none; border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.1);
-    }
-
     /* MCQ options grid */
     .mcq-grid { display:grid; grid-template-columns:1fr 1fr; gap:.45rem .75rem; margin-bottom:.65rem; }
     @media(max-width:520px){ .mcq-grid { grid-template-columns:1fr; } }
     .mcq-opt { display:flex; align-items:center; gap:.5rem; }
     .opt-letter { width:24px; height:24px; border-radius:6px; background:#ede9fe; display:flex; align-items:center;
                   justify-content:center; font-weight:700; font-size:.78rem; color:#6366f1; flex-shrink:0; }
-    .mcq-opt input { flex:1; padding:.38rem .65rem; border:1.5px solid #e2e8f0; border-radius:7px;
-                     font-size:.85rem; font-family:inherit; }
-    .mcq-opt input:focus { outline:none; border-color:#6366f1; }
     .correct-dot { width:18px; height:18px; border-radius:50%; border:2px solid #d1d5db; background:#fff;
                    cursor:pointer; flex-shrink:0; transition:.15s; }
     .correct-dot.active { border-color:#10b981; background:#10b981; }
@@ -150,17 +124,8 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
                                   background:#fff; margin:4px auto 0; }
 
     /* Short answer line */
-    .answer-input { width:100%; padding:.45rem .75rem; border:1.5px solid #e2e8f0; border-radius:8px;
-                    font-size:.88rem; color:#374151; background:#fff; box-sizing:border-box; font-family:inherit; }
-    .answer-input:focus { outline:none; border-color:#6366f1; }
-
     /* T/F */
     .tf-row { display:flex; gap:.75rem; }
-    .tf-btn { padding:.38rem 1rem; border:1.5px solid #e2e8f0; border-radius:8px; cursor:pointer;
-              font-size:.85rem; font-weight:600; background:#fff; color:#374151; transition:.15s; }
-    .tf-btn.sel-t { background:#d1fae5; border-color:#10b981; color:#065f46; }
-    .tf-btn.sel-f { background:#fee2e2; border-color:#ef4444; color:#991b1b; }
-
     /* Row actions */
     .q-actions { display:flex; align-items:center; justify-content:flex-end; gap:.35rem; margin-top:.5rem; }
 
@@ -178,11 +143,6 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
     .lines-row { display:flex; align-items:center; gap:.6rem; margin-bottom:.65rem; flex-wrap:wrap; }
     .lines-row label { font-size:.75rem; font-weight:600; color:#64748b; white-space:nowrap; }
     .lines-stepper { display:flex; align-items:center; gap:.3rem; }
-    .lines-stepper button { width:26px; height:26px; border:1.5px solid #e2e8f0; border-radius:6px;
-                            background:#fff; color:#475569; font-size:1rem; line-height:1; cursor:pointer;
-                            display:flex; align-items:center; justify-content:center; transition:.15s; }
-    .lines-stepper button:hover:not(:disabled) { border-color:#6366f1; color:#6366f1; }
-    .lines-stepper button:disabled { opacity:.3; cursor:not-allowed; }
     .lines-stepper span { min-width:28px; text-align:center; font-size:.88rem; font-weight:700; color:#1e293b; }
     .lines-preview { display:flex; flex-direction:column; gap:6px; margin:6px 0 .65rem; padding:0 2px; }
     .answer-line { height:1px; background:#cbd5e1; border-radius:1px; }
@@ -211,14 +171,8 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
       </div>
     </div>
     <div style="display:flex;gap:.6rem;flex-wrap:wrap">
-      <button class="btn-secondary" (click)="goBack()">
-        <span class="material-icons-round">arrow_back</span> Back
-      </button>
-      <button class="btn-primary" (click)="saveAll()" [disabled]="saving()">
-        @if (saving()) { <span class="material-icons-round spinner">refresh</span> }
-        @else { <span class="material-icons-round">save</span> }
-        Save Paper
-      </button>
+      <p-button label="Back" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="goBack()" />
+      <p-button label="Save Paper" icon="pi pi-save" [loading]="saving()" [disabled]="saving()" (onClick)="saveAll()" />
     </div>
   </div>
 
@@ -275,10 +229,9 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
             <strong>{{ secQs.length }}</strong> / {{ expected || '?' }} questions added
             @if (sec.sectionNote) { — <em>{{ sec.sectionNote }}</em> }
           </span>
-          <button class="btn-add-questions" (click)="generateQuestions(sec, si)">
-            <span class="material-icons-round">add_circle_outline</span>
-            @if (secQs.length === 0) { Add Questions } @else { Add More }
-          </button>
+          <p-button size="small" icon="pi pi-plus-circle"
+            [label]="secQs.length === 0 ? 'Add Questions' : 'Add More'"
+            (onClick)="generateQuestions(sec, si)" />
         </div>
 
         <!-- Question cards for this section -->
@@ -292,9 +245,8 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
                 <span class="q-type-badge" [class]="'type-' + q.questionType">{{ typeLabel(q.questionType) }}</span>
                 <span class="q-preview">{{ q.questionText || '(empty — click to edit)' }}</span>
                 <span class="q-marks-chip">{{ q.marks }}M</span>
-                <button class="btn-ghost" (click)="removeQ(q._idx); $event.stopPropagation()" title="Delete">
-                  <span class="material-icons-round" style="font-size:17px;color:#ef4444">delete</span>
-                </button>
+                <p-button icon="pi pi-trash" severity="danger" [text]="true" [rounded]="true" size="small" ariaLabel="Delete"
+                  (onClick)="removeQ(q._idx); $event.stopPropagation()" />
                 <span class="material-icons-round" style="font-size:18px;color:#94a3b8">
                   {{ q._collapsed ? 'expand_more' : 'expand_less' }}
                 </span>
@@ -306,19 +258,16 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
                   <!-- Question text -->
                   <div class="q-text-row">
                     <label>Question Text</label>
-                    <textarea [(ngModel)]="q.questionText"
+                    <textarea pTextarea class="w-full" [(ngModel)]="q.questionText"
                               [placeholder]="questionPlaceholder(q.questionType, qi + 1)"
                               rows="2"></textarea>
                   </div>
                   @if (syllabusTopics().length) {
                     <div class="q-text-row">
                       <label>Course Topic (optional)</label>
-                      <select [(ngModel)]="q.courseTopicId">
-                        <option [ngValue]="null">— None —</option>
-                        @for (tp of syllabusTopics(); track tp.id) {
-                          <option [ngValue]="tp.id">{{ tp.title }}</option>
-                        }
-                      </select>
+                      <p-select class="w-full" placeholder="— None —" [options]="syllabusTopics()" optionLabel="title" optionValue="id"
+                        [showClear]="true" [filter]="syllabusTopics().length > 8" filterBy="title"
+                        [(ngModel)]="q.courseTopicId" />
                     </div>
                   }
 
@@ -328,7 +277,7 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
                       @for (opt of q.options; track $index; let oi = $index) {
                         <div class="mcq-opt">
                           <span class="opt-letter">{{ ['A','B','C','D'][oi] }}</span>
-                          <input type="text" [(ngModel)]="opt.optionText"
+                          <input pInputText type="text" class="flex-1" [(ngModel)]="opt.optionText"
                                  [placeholder]="'Option ' + ['A','B','C','D'][oi]" />
                           <div class="correct-dot" [class.active]="opt.isCorrect"
                                (click)="setCorrect(q, oi)" title="Mark correct"></div>
@@ -340,8 +289,8 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
                   <!-- True / False -->
                   @if (q.questionType === 2) {
                     <div class="tf-row" style="margin-bottom:.65rem">
-                      <button class="tf-btn" [class.sel-t]="q.isTrue===true"  (click)="q.isTrue=true">✓ True</button>
-                      <button class="tf-btn" [class.sel-f]="q.isTrue===false" (click)="q.isTrue=false">✗ False</button>
+                      <p-button label="True" icon="pi pi-check" size="small" [severity]="q.isTrue===true ? 'success' : 'secondary'" [outlined]="q.isTrue!==true" (onClick)="q.isTrue=true" />
+                      <p-button label="False" icon="pi pi-times" size="small" [severity]="q.isTrue===false ? 'danger' : 'secondary'" [outlined]="q.isTrue!==false" (onClick)="q.isTrue=false" />
                     </div>
                   }
 
@@ -350,9 +299,9 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
                     <div class="lines-row">
                       <label>Answer Lines on Paper:</label>
                       <div class="lines-stepper">
-                        <button type="button" (click)="decLines(q)" [disabled]="!q.answerLines || q.answerLines <= 0">−</button>
+                        <p-button icon="pi pi-minus" size="small" severity="secondary" [outlined]="true" ariaLabel="Fewer lines" (onClick)="decLines(q)" [disabled]="!q.answerLines || q.answerLines <= 0" />
                         <span>{{ q.answerLines || 0 }}</span>
-                        <button type="button" (click)="incLines(q)" [disabled]="(q.answerLines || 0) >= 20">+</button>
+                        <p-button icon="pi pi-plus" size="small" severity="secondary" [outlined]="true" ariaLabel="More lines" (onClick)="incLines(q)" [disabled]="(q.answerLines || 0) >= 20" />
                       </div>
                       <small style="color:#94a3b8">blank lines printed for student to write answer</small>
                     </div>
@@ -365,14 +314,14 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
                     }
                     <div class="q-text-row">
                       <label>Model Answer <small style="color:#94a3b8">(optional, for answer key)</small></label>
-                      <input class="answer-input" type="text" [(ngModel)]="q.correctAnswer"
+                      <input pInputText class="w-full" type="text" [(ngModel)]="q.correctAnswer"
                              placeholder="Enter model answer or marking guide…" />
                     </div>
                   }
                   @if (q.questionType === 3) {
                     <div class="q-text-row">
                       <label>Expected Answer <small style="color:#94a3b8">(fill in the blank)</small></label>
-                      <input class="answer-input" type="text" [(ngModel)]="q.correctAnswer"
+                      <input pInputText class="w-full" type="text" [(ngModel)]="q.correctAnswer"
                              placeholder="Correct answer…" />
                     </div>
                   }
@@ -380,8 +329,7 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
                   <!-- Marks (editable per question) -->
                   <div style="display:flex;align-items:center;gap:.5rem;margin-top:.3rem">
                     <label style="font-size:.75rem;font-weight:600;color:#64748b;margin:0">Marks:</label>
-                    <input type="number" [(ngModel)]="q.marks" min="1" style="width:70px;padding:.32rem .6rem;
-                           border:1.5px solid #e2e8f0;border-radius:7px;font-size:.85rem;" />
+                    <input pInputText type="number" [(ngModel)]="q.marks" min="1" class="w-[80px]" />
                   </div>
 
                 </div>
@@ -405,10 +353,7 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
     <!-- No sections — fallback plain add buttons -->
     <div style="margin-bottom:1rem;display:flex;gap:.6rem;flex-wrap:wrap">
       @for (qt of questionTypes; track qt.value) {
-        <button class="btn-secondary" (click)="addOneQuestion(qt.value)" style="font-size:.82rem;padding:.38rem .8rem">
-          <span class="material-icons-round" style="font-size:.95rem">{{ qt.icon }}</span>
-          {{ qt.label }}
-        </button>
+        <p-button [label]="qt.label" icon="pi pi-plus" size="small" severity="secondary" [outlined]="true" (onClick)="addOneQuestion(qt.value)" />
       }
     </div>
     <div class="q-list-inner">
@@ -419,9 +364,8 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
             <span class="q-type-badge" [class]="'type-' + q.questionType">{{ typeLabel(q.questionType) }}</span>
             <span class="q-preview">{{ q.questionText || '(empty)' }}</span>
             <span class="q-marks-chip">{{ q.marks }}M</span>
-            <button class="btn-ghost" (click)="removeQ(i); $event.stopPropagation()">
-              <span class="material-icons-round" style="font-size:17px;color:#ef4444">delete</span>
-            </button>
+            <p-button icon="pi pi-trash" severity="danger" [text]="true" [rounded]="true" size="small" ariaLabel="Delete"
+              (onClick)="removeQ(i); $event.stopPropagation()" />
             <span class="material-icons-round" style="font-size:18px;color:#94a3b8">
               {{ q._collapsed ? 'expand_more' : 'expand_less' }}
             </span>
@@ -430,17 +374,14 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
             <div class="q-body">
               <div class="q-text-row">
                 <label>Question Text</label>
-                <textarea [(ngModel)]="q.questionText" rows="2" placeholder="Enter question…"></textarea>
+                <textarea pTextarea class="w-full" [(ngModel)]="q.questionText" rows="2" placeholder="Enter question…"></textarea>
               </div>
               @if (syllabusTopics().length) {
                 <div class="q-text-row">
                   <label>Course Topic (optional)</label>
-                  <select [(ngModel)]="q.courseTopicId">
-                    <option [ngValue]="null">— None —</option>
-                    @for (tp of syllabusTopics(); track tp.id) {
-                      <option [ngValue]="tp.id">{{ tp.title }}</option>
-                    }
-                  </select>
+                  <p-select class="w-full" placeholder="— None —" [options]="syllabusTopics()" optionLabel="title" optionValue="id"
+                        [showClear]="true" [filter]="syllabusTopics().length > 8" filterBy="title"
+                        [(ngModel)]="q.courseTopicId" />
                 </div>
               }
               @if (q.questionType === 1) {
@@ -448,7 +389,7 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
                   @for (opt of q.options; track $index; let oi = $index) {
                     <div class="mcq-opt">
                       <span class="opt-letter">{{ ['A','B','C','D'][oi] }}</span>
-                      <input type="text" [(ngModel)]="opt.optionText" [placeholder]="'Option ' + ['A','B','C','D'][oi]" />
+                      <input pInputText type="text" class="flex-1" [(ngModel)]="opt.optionText" [placeholder]="'Option ' + ['A','B','C','D'][oi]" />
                       <div class="correct-dot" [class.active]="opt.isCorrect" (click)="setCorrect(q, oi)"></div>
                     </div>
                   }
@@ -456,17 +397,17 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
               }
               @if (q.questionType === 2) {
                 <div class="tf-row" style="margin-bottom:.65rem">
-                  <button class="tf-btn" [class.sel-t]="q.isTrue===true"  (click)="q.isTrue=true">✓ True</button>
-                  <button class="tf-btn" [class.sel-f]="q.isTrue===false" (click)="q.isTrue=false">✗ False</button>
+                  <p-button label="True" icon="pi pi-check" size="small" [severity]="q.isTrue===true ? 'success' : 'secondary'" [outlined]="q.isTrue!==true" (onClick)="q.isTrue=true" />
+                  <p-button label="False" icon="pi pi-times" size="small" [severity]="q.isTrue===false ? 'danger' : 'secondary'" [outlined]="q.isTrue!==false" (onClick)="q.isTrue=false" />
                 </div>
               }
               @if (q.questionType === 4 || q.questionType === 5) {
                 <div class="lines-row">
                   <label>Answer Lines on Paper:</label>
                   <div class="lines-stepper">
-                    <button type="button" (click)="decLines(q)" [disabled]="!q.answerLines || q.answerLines <= 0">−</button>
+                    <p-button icon="pi pi-minus" size="small" severity="secondary" [outlined]="true" ariaLabel="Fewer lines" (onClick)="decLines(q)" [disabled]="!q.answerLines || q.answerLines <= 0" />
                     <span>{{ q.answerLines || 0 }}</span>
-                    <button type="button" (click)="incLines(q)" [disabled]="(q.answerLines || 0) >= 20">+</button>
+                    <p-button icon="pi pi-plus" size="small" severity="secondary" [outlined]="true" ariaLabel="More lines" (onClick)="incLines(q)" [disabled]="(q.answerLines || 0) >= 20" />
                   </div>
                 </div>
                 @if (q.answerLines && q.answerLines > 0) {
@@ -478,18 +419,18 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
                 }
                 <div class="q-text-row">
                   <label>Model Answer</label>
-                  <input class="answer-input" type="text" [(ngModel)]="q.correctAnswer" placeholder="Model answer…" />
+                  <input pInputText class="w-full" type="text" [(ngModel)]="q.correctAnswer" placeholder="Model answer…" />
                 </div>
               }
               @if (q.questionType === 3) {
                 <div class="q-text-row">
                   <label>Expected Answer</label>
-                  <input class="answer-input" type="text" [(ngModel)]="q.correctAnswer" placeholder="Correct answer…" />
+                  <input pInputText class="w-full" type="text" [(ngModel)]="q.correctAnswer" placeholder="Correct answer…" />
                 </div>
               }
               <div style="display:flex;align-items:center;gap:.5rem;margin-top:.3rem">
                 <label style="font-size:.75rem;font-weight:600;color:#64748b;margin:0">Marks:</label>
-                <input type="number" [(ngModel)]="q.marks" min="1" style="width:70px;padding:.32rem .6rem;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.85rem;" />
+                <input pInputText type="number" [(ngModel)]="q.marks" min="1" class="w-[80px]" />
               </div>
             </div>
           }
@@ -500,11 +441,7 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
 
   @if (questions().length > 4) {
     <div style="display:flex;justify-content:flex-end;margin-top:1rem">
-      <button class="btn-primary" (click)="saveAll()" [disabled]="saving()">
-        @if (saving()) { <span class="material-icons-round spinner">refresh</span> }
-        @else { <span class="material-icons-round">save</span> }
-        Save All Questions
-      </button>
+      <p-button label="Save All Questions" icon="pi pi-save" [loading]="saving()" [disabled]="saving()" (onClick)="saveAll()" />
     </div>
   }
 

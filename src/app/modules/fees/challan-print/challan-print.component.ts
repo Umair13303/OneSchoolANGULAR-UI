@@ -1,6 +1,9 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
 import { FeeService } from '../../../core/services/fee.service';
 import { AcademicService } from '../../../core/services/academic.service';
 import { InstituteService } from '../../../core/services/institute.service';
@@ -27,7 +30,7 @@ interface ChallanStudent {
 @Component({
   selector: 'app-challan-print',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent],
+  imports: [CommonModule, FormsModule, PageHeaderComponent, Button, Select, InputText],
   template: `
     <app-page-header title="Print Challan" subtitle="Search generated challans and print" />
 
@@ -36,34 +39,43 @@ interface ChallanStudent {
       <div class="filter-row">
         <div class="field">
           <label>Academic Year *</label>
-          <select [(ngModel)]="filterYearId" (change)="onYearChange()">
-            <option [ngValue]="null">Select year</option>
-            @for (y of years(); track y.academicYearId) {
-              <option [ngValue]="y.academicYearId">{{ y.yearLabel }}</option>
-            }
-          </select>
+          <p-select
+            class="w-full"
+            [options]="years()"
+            optionLabel="yearLabel"
+            optionValue="academicYearId"
+            placeholder="Select year"
+            appendTo="body"
+            [(ngModel)]="filterYearId"
+            (onChange)="onYearChange()" />
         </div>
         <div class="field">
           <label>Class</label>
-          <select [(ngModel)]="filterClassId" (change)="onSearch()">
-            <option [ngValue]="null">All classes</option>
-            @for (c of classes(); track c.classId) {
-              <option [ngValue]="c.classId">{{ c.className }} {{ c.section }}</option>
-            }
-          </select>
+          <p-select
+            class="w-full"
+            [options]="classOptions()"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="All classes"
+            [showClear]="true"
+            appendTo="body"
+            [(ngModel)]="filterClassId"
+            (onChange)="onSearch()" />
         </div>
         <div class="field">
           <label>Month</label>
-          <select [(ngModel)]="filterMonth" (change)="onSearch()">
-            <option value="">All months</option>
-            @for (m of months; track m) {
-              <option [value]="m">{{ m }}</option>
-            }
-          </select>
+          <p-select
+            class="w-full"
+            [options]="months"
+            placeholder="All months"
+            [showClear]="true"
+            appendTo="body"
+            [(ngModel)]="filterMonth"
+            (onChange)="onSearch()" />
         </div>
         <div class="field">
           <label>Student Name / Admission No</label>
-          <input type="text" [(ngModel)]="filterSearch" (input)="onSearch()" placeholder="Search..." />
+          <input pInputText type="text" class="w-full" [(ngModel)]="filterSearch" (input)="onSearch()" placeholder="Search..." />
         </div>
       </div>
       @if (loading()) {
@@ -73,9 +85,9 @@ interface ChallanStudent {
 
     <!-- Results -->
     @if (students().length > 0) {
-      <div class="result-bar no-print">
+      <div class="result-bar no-print flex flex-wrap items-center justify-between gap-2">
         <span class="count-chip">{{ filtered().length }} challan(s)</span>
-        <button class="btn-primary" (click)="printAll()">🖨️ Print All ({{ filtered().length }})</button>
+        <p-button [label]="'Print All (' + filtered().length + ')'" icon="pi pi-print" (onClick)="printAll()" />
       </div>
 
       <div class="card result-card no-print">
@@ -106,7 +118,7 @@ interface ChallanStudent {
                 <td class="amt">{{ s.totalDue | number:'1.0-0' }}</td>
                 <td class="amt disc">{{ s.totalDiscount > 0 ? (s.totalDiscount | number:'1.0-0') : '—' }}</td>
                 <td class="amt payable"><strong>{{ s.netPayable | number:'1.0-0' }}</strong></td>
-                <td><button class="btn-print-row" (click)="printOne(s)">🖨️ Print</button></td>
+                <td><p-button label="Print" icon="pi pi-print" size="small" [outlined]="true" (onClick)="printOne(s)" /></td>
               </tr>
             }
           </tbody>
@@ -141,11 +153,6 @@ interface ChallanStudent {
     .amt  { text-align:right; font-family:monospace; font-size:13px; }
     .disc { color:#059669; }
     .payable { color:var(--t1); }
-    .btn-print-row { padding:4px 10px; font-size:12px; border:1.5px solid var(--accent);
-      background:var(--accent-g); color:var(--accent); border-radius:6px; cursor:pointer;
-      font-family:inherit; font-weight:600; }
-    .btn-print-row:hover { background:var(--accent); color:#fff; }
-
   `]
 })
 export class ChallanPrintComponent implements OnInit {
@@ -160,6 +167,8 @@ export class ChallanPrintComponent implements OnInit {
 
   years   = signal<AcademicYear[]>([]);
   classes = signal<ClassDto[]>([]);
+  classOptions = computed(() =>
+    this.classes().map(c => ({ label: `${c.className} ${c.section ?? ''}`.trim(), value: c.classId })));
   loading = signal(false);
   students = signal<ChallanStudent[]>([]);
 

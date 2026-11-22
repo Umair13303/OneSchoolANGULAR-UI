@@ -1,6 +1,11 @@
 import { Component, EventEmitter, Input, OnInit, Output, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
+import { Textarea } from 'primeng/textarea';
+import { Message } from 'primeng/message';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { CurriculumService } from '../../../core/services/curriculum.service';
@@ -27,7 +32,7 @@ export interface AiTopicChoice {
 @Component({
   selector: 'app-ai-generate-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, Button, Select, InputText, Textarea, Message],
   template: `
     <div class="ai-panel os-stage">
       <div class="ai-panel-head">
@@ -35,15 +40,16 @@ export interface AiTopicChoice {
           <h3>AI Generate Questions</h3>
           <p class="ai-panel-sub">Select curriculum, then generate a draft to review before saving.</p>
         </div>
-        <button type="button" class="btn-ghost" (click)="cancelled.emit()" [disabled]="busy()">Close</button>
+        <p-button label="Close" icon="pi pi-times" size="small" severity="secondary" [outlined]="true"
+          (onClick)="cancelled.emit()" [disabled]="busy()" />
       </div>
 
       <div class="ai-panel-body">
         @if (loadError()) {
-          <div class="os-alert error">{{ loadError() }}</div>
+          <p-message severity="error" styleClass="mb-2.5 w-full" [text]="loadError()" />
         }
         @if (error()) {
-          <div class="os-alert error">{{ error() }}</div>
+          <p-message severity="error" styleClass="mb-2.5 w-full" [text]="error()" />
         }
 
         <div class="ai-section">
@@ -51,30 +57,22 @@ export interface AiTopicChoice {
           <div class="ai-row cascade">
             <div class="os-field">
               <label class="os-field-label">Class</label>
-              <select class="os-input" [(ngModel)]="classId" (ngModelChange)="onClassChange()">
-                <option [ngValue]="null">Select class…</option>
-                @for (c of classes(); track c.id) {
-                  <option [ngValue]="c.id">{{ c.name }}</option>
-                }
-              </select>
+              <p-select class="w-full" placeholder="Select class…" [options]="classes()"
+                optionLabel="name" optionValue="id" [showClear]="true"
+                [(ngModel)]="classId" (ngModelChange)="onClassChange()" />
             </div>
             <div class="os-field">
               <label class="os-field-label">Subject</label>
-              <select class="os-input" [(ngModel)]="subjectId" (ngModelChange)="onSubjectChange()" [disabled]="!classId">
-                <option [ngValue]="null">Select subject…</option>
-                @for (s of subjectsForClass(); track s.id) {
-                  <option [ngValue]="s.id">{{ s.name }}</option>
-                }
-              </select>
+              <p-select class="w-full" placeholder="Select subject…" [options]="subjectsForClass()"
+                optionLabel="name" optionValue="id" [showClear]="true"
+                [(ngModel)]="subjectId" (ngModelChange)="onSubjectChange()" [disabled]="!classId" />
             </div>
             <div class="os-field topic">
               <label class="os-field-label">Topic</label>
-              <select class="os-input" [(ngModel)]="courseTopicId" [disabled]="!classId || !subjectId">
-                <option [ngValue]="null">Select topic…</option>
-                @for (t of topicsForSelection(); track t.id) {
-                  <option [ngValue]="t.id">{{ t.title }}</option>
-                }
-              </select>
+              <p-select class="w-full" placeholder="Select topic…" [options]="topicsForSelection()"
+                optionLabel="title" optionValue="id" [showClear]="true"
+                [filter]="topicsForSelection().length > 8" filterBy="title"
+                [(ngModel)]="courseTopicId" [disabled]="!classId || !subjectId" />
             </div>
           </div>
         </div>
@@ -84,55 +82,38 @@ export interface AiTopicChoice {
           <div class="ai-row options">
             <div class="os-field count">
               <label class="os-field-label">Count</label>
-              <select class="os-input" [(ngModel)]="count">
-                @for (n of counts; track n) {
-                  <option [ngValue]="n">{{ n }}</option>
-                }
-              </select>
+              <p-select class="w-full" [options]="counts" [(ngModel)]="count" />
             </div>
             <div class="os-field type">
               <label class="os-field-label">Question type</label>
-              <select class="os-input" [(ngModel)]="questionType">
-                @for (qt of questionTypes; track qt.value) {
-                  <option [ngValue]="qt.value">{{ qt.label }}</option>
-                }
-              </select>
+              <p-select class="w-full" [options]="questionTypes" optionLabel="label" optionValue="value"
+                [(ngModel)]="questionType" />
             </div>
             <div class="os-field">
               <label class="os-field-label">Difficulty</label>
-              <select class="os-input" [(ngModel)]="difficulty">
-                @for (d of difficulties; track d) {
-                  <option [ngValue]="d">{{ d }}</option>
-                }
-              </select>
+              <p-select class="w-full" [options]="difficulties" [(ngModel)]="difficulty" />
             </div>
             <div class="os-field marks">
               <label class="os-field-label">Marks</label>
-              <input class="os-input" type="number" min="1" max="100" [(ngModel)]="marks" />
+              <input pInputText class="w-full" type="number" min="1" max="100" [(ngModel)]="marks" />
             </div>
             <div class="os-field">
               <label class="os-field-label">Language</label>
-              <select class="os-input" [(ngModel)]="language">
-                @for (l of languages; track l.value) {
-                  <option [ngValue]="l.value">{{ l.label }}</option>
-                }
-              </select>
+              <p-select class="w-full" [options]="languages" optionLabel="label" optionValue="value"
+                [(ngModel)]="language" />
             </div>
           </div>
 
           <div class="os-field instructions">
             <label class="os-field-label">Optional instructions</label>
-            <textarea class="os-input" rows="2" maxlength="1000" [(ngModel)]="instructions"
+            <textarea pTextarea class="w-full" rows="2" maxlength="1000" [(ngModel)]="instructions"
               placeholder="Extra context for the AI (not saved until you approve questions)…"></textarea>
           </div>
         </div>
 
         <div class="ai-actions">
-          <button type="button" class="btn-primary" (click)="generate()" [disabled]="busy() || !canGenerate()">
-            @if (busy()) { Generating… } @else {
-              <span class="material-icons-round">auto_awesome</span> Generate draft
-            }
-          </button>
+          <p-button [label]="busy() ? 'Generating…' : 'Generate draft'" icon="pi pi-sparkles"
+            [loading]="busy()" (onClick)="generate()" [disabled]="busy() || !canGenerate()" />
           <span class="hint">Drafts are not saved until you add selected questions to the bank.</span>
         </div>
       </div>
@@ -171,38 +152,10 @@ export interface AiTopicChoice {
       line-height: 1.35;
       max-width: 42rem;
     }
-    .ai-panel .btn-ghost {
-      flex-shrink: 0;
-      height: 32px;
-      padding: 0 12px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--t2);
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      border-radius: 0;
-    }
-    .ai-panel .btn-ghost:hover:not(:disabled) {
-      background: var(--surface-2);
-      color: var(--t1);
-    }
-    .ai-panel .btn-ghost:disabled { opacity: .5; cursor: not-allowed; }
-
     .ai-panel-body {
       padding: 12px 14px 14px;
       background: var(--surface);
       box-sizing: border-box;
-    }
-
-    .os-alert.error {
-      margin: 0 0 10px;
-      padding: 8px 10px;
-      font-size: 12px;
-      background: #fef2f2;
-      color: #991b1b;
-      border: 1px solid #fecaca;
-      border-radius: 0;
     }
 
     .ai-section + .ai-section {
@@ -229,38 +182,6 @@ export interface AiTopicChoice {
       letter-spacing: .02em;
       line-height: 1.2;
     }
-    .os-input {
-      width: 100%;
-      height: 34px;
-      padding: 0 10px;
-      border: 1px solid var(--border);
-      border-radius: 0 !important;
-      font-size: 13px;
-      font-family: inherit;
-      background: var(--surface);
-      color: var(--t1);
-      box-sizing: border-box;
-    }
-    .os-input:disabled {
-      background: var(--surface-2);
-      color: var(--t4);
-      cursor: not-allowed;
-      opacity: 1;
-    }
-    .os-input:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: var(--input-shadow-focus);
-    }
-    textarea.os-input {
-      height: auto;
-      min-height: 52px;
-      max-height: 88px;
-      padding: 8px 10px;
-      resize: vertical;
-      line-height: 1.4;
-    }
-
     .ai-row {
       display: grid;
       gap: 10px;
@@ -284,37 +205,6 @@ export interface AiTopicChoice {
       padding-top: 12px;
       border-top: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
     }
-    .ai-panel .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      height: 34px;
-      min-height: 34px;
-      padding: 0 16px;
-      border: none;
-      border-radius: 0;
-      background: var(--accent);
-      color: #fff;
-      font-size: 12.5px;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: 0 1px 4px rgba(var(--accent-rgb), 0.35);
-      white-space: nowrap;
-    }
-    .ai-panel .btn-primary:hover:not(:disabled) {
-      background: var(--accent-h);
-      box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.4);
-    }
-    .ai-panel .btn-primary .material-icons-round { font-size: 16px; }
-    .ai-panel .btn-primary:disabled {
-      background: var(--surface-2);
-      color: var(--t4);
-      box-shadow: none;
-      cursor: not-allowed;
-      opacity: 1;
-      border: 1px solid var(--border);
-    }
     .hint {
       flex: 1;
       min-width: 0;
@@ -337,7 +227,6 @@ export interface AiTopicChoice {
       .ai-row.cascade .topic,
       .ai-row.options .type { grid-column: auto; }
       .ai-actions { flex-direction: column; align-items: stretch; gap: 8px; }
-      .ai-panel .btn-primary { width: 100%; }
     }
   `]
 })
@@ -348,10 +237,10 @@ export class AiGeneratePanelComponent implements OnInit {
   @Output() generated = new EventEmitter<GenerateQuestionsResponse>();
   @Output() cancelled = new EventEmitter<void>();
 
-  readonly counts = AI_COUNTS;
-  readonly difficulties = AI_DIFFICULTIES;
-  readonly languages = AI_LANGUAGES;
-  readonly questionTypes = AI_QUESTION_TYPES;
+  readonly counts = [...AI_COUNTS];
+  readonly difficulties = [...AI_DIFFICULTIES];
+  readonly languages = [...AI_LANGUAGES];
+  readonly questionTypes = [...AI_QUESTION_TYPES];
 
   topics = signal<AiTopicChoice[]>([]);
   loadError = signal('');

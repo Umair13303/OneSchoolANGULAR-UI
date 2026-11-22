@@ -1,6 +1,16 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
+import { Textarea } from 'primeng/textarea';
+import { Tag } from 'primeng/tag';
+import { Dialog } from 'primeng/dialog';
+import { TableModule } from 'primeng/table';
+import { Tooltip } from 'primeng/tooltip';
+import { IconField } from 'primeng/iconfield';
+import { InputIcon } from 'primeng/inputicon';
 import { InventoryService } from '../../../core/services/inventory.service';
 import { SupplierDto } from '../../../core/models/inventory.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -10,94 +20,97 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
 @Component({
   selector: 'app-suppliers',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, PageHeaderComponent, ConfirmDeleteComponent],
+  imports: [
+    CommonModule, ReactiveFormsModule, PageHeaderComponent, ConfirmDeleteComponent,
+    Button, Select, InputText, Textarea, Tag, Dialog, TableModule, Tooltip, IconField, InputIcon
+  ],
   template: `
     <div class="os-page compact">
     <app-page-header [dense]="true" title="Suppliers" subtitle="Manage vendors you purchase inventory from" routeUrl="/inventory/suppliers">
-      <button class="btn-primary" (click)="openAdd()"><span class="material-icons-round">add</span> Add Supplier</button>
+      <p-button label="Add Supplier" icon="pi pi-plus" (onClick)="openAdd()" />
     </app-page-header>
 
     <div class="os-stage">
       <div class="os-stage-bar">
-        <div class="os-toolbar-group">
-          <div class="os-field grow">
-            <div class="search-wrap">
-              <span class="material-icons-round search-icon">search</span>
-              <input class="search-input" placeholder="Search suppliers…" [value]="search()" (input)="onSearch($any($event.target).value)" />
-            </div>
-          </div>
+        <div class="flex w-full flex-wrap items-center gap-3">
+          <p-iconfield class="min-w-[220px] flex-1">
+            <p-inputicon class="pi pi-search" />
+            <input pInputText class="w-full" placeholder="Search suppliers…" [value]="search()" (input)="onSearch($any($event.target).value)" />
+          </p-iconfield>
         </div>
       </div>
 
       <div class="os-stage-body">
-      <table class="table">
-        <thead><tr><th>Name</th><th>Contact Person</th><th>Mobile</th><th>City</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>
-          @for (s of suppliers(); track s.supplierId) {
+        <p-table [value]="suppliers()" dataKey="supplierId" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '40rem' }" [scrollable]="true">
+          <ng-template #header>
+            <tr><th>Name</th><th>Contact Person</th><th>Mobile</th><th>City</th><th>Status</th><th class="text-right">Actions</th></tr>
+          </ng-template>
+          <ng-template #body let-s>
             <tr>
               <td><strong>{{ s.supplierName }}</strong></td>
               <td>{{ s.contactPerson || '—' }}</td>
               <td>{{ s.mobile || '—' }}</td>
               <td>{{ s.city || '—' }}</td>
-              <td><span [class]="'badge ' + (s.isActive ? 'badge-green' : 'badge-gray')">{{ s.isActive ? 'Active' : 'Inactive' }}</span></td>
-              <td class="actions">
-                <button class="icon-btn" (click)="openEdit(s)" title="Edit"><span class="material-icons-round">edit</span></button>
-                <button class="icon-btn danger" (click)="deleteSupplier(s)" title="Delete"><span class="material-icons-round">delete</span></button>
+              <td><p-tag [value]="s.isActive ? 'Active' : 'Inactive'" [severity]="s.isActive ? 'success' : 'secondary'" [rounded]="true" /></td>
+              <td>
+                <div class="flex items-center justify-end gap-1 whitespace-nowrap">
+                  <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" severity="secondary" ariaLabel="Edit" pTooltip="Edit" (onClick)="openEdit(s)" />
+                  <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Delete" pTooltip="Delete" (onClick)="deleteSupplier(s)" />
+                </div>
               </td>
             </tr>
-          }
-          @if (!suppliers().length) { <tr><td colspan="6" class="empty">No suppliers found.</td></tr> }
-        </tbody>
-      </table>
+          </ng-template>
+          <ng-template #emptymessage>
+            <tr><td colspan="6" class="empty">No suppliers found.</td></tr>
+          </ng-template>
+        </p-table>
       </div>
     </div>
     </div>
 
-    @if (showModal()) {
-      <div class="modal-overlay" (click)="showModal.set(false)">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <div class="modal-hd"><h3>{{ editingId() ? 'Edit' : 'Add' }} Supplier</h3><button class="close-btn" (click)="showModal.set(false)"><span class="material-icons-round">close</span></button></div>
-          <form [formGroup]="form" (ngSubmit)="save()" class="modal-body">
-            <div class="field"><label>Supplier Name <span class="req">*</span></label><input formControlName="supplierName" /></div>
-            <div class="field"><label>Contact Person</label><input formControlName="contactPerson" /></div>
-            <div class="field"><label>Mobile</label><input formControlName="mobile" /></div>
-            <div class="field"><label>Phone</label><input formControlName="phone" /></div>
-            <div class="field"><label>Email</label><input formControlName="email" /></div>
-            <div class="field"><label>City</label><input formControlName="city" /></div>
-            <div class="field"><label>Address</label><textarea formControlName="address" rows="2"></textarea></div>
-            @if (editingId()) { <div class="field"><label>Status</label><select formControlName="isActive"><option [ngValue]="true">Active</option><option [ngValue]="false">Inactive</option></select></div> }
-            @if (modalError()) { <div class="alert-err">{{ modalError() }}</div> }
-            <div class="modal-ft"><button type="button" class="btn-secondary" (click)="showModal.set(false)">Cancel</button><button type="submit" class="btn-primary" [disabled]="saving()">Save</button></div>
-          </form>
+    <p-dialog
+      [header]="(editingId() ? 'Edit' : 'Add') + ' Supplier'"
+      [visible]="showModal()"
+      (visibleChange)="showModal.set($event)"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '30rem' }"
+      [breakpoints]="{ '640px': '96vw' }">
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <div class="field"><label for="sp-name">Supplier Name <span class="req">*</span></label><input pInputText id="sp-name" class="w-full" formControlName="supplierName" /></div>
+        <div class="field"><label for="sp-contact">Contact Person</label><input pInputText id="sp-contact" class="w-full" formControlName="contactPerson" /></div>
+        <div class="grid grid-cols-1 gap-x-3.5 sm:grid-cols-2">
+          <div class="field"><label for="sp-mobile">Mobile</label><input pInputText id="sp-mobile" class="w-full" formControlName="mobile" /></div>
+          <div class="field"><label for="sp-phone">Phone</label><input pInputText id="sp-phone" class="w-full" formControlName="phone" /></div>
+          <div class="field"><label for="sp-email">Email</label><input pInputText id="sp-email" class="w-full" formControlName="email" /></div>
+          <div class="field"><label for="sp-city">City</label><input pInputText id="sp-city" class="w-full" formControlName="city" /></div>
         </div>
-      </div>
-    }
+        <div class="field"><label for="sp-address">Address</label><textarea pTextarea id="sp-address" class="w-full" formControlName="address" rows="2"></textarea></div>
+        @if (editingId()) {
+          <div class="field"><label>Status</label>
+            <p-select class="w-full" [options]="statusOptions" optionLabel="label" optionValue="value"
+                      appendTo="body" [overlayOptions]="{ baseZIndex: 10050 }" formControlName="isActive" />
+          </div>
+        }
+        @if (modalError()) { <div class="alert-err">{{ modalError() }}</div> }
+      </form>
+      <ng-template #footer>
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="showModal.set(false)" />
+          <p-button [label]="saving() ? 'Saving…' : 'Save'" icon="pi pi-check" [loading]="saving()" [disabled]="saving()" (onClick)="save()" />
+        </div>
+      </ng-template>
+    </p-dialog>
 
     <app-confirm-delete />
   `,
   styles: [`
-    /* Removed by the canonical migration: .search (now the stage bar + global
-       .search-wrap/.search-input), .card (now .os-stage), .actions and the
-       three .icon-btn rules (the global .icon-btn supplies size, hover,
-       disabled and focus, and its .danger variant uses --red tokens instead of
-       the hardcoded #ef4444 these rules used). */
-    .badge { padding:3px 9px; border-radius:12px; font-size:11.5px; font-weight:600; }
-    .badge-green { background:var(--green-s); color:var(--green); }
-    .badge-gray { background:var(--surface-2); color:var(--t4); }
     .empty { text-align:center; color:var(--t4); padding:32px 0; font-size:13px; }
-    /* .overlay removed: the template now uses the global .modal-overlay. */
-    .modal { background:var(--surface); border-radius:16px; width:100%; max-width:460px; }
-    .modal-hd { display:flex; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid var(--border); background:var(--surface-2); }
-    .modal-hd h3 { font-size:15px; font-weight:700; margin:0; }
-    .close-btn { margin-left:auto; border:none; background:transparent; cursor:pointer; color:var(--t4); padding:6px; border-radius:8px; }
-    .modal-body { padding:20px; max-height:70vh; overflow-y:auto; }
-    .modal-ft { display:flex; justify-content:flex-end; gap:10px; padding-top:12px; border-top:1px solid var(--border); margin-top:4px; }
     .field { display:flex; flex-direction:column; gap:5px; margin-bottom:14px; }
     label { font-size:11px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.5px; }
     .req { color:var(--red); }
-    /* Scoped to the modal so it no longer out-specifies the global
-       .search-input on the stage-bar search box. Modal fields are unchanged. */
-    .modal-body input, .modal-body select, .modal-body textarea { padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13.5px; font-family:inherit; background:var(--surface); color:var(--t1); width:100%; }
     .alert-err { background:#fee2e2; color:#dc2626; border:1px solid #dc2626; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:10px; }
   `]
 })
@@ -106,6 +119,7 @@ export class SuppliersComponent implements OnInit {
   private confirmDelete = inject(ConfirmDeleteService);
   private fb = inject(FormBuilder);
 
+  statusOptions = [{ label: 'Active', value: true }, { label: 'Inactive', value: false }];
   suppliers = signal<SupplierDto[]>([]);
   search = signal('');
   showModal = signal(false);

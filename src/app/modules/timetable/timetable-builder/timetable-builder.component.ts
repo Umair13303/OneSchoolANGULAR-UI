@@ -1,6 +1,8 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
 import { forkJoin } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { TimetableService } from '../../../core/services/timetable.service';
@@ -29,25 +31,26 @@ interface CellState {
 @Component({
   selector: 'app-timetable-builder',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent, LoadingComponent],
+  imports: [CommonModule, FormsModule, PageHeaderComponent, LoadingComponent, Button, Select],
   template: `
     <app-page-header title="Timetable" routeUrl="/timetable"
       [subtitle]="activeProfileName() ? 'Schedule: ' + activeProfileName() + ' · Assign subjects & teachers to each period' : 'Assign subjects & teachers to each period'" />
 
     <!-- ── Top bar ── -->
     <div class="topbar card">
-      <div class="tb-selects">
+      <div class="tb-selects flex flex-wrap items-end gap-3">
         <div class="sel-wrap">
           <span class="sel-label">Class</span>
-          <div class="sel-inner">
-            <select [(ngModel)]="selectedClass" (change)="onClassChange()">
-              <option [ngValue]="null">Select class…</option>
-              @for (c of classes(); track c.classId) {
-                <option [ngValue]="c.classId">{{ c.className }}{{ c.section ? ' · ' + c.section : '' }}</option>
-              }
-            </select>
-            <span class="sel-arrow">⌄</span>
-          </div>
+          <p-select
+            class="min-w-[220px]"
+            [options]="classOptions()"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Select class…"
+            ariaLabel="Class"
+            appendTo="body"
+            [(ngModel)]="selectedClass"
+            (onChange)="onClassChange()" />
         </div>
       </div>
 
@@ -66,9 +69,13 @@ interface CellState {
             <span class="stat-lbl">Complete</span>
           </div>
           @if (hasMondaySchedule()) {
-            <button class="copy-day-btn" [disabled]="copying()" (click)="copyMondayToAllDays()">
-              {{ copying() ? 'Copying…' : '⚡ Copy Mon → All Days' }}
-            </button>
+            <p-button
+              [label]="copying() ? 'Copying…' : 'Copy Mon → All Days'"
+              icon="pi pi-copy"
+              size="small"
+              [loading]="copying()"
+              [disabled]="copying()"
+              (onClick)="copyMondayToAllDays()" />
           }
         </div>
       }
@@ -154,7 +161,15 @@ interface CellState {
                               <div class="slot-assigned">
                                 <span class="slot-subject">{{ cell.subjectName }}</span>
                                 <span class="slot-teacher">{{ cell.teacherName }}</span>
-                                <button class="slot-remove" (click)="deleteCell(cell, $event)" title="Remove">✕</button>
+                                <p-button
+                                  class="slot-remove"
+                                  icon="pi pi-times"
+                                  [text]="true"
+                                  [rounded]="true"
+                                  size="small"
+                                  severity="danger"
+                                  ariaLabel="Remove"
+                                  (onClick)="deleteCell(cell, $event)" />
                               </div>
                             } @else {
                               <div class="slot-empty">
@@ -167,12 +182,16 @@ interface CellState {
                             <div class="edit-panel" (click)="$event.stopPropagation()">
                               <div class="ep-row">
                                 <label class="ep-label">Subject</label>
-                                <select class="ep-select" [(ngModel)]="editSubjectId" (change)="onEditSubjectChange()">
-                                  <option [ngValue]="null">— choose —</option>
-                                  @for (s of classSubjects(); track s.id) {
-                                    <option [ngValue]="s.subjectId">{{ s.subjectName }}</option>
-                                  }
-                                </select>
+                                <p-select
+                                  class="w-full"
+                                  size="small"
+                                  [options]="subjectOptions()"
+                                  optionLabel="label"
+                                  optionValue="value"
+                                  placeholder="— choose —"
+                                  appendTo="body"
+                                  [(ngModel)]="editSubjectId"
+                                  (onChange)="onEditSubjectChange()" />
                               </div>
                               @if (editSubjectId) {
                                 <div class="ep-row">
@@ -182,24 +201,26 @@ interface CellState {
                                       <span class="ep-assigned-hint">· {{ assignedTeacher()!.fullName }} assigned</span>
                                     }
                                   </label>
-                                  <select class="ep-select" [(ngModel)]="editTeacherId">
-                                    <option [ngValue]="null">— choose teacher —</option>
-                                    @if (assignedTeacher()) {
-                                      <option [ngValue]="assignedTeacher()!.userId">⭐ {{ assignedTeacher()!.fullName }} (assigned)</option>
-                                    }
-                                    @for (t of otherTeachers(); track t.userId) {
-                                      <option [ngValue]="t.userId">{{ t.fullName }}</option>
-                                    }
-                                  </select>
+                                  <p-select
+                                    class="w-full"
+                                    size="small"
+                                    [options]="teacherOptions()"
+                                    optionLabel="label"
+                                    optionValue="value"
+                                    placeholder="— choose teacher —"
+                                    appendTo="body"
+                                    [filter]="teacherOptions().length > 8"
+                                    [(ngModel)]="editTeacherId" />
                                 </div>
                               }
-                              <div class="ep-actions">
-                                <button class="ep-cancel" (click)="closeEdit()">Cancel</button>
-                                <button class="ep-save"
+                              <div class="ep-actions flex items-center gap-2">
+                                <p-button label="Cancel" size="small" severity="secondary" [outlined]="true" (onClick)="closeEdit()" />
+                                <p-button
+                                  size="small"
+                                  [label]="saving() ? 'Saving…' : cell.timetableId ? 'Update' : 'Assign'"
+                                  [loading]="saving()"
                                   [disabled]="!editSubjectId || !editTeacherId || saving()"
-                                  (click)="commitEdit(p.periodId, d)">
-                                  {{ saving() ? 'Saving…' : cell.timetableId ? 'Update' : 'Assign' }}
-                                </button>
+                                  (onClick)="commitEdit(p.periodId, d)" />
                               </div>
                             </div>
                           }
@@ -384,6 +405,33 @@ export class TimetableBuilderComponent implements OnInit {
     return this.allTeachers().filter(t => t.userId !== assigned?.userId);
   });
 
+  classOptions = computed(() =>
+    this.classes().map(c => ({
+      label: `${c.className}${c.section ? ' · ' + c.section : ''}`,
+      value: c.classId
+    })));
+
+  subjectOptions = computed(() =>
+    this.classSubjects().map(s => ({ label: s.subjectName, value: s.subjectId })));
+
+  // Memoised so p-select receives a stable array between change-detection passes.
+  private teacherOptsAssigned: unknown = undefined;
+  private teacherOptsOthers: unknown = undefined;
+  private teacherOptsCache: { label: string; value: number }[] = [];
+  teacherOptions(): { label: string; value: number }[] {
+    const assigned = this.assignedTeacher();
+    const others = this.otherTeachers();
+    if (assigned !== this.teacherOptsAssigned || others !== this.teacherOptsOthers) {
+      this.teacherOptsAssigned = assigned;
+      this.teacherOptsOthers = others;
+      this.teacherOptsCache = [
+        ...(assigned ? [{ label: `⭐ ${assigned.fullName} (assigned)`, value: assigned.userId }] : []),
+        ...others.map(t => ({ label: t.fullName, value: t.userId }))
+      ];
+    }
+    return this.teacherOptsCache;
+  }
+
   // Cell map
   private cells = new Map<string, CellState>();
 
@@ -426,7 +474,10 @@ export class TimetableBuilderComponent implements OnInit {
       this.classes.set(classes);
       this.allTeachers.set(teachers.filter(u => u.roleName?.toLowerCase() === 'teacher' && u.isActive));
       const active = years.find(y => y.isActive) ?? years[0];
-      if (active) this.activeYearId = active.academicYearId;
+      if (active) {
+        this.activeYearId = active.academicYearId;
+        if (this.selectedClass) this.loadGrid();
+      }
     });
 
     // Load working days from active profile and update day columns
@@ -467,8 +518,13 @@ export class TimetableBuilderComponent implements OnInit {
 
   private loadGrid() {
     if (!this.selectedClass) return;
+    if (!this.activeYearId) {
+      // Year still loading — retry once years arrive via ngOnInit forkJoin.
+      this.loadingGrid.set(false);
+      return;
+    }
     this.loadingGrid.set(true);
-    this.ttSvc.getForClass(this.selectedClass).subscribe({
+    this.ttSvc.getForClass(this.selectedClass, undefined, this.activeYearId).subscribe({
       next: entries => {
         this.entries.set(entries);
         this.cells.clear();

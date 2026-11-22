@@ -10,12 +10,15 @@ import { ClassDto } from '../../../core/models/academic.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
-import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
+import { OsSelectOption } from '../../../shared/components/os-select/os-select.component';
+import { FormsModule } from '@angular/forms';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
 
 @Component({
   selector: 'app-timetable-view',
   standalone: true,
-  imports: [CommonModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, OsSelectComponent],
+  imports: [CommonModule, FormsModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, Button, Select],
   template: `
     <div class="os-page tt-page">
       <app-page-header
@@ -24,10 +27,7 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
         [title]="pageTitle()"
         [routeUrl]="routeUrl">
         @if (entries().length > 0) {
-          <button type="button" class="btn-secondary btn-sm" (click)="printTimetable()">
-            <span class="material-icons-round" style="font-size:16px">print</span>
-            Print
-          </button>
+          <p-button label="Print" icon="pi pi-print" size="small" severity="secondary" [outlined]="true" (onClick)="printTimetable()" />
         }
       </app-page-header>
 
@@ -47,15 +47,18 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
           <div class="os-toolbar-group">
             <div class="os-field inline">
               <label class="os-field-label" for="tt-class-select">Class</label>
-              <app-os-select
-                id="tt-class-select"
-                icon="school"
+              <p-select
+                inputId="tt-class-select"
+                class="min-w-[220px]"
+                [options]="classOptions()"
+                optionLabel="label"
+                optionValue="value"
                 placeholder="Select class…"
                 ariaLabel="Select class"
-                [searchable]="classOptions().length > 6"
-                [options]="classOptions()"
-                [value]="selectedClass()"
-                (valueChange)="onClassSelect($event)" />
+                appendTo="body"
+                [filter]="classOptions().length > 6"
+                [ngModel]="selectedClass()"
+                (ngModelChange)="onClassSelect($event)" />
             </div>
 
             @if (selectedClass() && entries().length > 0) {
@@ -285,11 +288,6 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
     .tt-stage {
       border-radius: 0 !important;
       box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04), 0 2px 8px rgba(15, 23, 42, 0.04);
-    }
-
-    .os-field.inline app-os-select {
-      width: 220px;
-      min-width: 180px;
     }
 
     .seg-short { display: none; }

@@ -1,6 +1,8 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { Button } from 'primeng/button';
+import { Tooltip } from 'primeng/tooltip';
 import { TimetableService } from '../../../core/services/timetable.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { SettingsService } from '../../../core/services/settings.service';
@@ -11,7 +13,7 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
 @Component({
   selector: 'app-teacher-timetable',
   standalone: true,
-  imports: [CommonModule, RouterModule, PageHeaderComponent, LoadingComponent],
+  imports: [CommonModule, RouterModule, PageHeaderComponent, LoadingComponent, Button, Tooltip],
   template: `
     <div class="os-page compact">
     <app-page-header
@@ -83,20 +85,23 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
 
         <!-- Mode Toggle (Cards vs Table) -->
         <div class="view-mode-toggle">
-          <button class="mode-btn"
-                  [class.active]="viewMode() === 'timeline'"
-                  (click)="viewMode.set('timeline')"
-                  title="Timeline View">
-            <span class="material-icons-round">view_agenda</span>
-            <span class="mode-text">Timeline</span>
-          </button>
-          <button class="mode-btn"
-                  [class.active]="viewMode() === 'table'"
-                  (click)="viewMode.set('table')"
-                  title="Table View">
-            <span class="material-icons-round">table_chart</span>
-            <span class="mode-text">Table</span>
-          </button>
+          <p-button
+            label="Timeline"
+            icon="pi pi-list"
+            size="small"
+            [text]="viewMode() !== 'timeline'"
+            [severity]="viewMode() === 'timeline' ? 'primary' : 'secondary'"
+            pTooltip="Timeline View"
+            (onClick)="viewMode.set('timeline')" />
+          <p-button
+            label="Table"
+            icon="pi pi-table"
+            size="small"
+            [text]="viewMode() !== 'table'"
+            [severity]="viewMode() === 'table' ? 'primary' : 'secondary'"
+            pTooltip="Table View"
+            (onClick)="viewMode.set('table')" />
+        
         </div>
       </div>
 
@@ -729,9 +734,6 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
       .day-pill { flex: 1; justify-content: center; padding: 7px 4px; font-size: 12px; }
 
       .scroll-hint { display: flex; }
-      .mode-text { display: none; }
-      .mode-btn { padding: 7px 10px; }
-
       .sticky-col-period { width: 55px; }
       .sticky-col-time { left: 55px; width: 105px; font-size: 11px; }
       th.period-th { width: 55px; }

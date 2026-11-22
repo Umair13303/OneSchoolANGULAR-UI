@@ -25,7 +25,7 @@
 
       @if (errorMessage) {
         <div class="err-alert">
-          <span class="material-icons-round">error_outline</span>
+          <i class="pi pi-exclamation-circle"></i>
           {{ errorMessage }}
         </div>
       }
@@ -34,9 +34,8 @@
 
         <div class="f-group">
           <label class="f-label" for="email">Email address</label>
-          <input id="email" class="f-input" type="email"
-            formControlName="email" placeholder="you@school.edu"
-            [class.is-invalid]="email?.invalid && email?.touched" />
+          <input pInputText id="email" class="w-full" type="email" autocomplete="username"
+            formControlName="email" placeholder="you@school.edu" [invalid]="!!(email?.invalid && email?.touched)" />
           @if (email?.invalid && email?.touched) {
             <div class="f-error">
               @if (email?.errors?.['required']) { Email is required. }
@@ -47,15 +46,9 @@
 
         <div class="f-group">
           <label class="f-label" for="password">Password</label>
-          <div class="pw-wrap">
-            <input id="password" class="f-input"
-              [type]="showPassword ? 'text' : 'password'"
-              formControlName="password" placeholder="••••••••"
-              [class.is-invalid]="password?.invalid && password?.touched" />
-            <button type="button" class="pw-toggle" (click)="showPassword = !showPassword">
-              <span class="material-icons-round">{{ showPassword ? 'visibility_off' : 'visibility' }}</span>
-            </button>
-          </div>
+          <p-password inputId="password" formControlName="password" placeholder="••••••••"
+            [feedback]="false" [toggleMask]="true" styleClass="w-full" inputStyleClass="w-full"
+            [invalid]="!!(password?.invalid && password?.touched)" autocomplete="current-password" />
           @if (password?.invalid && password?.touched) {
             <div class="f-error">
               @if (password?.errors?.['required'])  { Password is required. }
@@ -64,9 +57,8 @@
           }
         </div>
 
-        <button type="submit" class="btn-signin" [disabled]="loading || loginForm.invalid">
-          {{ loading ? 'Signing in...' : 'Sign In' }}
-        </button>
+        <p-button type="submit" class="mt-1.5 block w-full" styleClass="w-full" [label]="loading ? 'Signing in...' : 'Sign In'"
+          [loading]="loading" [disabled]="loading || loginForm.invalid" />
 
       </form>
 

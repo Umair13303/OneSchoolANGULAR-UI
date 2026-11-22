@@ -37,12 +37,12 @@ import { MenuCrumb } from '../../../core/models/menu.model';
     </div>
   `,
   styles: [`
-    :host { display: block; width: 100%; }
+    :host { display: block; width: 100%; margin-bottom: 8px; }
     .ph {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       flex-wrap: wrap;
       width: 100%;
       margin: 0;
@@ -52,47 +52,46 @@ import { MenuCrumb } from '../../../core/models/menu.model';
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
       min-width: 0;
-      line-height: 1.25;
+      line-height: 1.2;
     }
     .ph-sep {
       color: var(--t4, #94a3b8);
-      font-size: 13px;
+      font-size: 11px;
       font-weight: 500;
       line-height: 1;
       user-select: none;
+      opacity: 0.8;
     }
     .ph-crumb {
-      font-size: 13.5px;
+      font-size: 12px;
       font-weight: 500;
-      color: var(--t3, #64748b);
+      color: var(--t4, #94a3b8);
       white-space: nowrap;
-      max-width: 220px;
+      max-width: 180px;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .ph-crumb.muted { color: var(--t3, #64748b); }
+    .ph-crumb.muted { color: var(--t4, #94a3b8); }
     .ph-crumb.link {
-      color: var(--t3, #64748b);
+      color: var(--t4, #94a3b8);
       text-decoration: none;
       border-radius: 4px;
+      padding: 0 2px;
+      margin: 0 -2px;
       transition: color .12s ease, background .12s ease;
     }
-    /* Was var(--brand, #2563eb). --brand was never defined anywhere, so the
-       fallback always won and the most-seen hover in the app (52 pages) painted
-       a blue that is not the product accent. Now uses the accent token directly;
-       --brand is also defined as an alias in styles.scss for any other caller. */
     .ph-crumb.link:hover {
       color: var(--accent);
       background: color-mix(in srgb, var(--accent) 8%, transparent);
     }
     .ph-title {
       margin: 0;
-      font-size: 18px;
-      font-weight: 700;
+      font-size: 1.25rem;
+      font-weight: 800;
       color: var(--t1);
-      letter-spacing: -0.3px;
+      letter-spacing: -0.4px;
       line-height: 1.2;
       min-width: 0;
       overflow: hidden;
@@ -100,21 +99,27 @@ import { MenuCrumb } from '../../../core/models/menu.model';
       white-space: nowrap;
     }
     .ph-sub {
-      margin: 4px 0 0;
-      font-size: 12.5px;
+      margin: 2px 0 0;
+      font-size: 12px;
       font-weight: 500;
       color: var(--t3);
-      line-height: 1.35;
+      line-height: 1.3;
+      max-width: 52ch;
     }
+    .ph.dense { margin-bottom: 0; }
     .ph.dense .ph-title {
-      font-size: 16px;
-      font-weight: 700;
+      font-size: 1.05rem;
+      font-weight: 750;
+      letter-spacing: -0.25px;
     }
-    .ph.dense .ph-crumb { font-size: 12.5px; }
-    .ph.dense .ph-sep { font-size: 12px; }
-    .ph.dense .ph-sub {
-      margin-top: 2px;
-      font-size: 12px;
+    .ph.dense .ph-crumb { font-size: 11.5px; }
+    .ph.dense .ph-sep { font-size: 11px; }
+    .ph.dense .ph-sub { display: none; }
+    .ph.dense .ph-actions ::ng-deep .p-button {
+      border-radius: 9px;
+      min-height: 34px;
+      padding: 0.4rem 0.9rem;
+      font-size: 13px;
     }
     .ph-actions {
       display: flex;
@@ -122,11 +127,29 @@ import { MenuCrumb } from '../../../core/models/menu.model';
       gap: 8px;
       flex-shrink: 0;
       flex-wrap: wrap;
+      padding-top: 0;
     }
-    /* About half the pages project no actions. The wrapper still rendered,
-       so the column layout below added its row gap under the title for
-       nothing. Comment nodes do not defeat :empty, so this is safe. */
     .ph-actions:empty { display: none; }
+    .ph-actions ::ng-deep .p-button {
+      border-radius: 11px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      min-height: 36px;
+    }
+    .ph-actions ::ng-deep .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-secondary) {
+      background: linear-gradient(135deg, #5b7cff 0%, #3d5ce5 100%);
+      border: none;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.2) inset,
+        0 8px 18px rgba(79, 110, 247, 0.28);
+    }
+    .ph-actions ::ng-deep .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-secondary):not(:disabled):hover {
+      filter: brightness(1.04);
+      transform: translateY(-1px);
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.24) inset,
+        0 12px 24px rgba(79, 110, 247, 0.34);
+    }
 
     @media (max-width: 640px) {
       .ph {
@@ -135,12 +158,13 @@ import { MenuCrumb } from '../../../core/models/menu.model';
         gap: 10px;
       }
       .ph-crumb { max-width: 140px; }
-      .ph-actions { width: 100%; }
+      .ph-actions { width: 100%; padding-top: 0; }
       .ph-actions ::ng-deep .btn-primary,
-      .ph-actions ::ng-deep .btn-secondary {
+      .ph-actions ::ng-deep .btn-secondary,
+      .ph-actions ::ng-deep .p-button {
         width: 100%;
         justify-content: center;
-        min-height: var(--btn-h-sm, 36px);
+        min-height: var(--btn-h-sm, 34px);
       }
     }
   `]

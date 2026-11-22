@@ -4,12 +4,14 @@ import { FormsModule } from '@angular/forms';
 import { AcademicService } from '../../../core/services/academic.service';
 import { StudentService } from '../../../core/services/student.service';
 import { AcademicYear, ClassDto } from '../../../core/models/academic.model';
-import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
+import { OsSelectOption } from '../../../shared/components/os-select/os-select.component';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
 
 @Component({
   selector: 'app-student-promote-bulk-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, OsSelectComponent],
+  imports: [CommonModule, FormsModule, Button, Select],
   template: `
     <div class="dlg-backdrop" (click)="closed.emit(false)">
       <div class="dlg" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
@@ -18,29 +20,34 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
             <h3>Promote Class</h3>
             <p>Move all active students from one class into another</p>
           </div>
-          <button type="button" class="icon-x" (click)="closed.emit(false)">
-            <span class="material-icons-round">close</span>
-          </button>
+          <p-button icon="pi pi-times" severity="secondary" [outlined]="true" size="small"
+            ariaLabel="Close" (onClick)="closed.emit(false)" />
         </div>
         <div class="dlg-body">
           <div class="grid2">
             <label class="fld"><span>From Year</span>
-              <app-os-select [options]="yearOptions()" [value]="sourceYearId"
-                (valueChange)="sourceYearId=$event; loadSourceClasses()" placeholder="Year" icon="event" ariaLabel="Source year" />
+              <p-select class="w-full" appendTo="body" [overlayOptions]="overlayOpts"
+                [options]="yearOptions()" optionLabel="label" optionValue="value"
+                [ngModel]="sourceYearId" (ngModelChange)="sourceYearId=$event; loadSourceClasses()"
+                placeholder="Year" ariaLabel="Source year" />
             </label>
             <label class="fld"><span>From Class</span>
-              <app-os-select [options]="sourceClassOptions()" [value]="sourceClassId"
-                (valueChange)="sourceClassId=$event" placeholder="Class" icon="class" ariaLabel="Source class"
-                [searchable]="sourceClasses().length > 6" />
+              <p-select class="w-full" appendTo="body" [overlayOptions]="overlayOpts"
+                [options]="sourceClassOptions()" optionLabel="label" optionValue="value"
+                [ngModel]="sourceClassId" (ngModelChange)="sourceClassId=$event"
+                placeholder="Class" ariaLabel="Source class" [filter]="sourceClasses().length > 6" />
             </label>
             <label class="fld"><span>To Year</span>
-              <app-os-select [options]="yearOptions()" [value]="targetYearId"
-                (valueChange)="targetYearId=$event; loadTargetClasses()" placeholder="Year" icon="event" ariaLabel="Target year" />
+              <p-select class="w-full" appendTo="body" [overlayOptions]="overlayOpts"
+                [options]="yearOptions()" optionLabel="label" optionValue="value"
+                [ngModel]="targetYearId" (ngModelChange)="targetYearId=$event; loadTargetClasses()"
+                placeholder="Year" ariaLabel="Target year" />
             </label>
             <label class="fld"><span>To Class</span>
-              <app-os-select [options]="targetClassOptions()" [value]="targetClassId"
-                (valueChange)="targetClassId=$event" placeholder="Class" icon="class" ariaLabel="Target class"
-                [searchable]="targetClasses().length > 6" />
+              <p-select class="w-full" appendTo="body" [overlayOptions]="overlayOpts"
+                [options]="targetClassOptions()" optionLabel="label" optionValue="value"
+                [ngModel]="targetClassId" (ngModelChange)="targetClassId=$event"
+                placeholder="Class" ariaLabel="Target class" [filter]="targetClasses().length > 6" />
             </label>
           </div>
           @if (result()) {
@@ -49,10 +56,10 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
           @if (error()) { <p class="err">{{ error() }}</p> }
         </div>
         <div class="dlg-foot">
-          <button type="button" class="btn-ghost" (click)="closed.emit(!!result())" [disabled]="saving()">Close</button>
-          <button type="button" class="btn-primary" (click)="save()" [disabled]="saving() || !canSave()">
-            {{ saving() ? 'Promoting…' : 'Promote All' }}
-          </button>
+          <p-button label="Close" severity="secondary" [outlined]="true" [disabled]="saving()"
+            (onClick)="closed.emit(!!result())" />
+          <p-button [label]="saving() ? 'Promoting…' : 'Promote All'" icon="pi pi-arrow-up"
+            [loading]="saving()" [disabled]="saving() || !canSave()" (onClick)="save()" />
         </div>
       </div>
     </div>
@@ -63,16 +70,12 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
     .dlg-head{display:flex;justify-content:space-between;gap:12px;padding:16px 18px 10px;border-bottom:1px solid var(--border);}
     .dlg-head h3{margin:0;font-size:16px;font-weight:700;color:var(--t1);}
     .dlg-head p{margin:4px 0 0;font-size:12px;color:var(--t4);}
-    .icon-x{width:34px;height:34px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);color:var(--t2);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;}
     .dlg-body{padding:14px 18px;display:flex;flex-direction:column;gap:12px;}
     .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
     .fld{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:600;color:var(--t3);}
     .err{margin:0;color:#ef4444;font-size:12.5px;}
     .ok{margin:0;color:var(--green,#059669);font-size:13px;font-weight:600;}
     .dlg-foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px 16px;border-top:1px solid var(--border);}
-    .btn-ghost{height:38px;padding:0 14px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--t2);font-weight:600;cursor:pointer;}
-    .btn-primary{height:38px;padding:0 16px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-weight:700;cursor:pointer;}
-    .btn-primary:disabled,.btn-ghost:disabled{opacity:.55;cursor:not-allowed;}
     @media(max-width:560px){.grid2{grid-template-columns:1fr;}}
   `]
 })
@@ -80,6 +83,9 @@ export class StudentPromoteBulkDialogComponent implements OnInit {
   @Input() presetSourceYearId: number | null = null;
   @Input() presetSourceClassId: number | null = null;
   @Output() closed = new EventEmitter<boolean>();
+
+  /** Raise PrimeNG select overlays above this dialog's custom backdrop (z-index 10040). */
+  readonly overlayOpts = { baseZIndex: 10050 };
 
   private academicSvc = inject(AcademicService);
   private studentSvc = inject(StudentService);

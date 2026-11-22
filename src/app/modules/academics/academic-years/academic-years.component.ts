@@ -2,6 +2,13 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Button } from 'primeng/button';
+import { InputText } from 'primeng/inputtext';
+import { Tag } from 'primeng/tag';
+import { Dialog } from 'primeng/dialog';
+import { TableModule } from 'primeng/table';
+import { ToggleSwitch } from 'primeng/toggleswitch';
+import { Tooltip } from 'primeng/tooltip';
 import { AcademicService } from '../../../core/services/academic.service';
 import { AcademicYear } from '../../../core/models/academic.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -11,102 +18,132 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
 @Component({
   selector: 'app-academic-years',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent, LoadingComponent, DatePickerComponent],
+  imports: [
+    CommonModule, FormsModule, PageHeaderComponent, LoadingComponent, DatePickerComponent,
+    Button, InputText, Tag, Dialog, TableModule, ToggleSwitch, Tooltip
+  ],
   template: `
-    <app-page-header title="Academic Years" subtitle="Manage academic years">
-      <button class="btn-primary" (click)="openAdd()">+ Add Year</button>
+    <div class="os-page compact">
+    <app-page-header title="Academic Years" [dense]="true" routeUrl="/academics/years">
+      <p-button label="Add Year" icon="pi pi-plus" (onClick)="openAdd()" />
     </app-page-header>
 
-    @if (loading()) { <app-loading /> }
-    @else {
-      <div class="card">
-        <div class="table-scroll">
-        <table class="table">
-          <thead>
-            <tr>
-              <th class="col-label">Label</th>
-              <th class="col-start">Start Date</th>
-              <th class="col-end">End Date</th>
-              <th class="col-status">Status</th>
-              <th class="col-actions"></th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (y of years(); track y.academicYearId) {
+    <div class="os-stage">
+      <div class="os-stage-body">
+        @if (loading()) {
+          <div class="state-pad"><app-loading /></div>
+        } @else {
+          <p-table [value]="years()" dataKey="academicYearId" styleClass="p-datatable-sm os-data-table" [tableStyle]="{ 'min-width': '100%' }">
+            <ng-template #header>
+              <tr>
+                <th class="col-label">Label</th>
+                <th class="col-start">Start Date</th>
+                <th class="col-end">End Date</th>
+                <th class="col-status">Status</th>
+                <th class="col-actions"></th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-y>
               <tr>
                 <td class="col-label"><strong>{{ y.yearLabel }}</strong></td>
                 <td class="col-start">{{ y.startDate | date:'dd-MMM-yyyy' }}</td>
                 <td class="col-end">{{ y.endDate | date:'dd-MMM-yyyy' }}</td>
-                <td class="col-status"><span class="badge" [class.active]="y.isActive">{{ y.isActive ? 'Active' : 'Inactive' }}</span></td>
-                <td class="col-actions actions-td">
-                  <button class="btn-icon calendar-btn" title="Manage Calendar" (click)="goToCalendar(y)">
-                    <span class="material-icons-round">event_note</span>
-                    <span class="btn-icon-label">Calendar</span>
-                  </button>
-                  <button class="btn-icon" title="Edit" (click)="openEdit(y)">
-                    <span class="material-icons-round">edit</span>
-                  </button>
+                <td class="col-status">
+                  <p-tag [value]="y.isActive ? 'Active' : 'Inactive'" [severity]="y.isActive ? 'success' : 'danger'" [rounded]="true" />
+                </td>
+                <td class="col-actions">
+                  <div class="flex items-center justify-end gap-1.5 whitespace-nowrap pr-1.5">
+                    <p-button
+                      label="Calendar"
+                      icon="pi pi-calendar"
+                      size="small"
+                      severity="secondary"
+                      [outlined]="true"
+                      ariaLabel="Manage Calendar"
+                      pTooltip="Manage Calendar"
+                      (onClick)="goToCalendar(y)" />
+                    <p-button
+                      icon="pi pi-pencil"
+                      size="small"
+                      severity="secondary"
+                      [text]="true"
+                      [rounded]="true"
+                      ariaLabel="Edit"
+                      pTooltip="Edit"
+                      (onClick)="openEdit(y)" />
+                  </div>
                 </td>
               </tr>
-            }
-          </tbody>
-        </table>
-        </div>
+            </ng-template>
+            <ng-template #emptymessage>
+              <tr><td colspan="5" class="text-center py-6 text-[var(--t4)]">No academic years yet.</td></tr>
+            </ng-template>
+          </p-table>
+        }
       </div>
-    }
+    </div>
+    </div>
 
-    @if (showModal()) {
-      <div class="modal-overlay" (click)="closeModal()">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <h3>{{ editingId() ? 'Edit Academic Year' : 'Add Academic Year' }}</h3>
-          <div class="field"><label>Start Date *</label><app-date-picker [(ngModel)]="form.startDate" (dateChange)="onStartDateChange()" /></div>
-          <div class="field"><label>End Date *</label><app-date-picker [(ngModel)]="form.endDate" [min]="form.startDate" /></div>
-          <div class="field"><label>Label *</label><input [(ngModel)]="form.yearLabel" placeholder="e.g. 2025-26" /></div>
-          <div class="toggle-row" (click)="form.isActive = !form.isActive">
-            <div class="toggle-info">
-              <span class="toggle-label">Active Year</span>
-              <span class="toggle-sub">Mark this as the current academic year</span>
-            </div>
-            <div class="toggle-track" [class.on]="form.isActive">
-              <div class="toggle-thumb"></div>
-            </div>
-          </div>
-          @if (modalError()) { <p class="error-msg">{{ modalError() }}</p> }
-          <div class="modal-actions">
-            <button class="btn-secondary" (click)="closeModal()">Cancel</button>
-            <button class="btn-primary" (click)="save()" [disabled]="saving()">{{ saving() ? 'Saving...' : 'Save' }}</button>
-          </div>
-        </div>
+    <p-dialog
+      [header]="editingId() ? 'Edit Academic Year' : 'Add Academic Year'"
+      [visible]="showModal()"
+      (visibleChange)="showModal.set($event)"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '28rem' }"
+      [breakpoints]="{ '640px': '96vw' }">
+
+      <div class="flex flex-col gap-1.5 mb-3.5">
+        <label class="lbl">Start Date *</label>
+        <app-date-picker [(ngModel)]="form.startDate" (dateChange)="onStartDateChange()" />
       </div>
-    }
+      <div class="flex flex-col gap-1.5 mb-3.5">
+        <label class="lbl">End Date *</label>
+        <app-date-picker [(ngModel)]="form.endDate" [min]="form.startDate" />
+      </div>
+      <div class="flex flex-col gap-1.5 mb-3.5">
+        <label class="lbl" for="yr-label">Label *</label>
+        <input pInputText id="yr-label" class="w-full" [(ngModel)]="form.yearLabel" placeholder="e.g. 2025-26" />
+      </div>
+
+      <div class="toggle-row flex items-center justify-between gap-4 px-3.5 py-3">
+        <div class="flex flex-col gap-0.5">
+          <span class="toggle-label">Active Year</span>
+          <span class="toggle-sub">Mark this as the current academic year</span>
+        </div>
+        <p-toggleswitch [(ngModel)]="form.isActive" />
+      </div>
+
+      @if (modalError()) { <p class="error-msg">{{ modalError() }}</p> }
+
+      <ng-template #footer>
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="closeModal()" />
+          <p-button
+            [label]="saving() ? 'Saving...' : 'Save'"
+            icon="pi pi-check"
+            [loading]="saving()"
+            [disabled]="saving()"
+            (onClick)="save()" />
+        </div>
+      </ng-template>
+    </p-dialog>
   `,
   styles: [`
-    .table-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .badge{padding:3px 10px;border-radius:12px;font-size:12px;background:var(--red-s);color:var(--red)}
-    .badge.active{background:var(--green-s);color:var(--green)}
-    .actions-td{text-align:right;white-space:nowrap;padding-right:12px}
-    .btn-icon{background:none;border:none;cursor:pointer;padding:5px;border-radius:6px;color:var(--t3);display:inline-flex;align-items:center;transition:background .15s,color .15s}
-    .btn-icon:hover{background:var(--surface-2,#f1f5f9);color:var(--accent)}
-    .btn-icon .material-icons-round{font-size:18px}
-    .calendar-btn{gap:4px;padding:5px 10px;border:1px solid var(--border);color:var(--accent)}
-    .calendar-btn:hover{background:#eef2ff;border-color:var(--accent)}
-    .btn-icon-label{font-size:11px;font-weight:700}
+    .state-pad { padding: 16px; }
+    .col-actions { width: 150px; }
+    .lbl { font-size: 12px; font-weight: 700; color: var(--t2); }
 
-    .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 14px;border:1px solid var(--border);border-radius:10px;cursor:pointer;user-select:none;transition:background .15s}
-    .toggle-row:hover{background:var(--surface-2,#f8fafc)}
-    .toggle-info{display:flex;flex-direction:column;gap:2px}
-    .toggle-label{font-size:13px;font-weight:600;color:var(--t1)}
-    .toggle-sub{font-size:11px;color:var(--t4)}
-    .toggle-track{width:42px;height:24px;border-radius:99px;background:var(--border);position:relative;transition:background .2s;flex-shrink:0}
-    .toggle-track.on{background:var(--accent)}
-    .toggle-thumb{width:18px;height:18px;border-radius:50%;background:#fff;position:absolute;top:3px;left:3px;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.2)}
-    .toggle-track.on .toggle-thumb{transform:translateX(18px)}
+    .toggle-row { border: 1px solid var(--border); border-radius: 10px; }
+    .toggle-label { font-size: 13px; font-weight: 600; color: var(--t1); }
+    .toggle-sub { font-size: 11px; color: var(--t4); }
+    .error-msg { color: #ef4444; font-size: 12.5px; margin: 12px 0 0; }
 
     @media (max-width: 640px) {
       .col-start, .col-end { display: none !important; }
-      .table th, .table td { padding: 10px 8px; }
-      .calendar-btn .btn-icon-label { display: none; }
-      .calendar-btn { padding: 5px; }
+      .col-actions { width: 100px; }
     }
   `]
 })

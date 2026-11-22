@@ -2,6 +2,12 @@ import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
+import { Tag } from 'primeng/tag';
+import { Dialog } from 'primeng/dialog';
+import { Tooltip } from 'primeng/tooltip';
 import { AcademicService } from '../../../core/services/academic.service';
 import { SubjectDto, ClassDto, ClassSubjectDto } from '../../../core/models/academic.model';
 import { UserService } from '../../../core/services/user.service';
@@ -20,52 +26,67 @@ const PERIOD_ICONS = ['menu_book','calculate','science','language','mosque','com
 @Component({
   selector: 'app-subjects',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent, EmptyStateComponent, LoadingComponent, ConfirmDeleteComponent],
+  imports: [
+    CommonModule, FormsModule, PageHeaderComponent, EmptyStateComponent, LoadingComponent, ConfirmDeleteComponent,
+    Button, Select, InputText, Tag, Dialog, Tooltip
+  ],
   template: `
-    <app-page-header title="Subjects" subtitle="Manage subjects and assign them class-wise" />
+    <div class="os-page compact">
+    <app-page-header title="Subjects" [dense]="true" routeUrl="/academics/subjects" />
 
     <div class="two-col">
 
       <!-- ═══ LEFT: Master Subject List ═══ -->
-      <div class="panel card">
-        <div class="panel-head">
+      <div class="os-stage">
+        <div class="os-stage-bar">
           <div class="panel-title">
             <span class="material-icons-round">library_books</span>
             Master Subjects
           </div>
           @if (!showAdd()) {
-            <button class="btn-primary btn-sm" (click)="openAdd()">
-              <span class="material-icons-round">add</span> Add
-            </button>
+            <p-button label="Add" icon="pi pi-plus" size="small" (onClick)="openAdd()" />
           }
         </div>
+        <div class="os-stage-body">
 
         <!-- Add subject form — pinned below header -->
         @if (showAdd()) {
           <div class="add-form">
-            <input class="add-input" [(ngModel)]="newName" placeholder="Subject name (e.g. Islamiat)"
+            <input pInputText class="add-input" [(ngModel)]="newName" placeholder="Subject name (e.g. Islamiat)"
                    (keyup.enter)="addSubject()" autofocus />
             @if (isSuperAdmin) {
-              <select class="add-select" [(ngModel)]="newInstituteId">
-                <option [ngValue]="null">— Institute —</option>
-                @for (inst of institutes(); track inst.instituteId) {
-                  <option [ngValue]="inst.instituteId">{{ inst.name }}</option>
-                }
-              </select>
+              <p-select
+                class="add-select"
+                [options]="institutes()"
+                optionLabel="name"
+                optionValue="instituteId"
+                placeholder="— Institute —"
+                [showClear]="true"
+                appendTo="body"
+                [(ngModel)]="newInstituteId" />
             }
-            <div class="add-form-actions">
-              <button class="btn-primary btn-sm" (click)="addSubject()" [disabled]="!newName.trim()">
-                <span class="material-icons-round">check</span>
-              </button>
-              <button class="btn-icon-only" (click)="showAdd.set(false)" title="Cancel">
-                <span class="material-icons-round">close</span>
-              </button>
+            <div class="flex items-center gap-1.5">
+              <p-button
+                icon="pi pi-check"
+                size="small"
+                ariaLabel="Add subject"
+                pTooltip="Add"
+                [disabled]="!newName.trim()"
+                (onClick)="addSubject()" />
+              <p-button
+                icon="pi pi-times"
+                size="small"
+                severity="secondary"
+                [outlined]="true"
+                ariaLabel="Cancel"
+                pTooltip="Cancel"
+                (onClick)="showAdd.set(false)" />
             </div>
           </div>
         }
 
         @if (subjectError()) {
-          <p class="error-msg" style="padding: 0 16px 8px">{{ subjectError() }}</p>
+          <p class="error-msg px-4 pb-2">{{ subjectError() }}</p>
         }
 
         @if (loadingSubjects()) {
@@ -81,46 +102,54 @@ const PERIOD_ICONS = ['menu_book','calculate','science','language','mosque','com
                     <span class="material-icons-round">{{ PERIOD_ICONS[i % PERIOD_ICONS.length] }}</span>
                   </div>
                   @if (editId() === s.subjectId) {
-                    <input class="inline-input" [(ngModel)]="editName" (keyup.enter)="saveEdit(s)" (keyup.escape)="editId.set(0)" autofocus />
+                    <input pInputText class="inline-input" [(ngModel)]="editName" (keyup.enter)="saveEdit(s)" (keyup.escape)="editId.set(0)" autofocus />
                   } @else {
                     <span class="subject-name">{{ s.subjectName }}</span>
                     @if (isSuperAdmin && s.instituteName) {
-                      <span class="inst-badge">{{ s.instituteName }}</span>
+                      <p-tag [value]="s.instituteName" severity="secondary" [rounded]="true" />
                     }
                   }
                 </div>
-                <div class="subject-actions">
+                <div class="flex shrink-0 gap-1">
                   @if (editId() === s.subjectId) {
-                    <button class="icon-act green" (click)="saveEdit(s)" title="Save"><span class="material-icons-round">check</span></button>
-                    <button class="icon-act" (click)="editId.set(0)" title="Cancel"><span class="material-icons-round">close</span></button>
+                    <p-button icon="pi pi-check" [text]="true" [rounded]="true" size="small" severity="success"
+                              ariaLabel="Save" pTooltip="Save" (onClick)="saveEdit(s)" />
+                    <p-button icon="pi pi-times" [text]="true" [rounded]="true" size="small" severity="secondary"
+                              ariaLabel="Cancel" pTooltip="Cancel" (onClick)="editId.set(0)" />
                   } @else {
-                    <button class="icon-act" (click)="startEdit(s)" title="Edit"><span class="material-icons-round">edit</span></button>
+                    <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" severity="secondary"
+                              ariaLabel="Edit" pTooltip="Edit" (onClick)="startEdit(s)" />
                   }
                 </div>
               </div>
             }
           </div>
         }
+        </div>
       </div>
 
       <!-- ═══ RIGHT: Class-wise Subject Assignment ═══ -->
-      <div class="panel card">
-        <div class="panel-head">
+      <div class="os-stage">
+        <div class="os-stage-bar">
           <div class="panel-title">
             <span class="material-icons-round">class</span>
             Assign Subjects to Class
           </div>
         </div>
+        <div class="os-stage-body">
 
         <!-- Class selector -->
         <div class="class-selector">
           <label class="sel-label">Select Class</label>
-          <div class="class-chips">
+          <div class="flex flex-wrap gap-2">
             @for (c of classes(); track c.classId) {
-              <button class="chip" [class.active]="selectedClass()?.classId === c.classId"
-                      (click)="selectClass(c)">
-                {{ c.className }}{{ c.section ? ' ' + c.section : '' }}
-              </button>
+              <p-button
+                [label]="c.className + (c.section ? ' ' + c.section : '')"
+                size="small"
+                [rounded]="true"
+                [outlined]="selectedClass()?.classId !== c.classId"
+                [severity]="selectedClass()?.classId === c.classId ? 'primary' : 'secondary'"
+                (onClick)="selectClass(c)" />
             }
             @if (classes().length === 0 && !loadingClasses()) {
               <p class="no-classes">No classes found. Create classes first.</p>
@@ -132,9 +161,7 @@ const PERIOD_ICONS = ['menu_book','calculate','science','language','mosque','com
           <div class="periods-section">
             <div class="periods-header">
               <span class="periods-title">{{ selectedClass()!.className }}{{ selectedClass()!.section ? ' — ' + selectedClass()!.section : '' }} Subjects</span>
-              <button class="btn-primary btn-sm" (click)="openAssign()">
-                <span class="material-icons-round">add</span> Assign Subject
-              </button>
+              <p-button label="Assign Subject" icon="pi pi-plus" size="small" (onClick)="openAssign()" />
             </div>
 
             @if (loadingClassSubjects()) {
@@ -142,7 +169,7 @@ const PERIOD_ICONS = ['menu_book','calculate','science','language','mosque','com
             } @else if (classSubjects().length === 0) {
               <app-empty-state icon="library_books" title="No subjects assigned" message="Assign subjects to this class using the button above" />
             } @else {
-              <div class="subject-assigned-list">
+              <div class="flex flex-col">
                 @for (cs of classSubjects(); track cs.id; let i = $index) {
                   <div class="assigned-row">
                     <div class="period-icon" [style.background]="iconBg(i)">
@@ -157,13 +184,16 @@ const PERIOD_ICONS = ['menu_book','calculate','science','language','mosque','com
                         </span>
                       }
                     </div>
-                    <div class="row-actions">
-                      <button class="toggle-btn" [class.active]="cs.isActive" (click)="toggleSubjectStatus(cs)" title="{{ cs.isActive ? 'Mark Inactive' : 'Mark Active' }}">
-                        {{ cs.isActive ? 'Active' : 'Inactive' }}
-                      </button>
-                      <button class="icon-act danger" (click)="removeSubject(cs)" title="Remove subject">
-                        <span class="material-icons-round">delete_outline</span>
-                      </button>
+                    <div class="ml-auto flex shrink-0 items-center gap-2">
+                      <p-tag
+                        class="cursor-pointer"
+                        [value]="cs.isActive ? 'Active' : 'Inactive'"
+                        [severity]="cs.isActive ? 'success' : 'secondary'"
+                        [rounded]="true"
+                        [pTooltip]="cs.isActive ? 'Mark Inactive' : 'Mark Active'"
+                        (click)="toggleSubjectStatus(cs)" />
+                      <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger"
+                                ariaLabel="Remove subject" pTooltip="Remove subject" (onClick)="removeSubject(cs)" />
                     </div>
                   </div>
                 }
@@ -173,69 +203,79 @@ const PERIOD_ICONS = ['menu_book','calculate','science','language','mosque','com
         } @else {
           <app-empty-state icon="touch_app" title="Select a class" message="Choose a class above to view and assign subjects" />
         }
-      </div>
-    </div>
-
-    <!-- Assign Subject Modal -->
-    @if (showAssign()) {
-      <div class="modal-overlay" (click)="showAssign.set(false)">
-        <div class="modal assign-modal" (click)="$event.stopPropagation()">
-
-          <div class="assign-modal-header">
-            <div>
-              <h3>Assign Subject</h3>
-              <p class="assign-sub">{{ selectedClass()?.className }}{{ selectedClass()?.section ? ' — ' + selectedClass()?.section : '' }}</p>
-            </div>
-            <button class="icon-act" (click)="showAssign.set(false)"><span class="material-icons-round">close</span></button>
-          </div>
-
-          @if (availableSubjects().length === 0) {
-            <div class="assign-empty">
-              <span class="material-icons-round">check_circle</span>
-              <p>All subjects are already assigned to this class.</p>
-            </div>
-          } @else {
-            <div class="pick-label-row">
-              <p class="pick-label">Select subjects to assign</p>
-              <button class="sel-all-btn" (click)="toggleSelectAll()">
-                {{ assignSubjectIds.size === availableSubjects().length ? 'Deselect All' : 'Select All' }}
-              </button>
-            </div>
-            <div class="subject-cards">
-              @for (s of availableSubjects(); track s.subjectId; let i = $index) {
-                <button class="subject-card" [class.selected]="assignSubjectIds.has(s.subjectId)"
-                        (click)="toggleSubject(s.subjectId)">
-                  <div class="sc-icon" [style.background]="iconBg(i)">
-                    <span class="material-icons-round">{{ PERIOD_ICONS[i % PERIOD_ICONS.length] }}</span>
-                  </div>
-                  <span class="sc-name">{{ s.subjectName }}</span>
-                  @if (assignSubjectIds.has(s.subjectId)) {
-                    <span class="sc-check material-icons-round">check_circle</span>
-                  }
-                </button>
-              }
-            </div>
-          }
-
-          @if (assignError()) {
-            <p class="error-msg" style="padding: 0 22px 8px">{{ assignError() }}</p>
-          }
-
-          <div class="modal-actions">
-            <button class="btn-secondary" (click)="showAssign.set(false)">Cancel</button>
-            @if (availableSubjects().length > 0) {
-              <button class="btn-primary" (click)="assignSubjects()" [disabled]="assignSubjectIds.size === 0 || assigning()">
-                @if (assigning()) {
-                  Assigning…
-                } @else {
-                  Assign {{ assignSubjectIds.size > 0 ? assignSubjectIds.size + ' Subject' + (assignSubjectIds.size > 1 ? 's' : '') : 'Subjects' }}
-                }
-              </button>
-            }
-          </div>
         </div>
       </div>
-    }
+    </div>
+    </div>
+
+    <!-- Assign Subject Dialog -->
+    <p-dialog
+      [visible]="showAssign()"
+      (visibleChange)="showAssign.set($event)"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '34rem' }"
+      [breakpoints]="{ '640px': '96vw' }">
+
+      <ng-template #header>
+        <div>
+          <h3 class="assign-title">Assign Subject</h3>
+          <p class="assign-sub">{{ selectedClass()?.className }}{{ selectedClass()?.section ? ' — ' + selectedClass()?.section : '' }}</p>
+        </div>
+      </ng-template>
+
+      @if (availableSubjects().length === 0) {
+        <div class="assign-empty">
+          <span class="material-icons-round">check_circle</span>
+          <p>All subjects are already assigned to this class.</p>
+        </div>
+      } @else {
+        <div class="pick-label-row">
+          <p class="pick-label">Select subjects to assign</p>
+          <p-button
+            [label]="assignSubjectIds.size === availableSubjects().length ? 'Deselect All' : 'Select All'"
+            [link]="true"
+            size="small"
+            (onClick)="toggleSelectAll()" />
+        </div>
+        <div class="subject-cards">
+          @for (s of availableSubjects(); track s.subjectId; let i = $index) {
+            <button type="button" class="subject-card" [class.selected]="assignSubjectIds.has(s.subjectId)"
+                    (click)="toggleSubject(s.subjectId)">
+              <div class="sc-icon" [style.background]="iconBg(i)">
+                <span class="material-icons-round">{{ PERIOD_ICONS[i % PERIOD_ICONS.length] }}</span>
+              </div>
+              <span class="sc-name">{{ s.subjectName }}</span>
+              @if (assignSubjectIds.has(s.subjectId)) {
+                <span class="sc-check material-icons-round">check_circle</span>
+              }
+            </button>
+          }
+        </div>
+      }
+
+      @if (assignError()) {
+        <p class="error-msg">{{ assignError() }}</p>
+      }
+
+      <ng-template #footer>
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="showAssign.set(false)" />
+          @if (availableSubjects().length > 0) {
+            <p-button
+              [label]="assigning()
+                ? 'Assigning…'
+                : 'Assign ' + (assignSubjectIds.size > 0 ? assignSubjectIds.size + ' Subject' + (assignSubjectIds.size > 1 ? 's' : '') : 'Subjects')"
+              icon="pi pi-check"
+              [loading]="assigning()"
+              [disabled]="assignSubjectIds.size === 0 || assigning()"
+              (onClick)="assignSubjects()" />
+          }
+        </div>
+      </ng-template>
+    </p-dialog>
 
     <app-confirm-delete />
   `,
@@ -260,31 +300,19 @@ const PERIOD_ICONS = ['menu_book','calculate','science','language','mosque','com
       }
     }
 
-    .panel {
-      width: 100%;
-      box-sizing: border-box;
-      overflow: hidden;
-    }
-    .panel-head {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 18px;
-      border-bottom: 1px solid var(--border);
-      gap: 10px;
-    }
+    .os-stage { width: 100%; box-sizing: border-box; min-width: 0; }
+    .os-stage-bar { flex-wrap: nowrap; }
     .panel-title {
       display: flex; align-items: center; gap: 8px;
-      font-size: 13.5px; font-weight: 700; color: var(--t1);
+      font-size: 13px; font-weight: 700; color: var(--t1);
     }
     .panel-title .material-icons-round { font-size: 18px; color: var(--accent); }
-
-    .btn-sm { padding: 6px 13px; font-size: 12px; }
-    .btn-sm .material-icons-round { font-size: 15px; }
 
     /* Subject list */
     .subject-list { display: flex; flex-direction: column; }
     .subject-row {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 10px 16px; border-bottom: 1px solid var(--border);
+      padding: 7px 14px; border-bottom: 1px solid var(--border);
       transition: background 0.1s; gap: 10px;
     }
     .subject-row:last-child { border-bottom: none; }
@@ -297,82 +325,33 @@ const PERIOD_ICONS = ['menu_book','calculate','science','language','mosque','com
     }
     .subject-icon .material-icons-round { font-size: 17px; color: #fff; font-variation-settings: 'FILL' 1; }
     .subject-name { font-size: 13.5px; font-weight: 600; color: var(--t1); word-break: break-word; }
-    .inline-input {
-      flex: 1; padding: 5px 9px; border: 1.5px solid var(--accent);
-      border-radius: 6px; font-size: 13px; background: var(--surface); color: var(--t1);
-      outline: none;
-    }
-
-    .subject-actions { display: flex; gap: 4px; flex-shrink: 0; }
-    .icon-act {
-      width: 30px; height: 30px; border-radius: 7px;
-      border: none; background: transparent; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      color: var(--t4); transition: background 0.15s, color 0.15s;
-    }
-    .icon-act:hover { background: var(--surface-3); color: var(--t1); }
-    .icon-act.green { color: var(--green); }
-    .icon-act .material-icons-round { font-size: 16px; }
+    .inline-input { flex: 1; min-width: 0; }
 
     .add-form {
       display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
       padding: 12px 14px; border-bottom: 2px solid var(--accent);
       background: color-mix(in srgb, var(--accent) 5%, var(--surface));
     }
-    .add-input {
-      flex: 1 1 180px; padding: 8px 12px; border: 1.5px solid var(--accent);
-      border-radius: 8px; font-size: 13px; font-family: inherit;
-      background: var(--surface); color: var(--t1); outline: none;
-      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
-    }
-    .add-select {
-      padding: 8px 10px; border: 1.5px solid var(--border);
-      border-radius: 8px; font-size: 12.5px; font-family: inherit;
-      background: var(--surface); color: var(--t1); outline: none;
-      flex: 1 1 130px;
-    }
-    .add-form-actions { display: flex; align-items: center; gap: 6px; }
-    .inst-badge {
-      font-size: 10.5px; font-weight: 700; color: var(--t4);
-      background: var(--surface-3); padding: 2px 7px; border-radius: 99px;
-      margin-left: 6px; white-space: nowrap;
-    }
-    .btn-icon-only {
-      width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border);
-      background: var(--surface); cursor: pointer; display: flex; align-items: center;
-      justify-content: center; color: var(--t4); flex-shrink: 0; transition: all .15s;
-    }
-    .btn-icon-only:hover { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
-    .btn-icon-only .material-icons-round { font-size: 16px; }
+    .add-input { flex: 1 1 180px; }
+    .add-select { flex: 1 1 130px; min-width: 0; }
 
     /* Class selector */
-    .class-selector { padding: 14px 18px; border-bottom: 1px solid var(--border); }
+    .class-selector { padding: 10px 14px; border-bottom: 1px solid var(--border); }
     .sel-label { font-size: 11px; font-weight: 700; color: var(--t4); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; display: block; }
-    .class-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-    .chip {
-      padding: 7px 15px; border-radius: 99px;
-      border: 1.5px solid var(--border); background: var(--surface);
-      font-size: 12.5px; font-weight: 600; color: var(--t2);
-      cursor: pointer; transition: all 0.15s;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .chip:hover { border-color: var(--accent); color: var(--accent); }
-    .chip.active { border-color: var(--accent); background: var(--accent-s); color: var(--accent); }
     .no-classes { font-size: 13px; color: var(--t4); }
 
     /* Periods section */
     .periods-section { padding: 0; }
     .periods-header {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 18px; border-bottom: 1px solid var(--border);
+      padding: 10px 14px; border-bottom: 1px solid var(--border);
       background: var(--surface-2); gap: 10px; flex-wrap: wrap;
     }
     .periods-title { font-size: 13px; font-weight: 700; color: var(--t2); }
 
-    .subject-assigned-list { display: flex; flex-direction: column; }
     .assigned-row {
-      display: flex; align-items: center; gap: 12px;
-      padding: 12px 18px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 14px; border-bottom: 1px solid var(--border);
       transition: background 0.1s;
     }
     .assigned-row:last-child { border-bottom: none; }
@@ -391,45 +370,23 @@ const PERIOD_ICONS = ['menu_book','calculate','science','language','mosque','com
       font-size: 12px; color: var(--t3);
     }
     .period-teacher .material-icons-round { font-size: 13px; }
-    .period-teacher.unassigned { color: var(--t5); font-style: italic; }
 
-    .row-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; }
-    .toggle-btn {
-      padding: 5px 12px; border-radius: 99px; font-size: 11.5px; font-weight: 700;
-      border: 1.5px solid var(--border); background: var(--surface); color: var(--t4);
-      cursor: pointer; transition: all 0.15s; font-family: inherit;
-    }
-    .toggle-btn.active { border-color: var(--green); color: var(--green); background: color-mix(in srgb, var(--green) 10%, transparent); }
-    .toggle-btn:hover { opacity: 0.75; }
-    .icon-act.danger:hover { background: color-mix(in srgb, #ef4444 12%, transparent); color: #ef4444; }
-
-    /* Assign modal */
-    .assign-modal { max-width: 540px; width: 100%; padding: 0; overflow: hidden; }
-    .assign-modal-header {
-      display: flex; align-items: flex-start; justify-content: space-between;
-      padding: 20px 22px 16px; border-bottom: 1px solid var(--border);
-    }
-    .assign-modal-header h3 { font-size: 16px; font-weight: 800; color: var(--t1); margin: 0; }
-    .assign-sub { font-size: 12.5px; color: var(--t4); margin-top: 3px; }
+    /* Assign dialog */
+    .assign-title { font-size: 16px; font-weight: 800; color: var(--t1); margin: 0; }
+    .assign-sub { font-size: 12.5px; color: var(--t4); margin: 3px 0 0; }
 
     .pick-label-row {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 22px 8px;
+      padding: 0 0 8px;
     }
     .pick-label {
       font-size: 11px; font-weight: 700; color: var(--t4);
       text-transform: uppercase; letter-spacing: 0.8px;
       margin: 0;
     }
-    .sel-all-btn {
-      font-size: 12px; font-weight: 600; color: var(--accent);
-      background: none; border: none; cursor: pointer; padding: 0;
-      font-family: inherit;
-    }
-    .sel-all-btn:hover { text-decoration: underline; }
     .subject-cards {
       display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      gap: 10px; padding: 0 22px 16px; max-height: 280px; overflow-y: auto;
+      gap: 10px; max-height: 280px; overflow-y: auto; padding: 2px;
     }
     .subject-card {
       display: flex; flex-direction: column; align-items: center; gap: 8px;
@@ -453,37 +410,21 @@ const PERIOD_ICONS = ['menu_book','calculate','science','language','mosque','com
 
     .assign-empty {
       display: flex; flex-direction: column; align-items: center; gap: 8px;
-      padding: 32px 22px; color: var(--t4);
+      padding: 24px 12px; color: var(--t4);
     }
     .assign-empty .material-icons-round { font-size: 36px; color: var(--green); }
     .assign-empty p { font-size: 13px; text-align: center; }
 
-    .modal-actions { padding: 14px 22px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+    .error-msg { color: #ef4444; font-size: 12.5px; margin: 8px 0 0; }
 
     @media (max-width: 768px) {
-      .two-col { display: flex !important; flex-direction: column !important; gap: 16px !important; }
-      .panel-head { padding: 14px 16px; }
-      .class-selector { padding: 12px 14px; }
-      .class-chips { gap: 6px; }
-      .chip { padding: 6px 12px; font-size: 12px; }
-      .periods-header { padding: 12px 14px; }
-      .assigned-row { padding: 10px 14px; gap: 10px; }
+      .class-selector { padding: 10px 12px; }
+      .periods-header { padding: 10px 12px; }
+      .assigned-row { padding: 8px 12px; gap: 10px; }
       .add-form { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 12px; }
       .add-input { width: 100%; flex: 1 1 auto; }
       .add-select { max-width: 100%; width: 100%; flex: 1 1 auto; }
-      .add-form-actions { justify-content: flex-end; }
-      .subject-cards { grid-template-columns: repeat(2, 1fr); padding: 0 14px 14px; }
-      .assign-modal {
-        max-width: 100vw;
-        border-radius: var(--r-2xl) var(--r-2xl) 0 0;
-        position: fixed;
-        bottom: 0; left: 0; right: 0;
-      }
-      .modal-actions {
-        flex-direction: column-reverse;
-        gap: 8px;
-        .btn-primary, .btn-secondary { width: 100%; justify-content: center; min-height: 42px; }
-      }
+      .subject-cards { grid-template-columns: repeat(2, 1fr); }
     }
   `]
 })

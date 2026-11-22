@@ -1,6 +1,8 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Button } from 'primeng/button';
+import { InputText } from 'primeng/inputtext';
 import { DevCompanyService } from '../../../core/services/dev-company.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { DevCompany } from '../../../core/models/dev-company.model';
@@ -8,10 +10,10 @@ import { DevCompany } from '../../../core/models/dev-company.model';
 @Component({
   selector: 'app-dev-company',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, Button, InputText],
   template: `
     <div class="page">
-      <div class="page-header">
+      <div class="page-header flex items-start justify-between">
         <div>
           <h1 class="page-title">Developer Company</h1>
           <p class="page-sub">Manage Dev_Solutions branding shown in the superadmin panel</p>
@@ -35,47 +37,47 @@ import { DevCompany } from '../../../core/models/dev-company.model';
             <div class="form-grid">
               <div class="field full">
                 <label>Company Name <span class="req">*</span></label>
-                <input [(ngModel)]="form.name" placeholder="Dev_Solutions" />
+                <input pInputText class="w-full" [(ngModel)]="form.name" placeholder="Dev_Solutions" />
               </div>
 
               <div class="field full">
                 <label>Tagline</label>
-                <input [(ngModel)]="form.tagline" placeholder="Empowering Schools with Smart Technology" />
+                <input pInputText class="w-full" [(ngModel)]="form.tagline" placeholder="Empowering Schools with Smart Technology" />
               </div>
 
               <div class="field full">
                 <label>Logo URL</label>
-                <input [(ngModel)]="form.logoUrl" placeholder="https://…/logo.png" />
+                <input pInputText class="w-full" [(ngModel)]="form.logoUrl" placeholder="https://…/logo.png" />
                 <p class="hint">Paste a direct image URL. Shown in the sidebar brand area.</p>
               </div>
 
               <div class="field full">
                 <label>Copyright Text</label>
-                <input [(ngModel)]="form.copyrightText" placeholder="© 2026 Dev_Solutions. All rights reserved." />
+                <input pInputText class="w-full" [(ngModel)]="form.copyrightText" placeholder="© 2026 Dev_Solutions. All rights reserved." />
               </div>
 
               <div class="field full">
                 <label>Email</label>
-                <input [(ngModel)]="form.email" type="email" placeholder="info@devsolutions.com" />
+                <input pInputText class="w-full" [(ngModel)]="form.email" type="email" placeholder="info@devsolutions.com" />
               </div>
 
               <div class="field">
                 <label>Phone</label>
-                <input [(ngModel)]="form.phone" placeholder="+92 300 0000000" />
+                <input pInputText class="w-full" [(ngModel)]="form.phone" placeholder="+92 300 0000000" />
               </div>
 
               <div class="field">
                 <label>Website</label>
-                <input [(ngModel)]="form.website" placeholder="https://devsolutions.com" />
+                <input pInputText class="w-full" [(ngModel)]="form.website" placeholder="https://devsolutions.com" />
               </div>
 
               <div class="field full">
                 <label>Address</label>
-                <input [(ngModel)]="form.address" placeholder="123 Tech Street, Karachi" />
+                <input pInputText class="w-full" [(ngModel)]="form.address" placeholder="123 Tech Street, Karachi" />
               </div>
             </div>
 
-            <div class="card-foot">
+            <div class="card-foot flex flex-wrap items-center gap-3">
               @if (successMsg()) {
                 <span class="success-msg">
                   <span class="material-icons-round">check_circle</span> {{ successMsg() }}
@@ -86,10 +88,7 @@ import { DevCompany } from '../../../core/models/dev-company.model';
                   <span class="material-icons-round">error</span> {{ errorMsg() }}
                 </span>
               }
-              <button class="btn-save" (click)="save()" [disabled]="saving()">
-                @if (saving()) { <span class="material-icons-round spin">refresh</span> Saving… }
-                @else { <span class="material-icons-round">save</span> Save Changes }
-              </button>
+              <p-button class="ml-auto" label="Save Changes" icon="pi pi-save" [loading]="saving()" [disabled]="saving()" (onClick)="save()" />
             </div>
           </div>
 
@@ -165,26 +164,11 @@ import { DevCompany } from '../../../core/models/dev-company.model';
     .field.full { grid-column: 1 / -1; }
     label { font-size: 12px; font-weight: 600; color: var(--t3); }
     .req { color: var(--red); }
-    input {
-      padding: 9px 12px; border: 1px solid var(--border); border-radius: 9px;
-      background: var(--surface); color: var(--t1); font-size: 13px; font-family: inherit;
-      transition: border-color 0.15s;
-      &:focus { outline: none; border-color: var(--accent); }
-    }
     .hint { font-size: 11px; color: var(--t4); margin: 2px 0 0; }
 
     .card-foot {
       display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
       padding: 16px 22px; border-top: 1px solid var(--border); background: var(--surface-2);
-    }
-    .btn-save {
-      display: flex; align-items: center; gap: 8px;
-      padding: 9px 20px; background: var(--accent); color: #fff;
-      border: none; border-radius: 10px; font-size: 13px; font-weight: 700;
-      cursor: pointer; font-family: inherit; transition: opacity 0.15s; margin-left: auto;
-      .material-icons-round { font-size: 17px; }
-      &:hover:not(:disabled) { opacity: 0.88; }
-      &:disabled { opacity: 0.6; cursor: not-allowed; }
     }
     .success-msg { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--green); font-weight: 600; .material-icons-round { font-size: 16px; } }
     .error-msg   { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--red); font-weight: 600; .material-icons-round { font-size: 16px; } }

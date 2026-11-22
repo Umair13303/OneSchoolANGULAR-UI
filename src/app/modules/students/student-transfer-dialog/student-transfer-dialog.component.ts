@@ -4,12 +4,14 @@ import { FormsModule } from '@angular/forms';
 import { AcademicService } from '../../../core/services/academic.service';
 import { StudentService, StudentTransferDto } from '../../../core/services/student.service';
 import { AcademicYear, ClassDto } from '../../../core/models/academic.model';
-import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
+import { OsSelectOption } from '../../../shared/components/os-select/os-select.component';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
 
 @Component({
   selector: 'app-student-transfer-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, OsSelectComponent],
+  imports: [CommonModule, FormsModule, Button, Select],
   template: `
     <div class="dlg-backdrop" (click)="closed.emit(false)" role="presentation">
       <div class="dlg" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
@@ -18,9 +20,13 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
             <h3>{{ title }}</h3>
             <p>{{ studentName }} · {{ admissionNo }}</p>
           </div>
-          <button type="button" class="icon-x" (click)="closed.emit(false)">
-            <span class="material-icons-round">close</span>
-          </button>
+          <p-button
+            icon="pi pi-times"
+            severity="secondary"
+            [outlined]="true"
+            size="small"
+            ariaLabel="Close"
+            (onClick)="closed.emit(false)" />
         </div>
 
         <div class="dlg-body">
@@ -38,25 +44,33 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
 
           <label class="fld">
             <span>Academic Year</span>
-            <app-os-select
+            <p-select
+              class="w-full"
+              appendTo="body"
+              [overlayOptions]="overlayOpts"
               [options]="yearOptions()"
-              [value]="academicYearId"
-              (valueChange)="academicYearId = $event; onYearChange()"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="academicYearId"
+              (ngModelChange)="academicYearId = $event; onYearChange()"
               placeholder="Select year"
-              icon="event"
               ariaLabel="Academic year" />
           </label>
 
           <label class="fld">
             <span>Class</span>
-            <app-os-select
+            <p-select
+              class="w-full"
+              appendTo="body"
+              [overlayOptions]="overlayOpts"
               [options]="classOptions()"
-              [value]="classId"
-              (valueChange)="classId = $event"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="classId"
+              (ngModelChange)="classId = $event"
               placeholder="Select class"
-              icon="class"
               ariaLabel="Class"
-              [searchable]="classOptions().length > 6" />
+              [filter]="classOptions().length > 6" />
           </label>
 
           @if (error()) {
@@ -65,10 +79,18 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
         </div>
 
         <div class="dlg-foot">
-          <button type="button" class="btn-ghost" (click)="closed.emit(false)" [disabled]="saving()">Cancel</button>
-          <button type="button" class="btn-primary" (click)="save()" [disabled]="saving() || !canSave()">
-            {{ saving() ? 'Saving…' : confirmLabel }}
-          </button>
+          <p-button
+            label="Cancel"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="saving()"
+            (onClick)="closed.emit(false)" />
+          <p-button
+            [label]="saving() ? 'Saving…' : confirmLabel"
+            icon="pi pi-check"
+            [loading]="saving()"
+            [disabled]="saving() || !canSave()"
+            (onClick)="save()" />
         </div>
       </div>
     </div>
@@ -89,11 +111,6 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
     }
     .dlg-head h3 { margin: 0; font-size: 16px; font-weight: 700; color: var(--t1); }
     .dlg-head p { margin: 4px 0 0; font-size: 12px; color: var(--t4); }
-    .icon-x {
-      width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--border);
-      background: var(--surface-2); color: var(--t2); cursor: pointer;
-      display: inline-flex; align-items: center; justify-content: center;
-    }
     .dlg-body { padding: 14px 18px; display: flex; flex-direction: column; gap: 12px; }
     .fld { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: var(--t3); }
     .modes { width: 100%; }
@@ -103,15 +120,6 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
       display: flex; justify-content: flex-end; gap: 8px;
       padding: 12px 18px 16px; border-top: 1px solid var(--border);
     }
-    .btn-ghost {
-      height: 38px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--border);
-      background: transparent; color: var(--t2); font-weight: 600; cursor: pointer;
-    }
-    .btn-primary {
-      height: 38px; padding: 0 16px; border-radius: 10px; border: none;
-      background: var(--accent); color: #fff; font-weight: 700; cursor: pointer;
-    }
-    .btn-primary:disabled, .btn-ghost:disabled { opacity: .55; cursor: not-allowed; }
   `]
 })
 export class StudentTransferDialogComponent implements OnInit {
@@ -121,6 +129,9 @@ export class StudentTransferDialogComponent implements OnInit {
   @Input() isActive = true;
   @Input() initialMode: 'Transfer' | 'Promote' | 'Readmit' = 'Transfer';
   @Output() closed = new EventEmitter<boolean>();
+
+  /** Raise PrimeNG select overlays above this dialog's custom backdrop (z-index 10040). */
+  readonly overlayOpts = { baseZIndex: 10050 };
 
   private academicSvc = inject(AcademicService);
   private studentSvc  = inject(StudentService);

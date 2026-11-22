@@ -1,5 +1,14 @@
 import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import Swal from 'sweetalert2';
+import { Button } from 'primeng/button';
+import { InputText } from 'primeng/inputtext';
+import { Password } from 'primeng/password';
+import { Checkbox } from 'primeng/checkbox';
+import { ToggleSwitch } from 'primeng/toggleswitch';
+import { Tag } from 'primeng/tag';
+import { Dialog } from 'primeng/dialog';
+import { TableModule } from 'primeng/table';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, FormControl, Validators } from '@angular/forms';
 import { InstituteService } from '../../../core/services/institute.service';
 import { environment } from '../../../../environments/environment';
@@ -14,19 +23,17 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
 @Component({
   selector: 'app-institutes',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, DatePickerComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, DatePickerComponent, Button, InputText, Password, Checkbox, ToggleSwitch, Tag, Dialog, TableModule],
   template: `
 
 <!-- ══════════════════════ LIST VIEW ══════════════════════ -->
 @if (view() === 'list') {
-  <div class="page-header">
+  <div class="page-header flex flex-wrap items-start justify-between gap-3">
     <div>
       <h1 class="page-title">Institute Management</h1>
       <p class="page-sub">Manage schools, campuses, module access and admin users</p>
     </div>
-    <button class="btn-primary" (click)="startNewInstitute()">
-      <span class="material-icons-round">add</span> New Institute
-    </button>
+    <p-button label="New Institute" icon="pi pi-plus" (onClick)="startNewInstitute()" />
   </div>
 
   <div class="inst-grid">
@@ -49,15 +56,11 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
           <div class="inst-meta">
             <h3>{{ inst.name }}</h3>
             @if (inst.address) { <p>{{ inst.address }}</p> }
-            <span class="badge" [class.badge-success]="inst.isActive" [class.badge-muted]="!inst.isActive">
-              {{ inst.isActive ? 'Active' : 'Inactive' }}
-            </span>
+            <p-tag [value]="inst.isActive ? 'Active' : 'Inactive'" [severity]="inst.isActive ? 'success' : 'secondary'" [rounded]="true" />
             @if (inst.licenseValidUntil) {
-              <span class="badge" [class.badge-danger]="isLicenseExpired(inst)" [class.badge-info]="!isLicenseExpired(inst)">
-                {{ isLicenseExpired(inst) ? 'License Expired' : 'License till ' + (inst.licenseValidUntil | date:'dd MMM yyyy') }}
-              </span>
+              <p-tag class="ml-1" [value]="isLicenseExpired(inst) ? 'License Expired' : 'License till ' + (inst.licenseValidUntil | date:'dd MMM yyyy')" [severity]="isLicenseExpired(inst) ? 'danger' : 'info'" [rounded]="true" />
             } @else {
-              <span class="badge badge-info">Unlimited License</span>
+              <p-tag class="ml-1" value="Unlimited License" severity="info" [rounded]="true" />
             }
           </div>
         </div>
@@ -75,16 +78,10 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
           <span class="chip" [class.chip-on]="inst.moduleReports">Reports</span>
           <span class="chip" [class.chip-on]="inst.moduleCurriculum">Curriculum</span>
         </div>
-        <div class="inst-actions">
-          <button class="btn-outline btn-sm" (click)="startManage(inst)">
-            <span class="material-icons-round">settings</span> Manage
-          </button>
-          <button class="btn-outline btn-sm" (click)="startEditInstitute(inst)">
-            <span class="material-icons-round">edit</span> Edit
-          </button>
-          <button class="btn-danger btn-sm" (click)="deleteInstitute(inst)">
-            <span class="material-icons-round">delete</span>
-          </button>
+        <div class="inst-actions items-center">
+          <p-button label="Manage" icon="pi pi-cog" severity="secondary" [outlined]="true" size="small" (onClick)="startManage(inst)" />
+          <p-button label="Edit" icon="pi pi-pencil" severity="secondary" [outlined]="true" size="small" (onClick)="startEditInstitute(inst)" />
+          <p-button icon="pi pi-trash" severity="danger" [outlined]="true" size="small" ariaLabel="Delete" (onClick)="deleteInstitute(inst)" />
         </div>
       </div>
     }
@@ -111,9 +108,7 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
       </div>
       <div class="adm-header-right">
         <span class="adm-step-badge">Step {{ instStep() + 1 }} / {{ view() === 'edit-institute' ? 2 : 3 }}</span>
-        <button class="adm-back-btn" (click)="view.set('list')">
-          <span class="material-icons-round">close</span>
-        </button>
+        <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="secondary" size="small" ariaLabel="Close" (onClick)="view.set('list')" />
       </div>
     </div>
 
@@ -163,7 +158,7 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
                 <div class="fi-icon"><span class="material-icons-round">domain</span></div>
                 <div class="fi-content">
                   <label>Institute Name <span class="req">*</span></label>
-                  <input formControlName="name" placeholder="e.g. Bright Future School"/>
+                  <input pInputText class="w-full" formControlName="name" placeholder="e.g. Bright Future School"/>
                   @if (instForm.get('name')!.invalid && instForm.get('name')!.touched) {
                     <span class="ferr">Name is required</span>
                   }
@@ -173,7 +168,7 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
                 <div class="fi-icon"><span class="material-icons-round">email</span></div>
                 <div class="fi-content">
                   <label>Email</label>
-                  <input formControlName="email" type="email" placeholder="info@school.com"/>
+                  <input pInputText class="w-full" formControlName="email" type="email" placeholder="info@school.com"/>
                 </div>
               </div>
             </div>
@@ -183,14 +178,14 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
                 <div class="fi-icon"><span class="material-icons-round">call</span></div>
                 <div class="fi-content">
                   <label>Phone</label>
-                  <input formControlName="phone" placeholder="+92 300 0000000"/>
+                  <input pInputText class="w-full" formControlName="phone" placeholder="+92 300 0000000"/>
                 </div>
               </div>
               <div class="fi">
                 <div class="fi-icon"><span class="material-icons-round">language</span></div>
                 <div class="fi-content">
                   <label>Website</label>
-                  <input formControlName="website" placeholder="https://school.com"/>
+                  <input pInputText class="w-full" formControlName="website" placeholder="https://school.com"/>
                 </div>
               </div>
             </div>
@@ -200,7 +195,7 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
                 <div class="fi-icon"><span class="material-icons-round">location_on</span></div>
                 <div class="fi-content">
                   <label>Address</label>
-                  <input formControlName="address" placeholder="Street, City, Country"/>
+                  <input pInputText class="w-full" formControlName="address" placeholder="Street, City, Country"/>
                 </div>
               </div>
               <div class="fi">
@@ -209,7 +204,7 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
                   <div class="lic-label-row">
                     <label>License Valid Until <span class="req">*</span></label>
                     <label class="lic-unlimited">
-                      <input type="checkbox" formControlName="unlimitedLicense"/> Unlimited
+                      <p-checkbox formControlName="unlimitedLicense" [binary]="true" /> Unlimited
                     </label>
                   </div>
                   @if (!instForm.get('unlimitedLicense')!.value) {
@@ -220,7 +215,7 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
                       <span class="fhint">School logins are blocked after this date.</span>
                     }
                   } @else {
-                    <input type="text" value="Never expires" disabled/>
+                    <input pInputText class="w-full" type="text" value="Never expires" disabled/>
                     <span class="fhint">This school's license will never expire.</span>
                   }
                 </div>
@@ -240,7 +235,7 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
                   <div class="fi-icon"><span class="material-icons-round">toggle_on</span></div>
                   <div class="fi-content">
                     <label class="checkbox-label">
-                      <input type="checkbox" formControlName="isActive"/> Active
+                      <p-checkbox formControlName="isActive" [binary]="true" /> Active
                     </label>
                   </div>
                 </div>
@@ -249,9 +244,7 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
 
             <div class="tab-nav">
               <span></span>
-              <button type="button" class="btn-primary" (click)="instNextStep()">
-                Next <span class="material-icons-round">arrow_forward</span>
-              </button>
+              <p-button type="button" label="Next" icon="pi pi-arrow-right" iconPos="right" (onClick)="instNextStep()" />
             </div>
           </div>
         }
@@ -274,9 +267,7 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
                       <p>{{ m.desc }}</p>
                     </div>
                   </div>
-                  <div class="toggle-switch" [class.on]="moduleValues[m.key]" (click)="toggleModule(m.key)">
-                    <div class="toggle-knob"></div>
-                  </div>
+                  <p-toggleswitch [ngModel]="moduleValues[m.key]" [ngModelOptions]="{ standalone: true }" (onChange)="toggleModule(m.key)" />
                 </label>
               }
             </div>
@@ -288,18 +279,11 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
             }
 
             <div class="tab-nav">
-              <button type="button" class="btn-secondary" (click)="instStep.set(0)">
-                <span class="material-icons-round">arrow_back</span> Back
-              </button>
+              <p-button type="button" label="Back" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="instStep.set(0)" />
               @if (view() === 'edit-institute') {
-                <button type="submit" class="btn-primary" [disabled]="instForm.invalid || saving()">
-                  @if (saving()) { <span class="material-icons-round spin">refresh</span> Saving… }
-                  @else { <span class="material-icons-round">save</span> Save Changes }
-                </button>
+                <p-button type="submit" [label]="saving() ? 'Saving…' : 'Save Changes'" icon="pi pi-save" [loading]="saving()" [disabled]="instForm.invalid || saving()" />
               } @else {
-                <button type="button" class="btn-primary" (click)="instStep.set(2)">
-                  Next <span class="material-icons-round">arrow_forward</span>
-                </button>
+                <p-button type="button" label="Next" icon="pi pi-arrow-right" iconPos="right" (onClick)="instStep.set(2)" />
               }
             </div>
           </div>
@@ -318,7 +302,7 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
                 <div class="fi-icon"><span class="material-icons-round">badge</span></div>
                 <div class="fi-content">
                   <label>Admin Full Name <span class="req">*</span></label>
-                  <input [formControl]="adminFullName" placeholder="e.g. Muhammad Tariq"/>
+                  <input pInputText class="w-full" [formControl]="adminFullName" placeholder="e.g. Muhammad Tariq"/>
                   @if (adminFullName.invalid && adminFullName.touched) {
                     <span class="ferr">Full name is required</span>
                   }
@@ -328,7 +312,7 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
                 <div class="fi-icon"><span class="material-icons-round">email</span></div>
                 <div class="fi-content">
                   <label>Admin Email <span class="req">*</span></label>
-                  <input type="email" [formControl]="adminEmail" placeholder="admin@school.com"/>
+                  <input pInputText class="w-full" type="email" [formControl]="adminEmail" placeholder="admin@school.com"/>
                   @if (adminEmail.invalid && adminEmail.touched) {
                     <span class="ferr">Valid email is required</span>
                   }
@@ -341,7 +325,7 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
                 <div class="fi-icon"><span class="material-icons-round">lock</span></div>
                 <div class="fi-content">
                   <label>Password <span class="req">*</span></label>
-                  <input type="password" [formControl]="adminPassword" placeholder="Minimum 6 characters"/>
+                  <p-password [formControl]="adminPassword" placeholder="Minimum 6 characters" [feedback]="false" [toggleMask]="true" styleClass="w-full" inputStyleClass="w-full" />
                   @if (adminPassword.invalid && adminPassword.touched) {
                     <span class="ferr">Minimum 6 characters</span>
                   }
@@ -371,13 +355,8 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
             }
 
             <div class="tab-nav">
-              <button type="button" class="btn-secondary" (click)="instStep.set(1)">
-                <span class="material-icons-round">arrow_back</span> Back
-              </button>
-              <button type="submit" class="btn-primary" [disabled]="instForm.invalid || adminFullName.invalid || adminEmail.invalid || adminPassword.invalid || saving()">
-                @if (saving()) { <span class="material-icons-round spin">refresh</span> Creating… }
-                @else { <span class="material-icons-round">domain</span> Create Institute }
-              </button>
+              <p-button type="button" label="Back" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="instStep.set(1)" />
+              <p-button type="submit" [label]="saving() ? 'Creating…' : 'Create Institute'" icon="pi pi-building" [loading]="saving()" [disabled]="instForm.invalid || adminFullName.invalid || adminEmail.invalid || adminPassword.invalid || saving()" />
             </div>
           </div>
         }
@@ -403,9 +382,7 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
         </div>
       </div>
       <div class="adm-header-right">
-        <button class="adm-back-btn" (click)="view.set('list')">
-          <span class="material-icons-round">close</span>
-        </button>
+        <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="secondary" size="small" ariaLabel="Close" (onClick)="view.set('list')" />
       </div>
     </div>
 
@@ -439,46 +416,33 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
 
           <div class="sub-section-header">
             <span class="sub-section-title">Campuses</span>
-            <button class="btn-primary btn-sm" (click)="openCampusModal()">
-              <span class="material-icons-round">add</span> Add Campus
-            </button>
+            <p-button label="Add Campus" icon="pi pi-plus" size="small" (onClick)="openCampusModal()" />
           </div>
 
-          @if (campuses().length > 0) {
-            <table class="data-table">
-              <thead>
-                <tr><th>Name</th><th>Address</th><th>Phone</th><th>Users</th><th>Status</th><th>Actions</th></tr>
-              </thead>
-              <tbody>
-                @for (c of campuses(); track c.campusId) {
-                  <tr [class.row-selected]="selectedCampus?.campusId === c.campusId">
-                    <td><strong>{{ c.name }}</strong></td>
-                    <td>{{ c.address || '—' }}</td>
-                    <td>{{ c.phone || '—' }}</td>
-                    <td>{{ c.userCount }}</td>
-                    <td>
-                      <span class="badge" [class.badge-success]="c.isActive" [class.badge-muted]="!c.isActive">
-                        {{ c.isActive ? 'Active' : 'Inactive' }}
-                      </span>
-                    </td>
-                    <td class="actions-cell">
-                      <button class="btn-outline btn-sm" (click)="manageCampusAdmins(c)">
-                        <span class="material-icons-round">people</span> Admins
-                      </button>
-                      <button class="btn-outline btn-sm" (click)="openCampusModal(c)">
-                        <span class="material-icons-round">edit</span>
-                      </button>
-                      <button class="btn-danger btn-sm" (click)="deleteCampus(c)">
-                        <span class="material-icons-round">delete</span>
-                      </button>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          } @else {
-            <p class="empty-text">No campuses yet.</p>
-          }
+          <p-table [value]="campuses()" dataKey="campusId" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '40rem' }" [scrollable]="true">
+            <ng-template #header>
+              <tr><th>Name</th><th>Address</th><th>Phone</th><th>Users</th><th>Status</th><th>Actions</th></tr>
+            </ng-template>
+            <ng-template #body let-c>
+              <tr [class.row-selected]="selectedCampus?.campusId === c.campusId">
+                <td><strong>{{ c.name }}</strong></td>
+                <td>{{ c.address || '—' }}</td>
+                <td>{{ c.phone || '—' }}</td>
+                <td>{{ c.userCount }}</td>
+                <td><p-tag [value]="c.isActive ? 'Active' : 'Inactive'" [severity]="c.isActive ? 'success' : 'secondary'" [rounded]="true" /></td>
+                <td>
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <p-button label="Admins" icon="pi pi-users" severity="secondary" [outlined]="true" size="small" (onClick)="manageCampusAdmins(c)" />
+                    <p-button icon="pi pi-pencil" severity="secondary" [outlined]="true" size="small" ariaLabel="Edit campus" (onClick)="openCampusModal(c)" />
+                    <p-button icon="pi pi-trash" severity="danger" [outlined]="true" size="small" ariaLabel="Delete campus" (onClick)="deleteCampus(c)" />
+                  </div>
+                </td>
+              </tr>
+            </ng-template>
+            <ng-template #emptymessage>
+              <tr><td colspan="6" class="empty-text">No campuses yet.</td></tr>
+            </ng-template>
+          </p-table>
 
           <!-- Campus Admins sub-panel -->
           @if (selectedCampus) {
@@ -488,31 +452,24 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
                   <span class="sub-section-title">Admins</span>
                   <span class="sub-section-sub"> — {{ selectedCampus.name }}</span>
                 </div>
-                <button class="btn-primary btn-sm" (click)="openAdminModal()">
-                  <span class="material-icons-round">person_add</span> Add Admin
-                </button>
+                <p-button label="Add Admin" icon="pi pi-user-plus" size="small" (onClick)="openAdminModal()" />
               </div>
-              @if (campusAdmins().length > 0) {
-                <table class="data-table">
-                  <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr></thead>
-                  <tbody>
-                    @for (a of campusAdmins(); track a.userId) {
-                      <tr>
-                        <td>{{ a.fullName }}</td>
-                        <td>{{ a.email }}</td>
-                        <td><span class="role-badge">{{ a.role }}</span></td>
-                        <td>
-                          <span class="badge" [class.badge-success]="a.isActive" [class.badge-muted]="!a.isActive">
-                            {{ a.isActive ? 'Active' : 'Inactive' }}
-                          </span>
-                        </td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              } @else {
-                <p class="empty-text">No admins yet.</p>
-              }
+              <p-table [value]="campusAdmins()" dataKey="userId" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '30rem' }" [scrollable]="true">
+                <ng-template #header>
+                  <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr>
+                </ng-template>
+                <ng-template #body let-a>
+                  <tr>
+                    <td>{{ a.fullName }}</td>
+                    <td>{{ a.email }}</td>
+                    <td><p-tag [value]="a.role" severity="info" [rounded]="true" /></td>
+                    <td><p-tag [value]="a.isActive ? 'Active' : 'Inactive'" [severity]="a.isActive ? 'success' : 'secondary'" [rounded]="true" /></td>
+                  </tr>
+                </ng-template>
+                <ng-template #emptymessage>
+                  <tr><td colspan="4" class="empty-text">No admins yet.</td></tr>
+                </ng-template>
+              </p-table>
             </div>
           }
         </div>
@@ -536,19 +493,14 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
                     <p>{{ m.desc }}</p>
                   </div>
                 </div>
-                <div class="toggle-switch" [class.on]="moduleValues[m.key]" (click)="toggleModule(m.key)">
-                  <div class="toggle-knob"></div>
-                </div>
+                <p-toggleswitch [ngModel]="moduleValues[m.key]" [ngModelOptions]="{ standalone: true }" (onChange)="toggleModule(m.key)" />
               </label>
             }
           </div>
 
           <div class="tab-nav">
             <span></span>
-            <button class="btn-primary" (click)="saveModules()" [disabled]="saving()">
-              @if (saving()) { <span class="material-icons-round spin">refresh</span> Saving… }
-              @else { <span class="material-icons-round">save</span> Save Module Settings }
-            </button>
+            <p-button [label]="saving() ? 'Saving…' : 'Save Module Settings'" icon="pi pi-save" [loading]="saving()" [disabled]="saving()" (onClick)="saveModules()" />
           </div>
         </div>
       }
@@ -605,10 +557,7 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
             <span class="challan-current-hint">
               Current: <strong>{{ challanTemplateLabel(selectedInstitute?.challanTemplate) }}</strong>
             </span>
-            <button class="btn-primary" (click)="saveChallanTemplate()" [disabled]="saving()">
-              @if (saving()) { <span class="material-icons-round spin">refresh</span> Saving… }
-              @else { <span class="material-icons-round">save</span> Save Challan Design }
-            </button>
+            <p-button [label]="saving() ? 'Saving…' : 'Save Challan Design'" icon="pi pi-save" [loading]="saving()" [disabled]="saving()" (onClick)="saveChallanTemplate()" />
           </div>
         </div>
       }
@@ -617,135 +566,105 @@ type View = 'list' | 'new-institute' | 'edit-institute' | 'manage';
   </div>
 }
 
-<!-- ══════════════════════ CAMPUS MODAL ══════════════════════ -->
-@if (showCampusModal) {
-  <div class="modal-backdrop" (click)="showCampusModal=false"></div>
-  <div class="modal">
-    <div class="modal-header">
-      <div class="adm-header-left">
-        <div class="adm-avatar sm" style="background:#7c3aed">
-          <span class="material-icons-round" style="font-size:14px;color:#fff">location_city</span>
+<!-- ══════════════════════ CAMPUS DIALOG ══════════════════════ -->
+<p-dialog [header]="editingCampus ? 'Edit Campus' : 'New Campus'" [visible]="showCampusModal"
+          (visibleChange)="showCampusModal = $event" [modal]="true" [draggable]="false" [dismissableMask]="true"
+          [style]="{ width: '540px', maxWidth: '95vw' }" [baseZIndex]="10000">
+  <form [formGroup]="campusForm" (ngSubmit)="saveCampus()" class="modal-body">
+    <div class="fg">
+      <div class="fi">
+        <div class="fi-icon"><span class="material-icons-round">location_city</span></div>
+        <div class="fi-content">
+          <label>Campus Name <span class="req">*</span></label>
+          <input pInputText class="w-full" formControlName="name" placeholder="e.g. Main Campus"/>
+          @if (campusForm.get('name')!.invalid && campusForm.get('name')!.touched) {
+            <span class="ferr">Name is required</span>
+          }
         </div>
-        <h3>{{ editingCampus ? 'Edit Campus' : 'New Campus' }}</h3>
       </div>
-      <button class="adm-back-btn" (click)="showCampusModal=false">
-        <span class="material-icons-round">close</span>
-      </button>
     </div>
-    <form [formGroup]="campusForm" (ngSubmit)="saveCampus()" class="modal-body">
+    <div class="fg two">
+      <div class="fi">
+        <div class="fi-icon"><span class="material-icons-round">location_on</span></div>
+        <div class="fi-content">
+          <label>Address</label>
+          <input pInputText class="w-full" formControlName="address" placeholder="Campus address"/>
+        </div>
+      </div>
+      <div class="fi">
+        <div class="fi-icon"><span class="material-icons-round">call</span></div>
+        <div class="fi-content">
+          <label>Phone</label>
+          <input pInputText class="w-full" formControlName="phone" placeholder="+92 300 0000000"/>
+        </div>
+      </div>
+    </div>
+    @if (editingCampus) {
       <div class="fg">
-        <div class="fi">
-          <div class="fi-icon"><span class="material-icons-round">location_city</span></div>
+        <div class="fi" style="align-items:center; padding-top:12px;">
+          <div class="fi-icon"><span class="material-icons-round">toggle_on</span></div>
           <div class="fi-content">
-            <label>Campus Name <span class="req">*</span></label>
-            <input formControlName="name" placeholder="e.g. Main Campus"/>
-            @if (campusForm.get('name')!.invalid && campusForm.get('name')!.touched) {
-              <span class="ferr">Name is required</span>
-            }
+            <label class="checkbox-label">
+              <p-checkbox formControlName="isActive" [binary]="true" /> Active
+            </label>
           </div>
         </div>
       </div>
-      <div class="fg two">
-        <div class="fi">
-          <div class="fi-icon"><span class="material-icons-round">location_on</span></div>
-          <div class="fi-content">
-            <label>Address</label>
-            <input formControlName="address" placeholder="Campus address"/>
-          </div>
-        </div>
-        <div class="fi">
-          <div class="fi-icon"><span class="material-icons-round">call</span></div>
-          <div class="fi-content">
-            <label>Phone</label>
-            <input formControlName="phone" placeholder="+92 300 0000000"/>
-          </div>
-        </div>
-      </div>
-      @if (editingCampus) {
-        <div class="fg">
-          <div class="fi" style="align-items:center; padding-top:12px;">
-            <div class="fi-icon"><span class="material-icons-round">toggle_on</span></div>
-            <div class="fi-content">
-              <label class="checkbox-label">
-                <input type="checkbox" formControlName="isActive"/> Active
-              </label>
-            </div>
-          </div>
-        </div>
-      }
-      <div class="modal-footer">
-        <button type="button" class="btn-secondary" (click)="showCampusModal=false">Cancel</button>
-        <button type="submit" class="btn-primary" [disabled]="campusForm.invalid || saving()">
-          @if (saving()) { <span class="material-icons-round spin">refresh</span> Saving… }
-          @else { <span class="material-icons-round">{{ editingCampus ? 'save' : 'add_circle' }}</span> {{ editingCampus ? 'Update' : 'Create' }} }
-        </button>
-      </div>
-    </form>
-  </div>
-}
-
-<!-- ══════════════════════ ADMIN MODAL ══════════════════════ -->
-@if (showAdminModal) {
-  <div class="modal-backdrop" (click)="showAdminModal=false"></div>
-  <div class="modal">
-    <div class="modal-header">
-      <div class="adm-header-left">
-        <div class="adm-avatar sm" style="background:#059669">
-          <span class="material-icons-round" style="font-size:14px;color:#fff">person_add</span>
-        </div>
-        <h3>Create Admin User</h3>
-      </div>
-      <button class="adm-back-btn" (click)="showAdminModal=false">
-        <span class="material-icons-round">close</span>
-      </button>
+    }
+    <div class="modal-footer">
+      <p-button type="button" label="Cancel" severity="secondary" [outlined]="true" (onClick)="showCampusModal = false" />
+      <p-button type="submit" [label]="saving() ? 'Saving…' : (editingCampus ? 'Update' : 'Create')" [icon]="editingCampus ? 'pi pi-save' : 'pi pi-plus-circle'" [loading]="saving()" [disabled]="campusForm.invalid || saving()" />
     </div>
-    <form [formGroup]="adminForm" (ngSubmit)="saveAdmin()" class="modal-body">
-      <div class="fg">
-        <div class="fi">
-          <div class="fi-icon"><span class="material-icons-round">badge</span></div>
-          <div class="fi-content">
-            <label>Full Name <span class="req">*</span></label>
-            <input formControlName="fullName" placeholder="Admin full name"/>
-          </div>
+  </form>
+</p-dialog>
+
+<!-- ══════════════════════ ADMIN DIALOG ══════════════════════ -->
+<p-dialog header="Create Admin User" [visible]="showAdminModal"
+          (visibleChange)="showAdminModal = $event" [modal]="true" [draggable]="false" [dismissableMask]="true"
+          [style]="{ width: '540px', maxWidth: '95vw' }" [baseZIndex]="10000">
+  <form [formGroup]="adminForm" (ngSubmit)="saveAdmin()" class="modal-body">
+    <div class="fg">
+      <div class="fi">
+        <div class="fi-icon"><span class="material-icons-round">badge</span></div>
+        <div class="fi-content">
+          <label>Full Name <span class="req">*</span></label>
+          <input pInputText class="w-full" formControlName="fullName" placeholder="Admin full name"/>
         </div>
       </div>
-      <div class="fg two">
-        <div class="fi">
-          <div class="fi-icon"><span class="material-icons-round">email</span></div>
-          <div class="fi-content">
-            <label>Email <span class="req">*</span></label>
-            <input formControlName="email" type="email" placeholder="admin@school.com"/>
-            @if (adminForm.get('email')!.invalid && adminForm.get('email')!.touched) {
-              <span class="ferr">Valid email required</span>
-            }
-          </div>
-        </div>
-        <div class="fi">
-          <div class="fi-icon"><span class="material-icons-round">lock</span></div>
-          <div class="fi-content">
-            <label>Password <span class="req">*</span></label>
-            <input formControlName="password" type="password" placeholder="Min 6 characters"/>
-            @if (adminForm.get('password')!.invalid && adminForm.get('password')!.touched) {
-              <span class="ferr">Min 6 characters</span>
-            }
-          </div>
+    </div>
+    <div class="fg two">
+      <div class="fi">
+        <div class="fi-icon"><span class="material-icons-round">email</span></div>
+        <div class="fi-content">
+          <label>Email <span class="req">*</span></label>
+          <input pInputText class="w-full" formControlName="email" type="email" placeholder="admin@school.com"/>
+          @if (adminForm.get('email')!.invalid && adminForm.get('email')!.touched) {
+            <span class="ferr">Valid email required</span>
+          }
         </div>
       </div>
-      @if (formError()) {
-        <div class="tm-alert error">
-          <span class="material-icons-round">error_outline</span> {{ formError() }}
+      <div class="fi">
+        <div class="fi-icon"><span class="material-icons-round">lock</span></div>
+        <div class="fi-content">
+          <label>Password <span class="req">*</span></label>
+          <p-password formControlName="password" placeholder="Min 6 characters" [feedback]="false" [toggleMask]="true" styleClass="w-full" inputStyleClass="w-full" />
+          @if (adminForm.get('password')!.invalid && adminForm.get('password')!.touched) {
+            <span class="ferr">Min 6 characters</span>
+          }
         </div>
-      }
-      <div class="modal-footer">
-        <button type="button" class="btn-secondary" (click)="showAdminModal=false">Cancel</button>
-        <button type="submit" class="btn-primary" [disabled]="adminForm.invalid || saving()">
-          @if (saving()) { <span class="material-icons-round spin">refresh</span> Creating… }
-          @else { <span class="material-icons-round">person_add</span> Create Admin }
-        </button>
       </div>
-    </form>
-  </div>
-}
+    </div>
+    @if (formError()) {
+      <div class="tm-alert error">
+        <span class="material-icons-round">error_outline</span> {{ formError() }}
+      </div>
+    }
+    <div class="modal-footer">
+      <p-button type="button" label="Cancel" severity="secondary" [outlined]="true" (onClick)="showAdminModal = false" />
+      <p-button type="submit" [label]="saving() ? 'Creating…' : 'Create Admin'" icon="pi pi-user-plus" [loading]="saving()" [disabled]="adminForm.invalid || saving()" />
+    </div>
+  </form>
+</p-dialog>
   `,
   styles: [`
     /* ── Page header ── */
@@ -1200,8 +1119,17 @@ export class InstitutesComponent implements OnInit {
   }
 
   deleteInstitute(inst: InstituteDto) {
-    if (!confirm(`Delete "${inst.name}"?`)) return;
-    this.svc.deleteInstitute(inst.instituteId).subscribe(() => this.loadInstitutes());
+    Swal.fire({
+      title: 'Delete institute?',
+      text: 'Delete "' + inst.name + '"? This cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      confirmButtonColor: '#dc2626',
+    }).then(res => {
+      if (!res.isConfirmed) return;
+      this.svc.deleteInstitute(inst.instituteId).subscribe(() => this.loadInstitutes());
+    });
   }
 
   startManage(inst: InstituteDto) {
@@ -1264,8 +1192,19 @@ export class InstitutesComponent implements OnInit {
   }
 
   deleteCampus(c: CampusDto) {
-    if (!this.selectedInstitute || !confirm(`Delete campus "${c.name}"?`)) return;
-    this.svc.deleteCampus(this.selectedInstitute.instituteId, c.campusId).subscribe(() => this.loadCampuses(this.selectedInstitute!.instituteId));
+    if (!this.selectedInstitute) return;
+    const instId = this.selectedInstitute.instituteId;
+    Swal.fire({
+      title: 'Delete campus?',
+      text: 'Delete campus "' + c.name + '"?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      confirmButtonColor: '#dc2626',
+    }).then(res => {
+      if (!res.isConfirmed) return;
+      this.svc.deleteCampus(instId, c.campusId).subscribe(() => this.loadCampuses(instId));
+    });
   }
 
   manageCampusAdmins(c: CampusDto) {

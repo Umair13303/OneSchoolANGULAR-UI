@@ -16,6 +16,12 @@ import {
   ClassAssessmentDto,
   StudentTopicPerformanceDto
 } from '../../../core/models/assessment.model';
+import { Button } from 'primeng/button';
+import { Dialog } from 'primeng/dialog';
+import { InputText } from 'primeng/inputtext';
+import { InputNumber } from 'primeng/inputnumber';
+import { Textarea } from 'primeng/textarea';
+import { SelectButton } from 'primeng/selectbutton';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { DatePickerComponent } from '../../../shared/components/date-picker/date-picker.component';
@@ -62,15 +68,16 @@ interface SabaqRow {
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterModule, PageHeaderComponent, LoadingComponent,
-    DatePickerComponent, RichContentViewComponent
+    DatePickerComponent, RichContentViewComponent,
+    Button, Dialog, InputText, InputNumber, Textarea, SelectButton
   ],
   template: `
     <div class="os-page compact">
       <app-page-header [dense]="true" [title]="pageTitle()">
         @if (fromClassroom()) {
-          <a class="btn-secondary" [routerLink]="['/classroom/today']" [queryParams]="classroomReturnQp()">Back to class</a>
+          <p-button label="Back to class" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" size="small" [routerLink]="['/classroom/today']" [queryParams]="classroomReturnQp()" />
         } @else {
-          <button type="button" class="btn-secondary" (click)="goBack()">Back</button>
+          <p-button label="Back" severity="secondary" [outlined]="true" size="small" (onClick)="goBack()" />
         }
       </app-page-header>
 
@@ -86,21 +93,13 @@ interface SabaqRow {
         </div>
 
         <div class="cta-bar">
-          <button type="button" class="btn-primary" (click)="openTeaching()" [disabled]="busy()">
-            Continue Teaching
-          </button>
-          <button type="button" class="btn-secondary" (click)="openQuiz()" [disabled]="busy()">
-            Record Quiz / Class Test
-          </button>
-          <button type="button" class="btn-secondary" (click)="openSabaq()" [disabled]="busy()">
-            Record Oral Assessment
-          </button>
+          <p-button label="Continue Teaching" size="small" (onClick)="openTeaching()" [disabled]="busy()" />
+          <p-button label="Record Quiz / Class Test" severity="secondary" [outlined]="true" size="small" (onClick)="openQuiz()" [disabled]="busy()" />
+          <p-button label="Record Oral Assessment" severity="secondary" [outlined]="true" size="small" (onClick)="openSabaq()" [disabled]="busy()" />
           @if (t.progressStatus !== 'Completed') {
-            <button type="button" class="btn-secondary" (click)="markCompleted()" [disabled]="busy()">
-              Mark Completed
-            </button>
+            <p-button label="Mark Completed" severity="secondary" [outlined]="true" size="small" (onClick)="markCompleted()" [disabled]="busy()" />
           }
-          <button type="button" class="btn-secondary" (click)="openHomework()">Add Homework</button>
+          <p-button label="Add Homework" severity="secondary" [outlined]="true" size="small" (onClick)="openHomework()" />
         </div>
 
         <div class="tabs" role="tablist">
@@ -242,14 +241,23 @@ interface SabaqRow {
       }
     </div>
 
-    @if (panel() === 'teaching') {
-      <div class="sheet-backdrop" (click)="closePanel()">
-        <div class="sheet sheet-sm" (click)="$event.stopPropagation()" role="dialog" aria-label="Continue Teaching">
+    <p-dialog
+      [visible]="panel() === 'teaching'"
+      (visibleChange)="!$event && closePanel()"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '28rem' }"
+      [breakpoints]="{ '640px': '96vw' }">
+      <ng-template #header>
           <div class="sheet-head">
             <h3>Continue Teaching</h3>
             <p class="ctx-line">{{ topicContext() }}</p>
             <p class="muted tiny">Teacher: {{ teacherName }} · Date defaults to today</p>
           </div>
+      </ng-template>
+      <div class="grid gap-3">
 
           <div class="os-field tight">
             <label class="os-field-label">Date</label>
@@ -258,53 +266,55 @@ interface SabaqRow {
 
           <div class="os-field tight">
             <label class="os-field-label">Type</label>
-            <div class="seg" role="group" aria-label="Teaching type">
-              @for (opt of typeOptions; track opt.value) {
-                <button type="button" class="seg-btn"
-                        [class.on]="teachingType === opt.value"
-                        (click)="teachingType = opt.value">{{ opt.label }}</button>
-              }
-            </div>
+            <p-selectbutton [options]="typeOptions" optionLabel="label" optionValue="value" [(ngModel)]="teachingType" [allowEmpty]="false" size="small" />
           </div>
 
           <div class="os-field tight">
             <label class="os-field-label">Notes <span class="opt">optional</span></label>
-            <textarea class="os-textarea short" rows="2" [(ngModel)]="remarks"
+            <textarea pTextarea class="w-full" rows="2" [(ngModel)]="remarks"
                       placeholder="What was taught today?"></textarea>
           </div>
 
           @if (teachError()) { <div class="os-error">{{ teachError() }}</div> }
-          <div class="sheet-actions sticky-actions">
-            <button type="button" class="btn-secondary" (click)="closePanel()">Cancel</button>
-            <button type="button" class="btn-secondary" [disabled]="busy()" (click)="saveTeaching(true)">+ Homework</button>
-            <button type="button" class="btn-primary" [disabled]="busy()" (click)="saveTeaching(false)">Save</button>
-          </div>
-        </div>
       </div>
-    }
+      <ng-template #footer>
+        <div class="flex flex-wrap justify-end gap-2">
+            <p-button label="Cancel" severity="secondary" [outlined]="true" size="small" (onClick)="closePanel()" />
+            <p-button label="+ Homework" severity="secondary" [outlined]="true" size="small" [disabled]="busy()" (onClick)="saveTeaching(true)" />
+            <p-button label="Save" size="small" [disabled]="busy()" (onClick)="saveTeaching(false)" />
+        </div>
+      </ng-template>
+    </p-dialog>
 
-    @if (panel() === 'homework') {
-      <div class="sheet-backdrop" (click)="closePanel()">
-        <div class="sheet sheet-sm" (click)="$event.stopPropagation()" role="dialog" aria-label="Add Homework">
+    <p-dialog
+      [visible]="panel() === 'homework'"
+      (visibleChange)="!$event && closePanel()"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '28rem' }"
+      [breakpoints]="{ '640px': '96vw' }">
+      <ng-template #header>
           <div class="sheet-head">
             <h3>Add Homework</h3>
             <p class="ctx-line">{{ topicContext() }}</p>
           </div>
+      </ng-template>
+      <div class="grid gap-3">
 
           <div class="os-field tight">
             <label class="os-field-label">Homework</label>
-            <input class="os-input primary-input" [(ngModel)]="hwTitle"
+            <input pInputText class="w-full" [(ngModel)]="hwTitle"
                    placeholder="What should students do?" autofocus />
           </div>
 
-          <button type="button" class="more-toggle" (click)="hwMore = !hwMore">
-            {{ hwMore ? 'Hide options' : 'Dates & description' }}
-          </button>
+          <div><p-button [label]="hwMore ? 'Hide options' : 'Dates & description'" [link]="true" size="small" (onClick)="hwMore = !hwMore" /></div>
           @if (hwMore) {
             <div class="more-block">
               <div class="os-field tight">
                 <label class="os-field-label">Description <span class="opt">optional</span></label>
-                <textarea class="os-textarea short" rows="2" [(ngModel)]="hwDesc"></textarea>
+                <textarea pTextarea class="w-full" rows="2" [(ngModel)]="hwDesc"></textarea>
               </div>
               <div class="form-row">
                 <div class="os-field tight">
@@ -322,77 +332,87 @@ interface SabaqRow {
           }
 
           @if (hwError()) { <div class="os-error">{{ hwError() }}</div> }
-          <div class="sheet-actions sticky-actions">
-            <button type="button" class="btn-secondary" (click)="closePanel()">Cancel</button>
-            <button type="button" class="btn-primary" [disabled]="busy()" (click)="createHomework()">Save Homework</button>
-          </div>
-        </div>
       </div>
-    }
+      <ng-template #footer>
+        <div class="flex flex-wrap justify-end gap-2">
+            <p-button label="Cancel" severity="secondary" [outlined]="true" size="small" (onClick)="closePanel()" />
+            <p-button label="Save Homework" size="small" [disabled]="busy()" (onClick)="createHomework()" />
+        </div>
+      </ng-template>
+    </p-dialog>
 
-    @if (panel() === 'quiz') {
-      <div class="sheet-backdrop" (click)="closePanel()">
-        <div class="sheet sheet-sm" (click)="$event.stopPropagation()" role="dialog" aria-label="Record Quiz">
+    <p-dialog
+      [visible]="panel() === 'quiz'"
+      (visibleChange)="!$event && closePanel()"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '28rem' }"
+      [breakpoints]="{ '640px': '96vw' }">
+      <ng-template #header>
           <div class="sheet-head">
             <h3>Quiz / Class Test</h3>
             <p class="ctx-line">In-class assessment · {{ topicContext() }}</p>
           </div>
+      </ng-template>
+      <div class="grid gap-3">
 
           <div class="os-field tight">
             <label class="os-field-label">Type</label>
-            <div class="seg" role="group">
-              @for (opt of quizTypeOptions; track opt.value) {
-                <button type="button" class="seg-btn"
-                        [class.on]="quizType === opt.value"
-                        (click)="quizType = opt.value">{{ opt.label }}</button>
-              }
-            </div>
+            <p-selectbutton [options]="quizTypeOptions" optionLabel="label" optionValue="value" [(ngModel)]="quizType" [allowEmpty]="false" size="small" />
           </div>
 
           <div class="os-field tight">
             <label class="os-field-label">Title</label>
-            <input class="os-input primary-input" [(ngModel)]="quizTitle" />
+            <input pInputText class="w-full" [(ngModel)]="quizTitle" />
           </div>
 
           <div class="form-row">
             <div class="os-field tight">
               <label class="os-field-label">Questions</label>
-              <input class="os-input" type="number" min="0" [(ngModel)]="quizQuestions" />
+              <p-inputnumber [(ngModel)]="quizQuestions" [min]="0" [useGrouping]="false" styleClass="w-full" inputStyleClass="w-full" />
             </div>
             <div class="os-field tight">
               <label class="os-field-label">Max marks</label>
-              <input class="os-input" type="number" min="0" [(ngModel)]="quizMarks" />
+              <p-inputnumber [(ngModel)]="quizMarks" [min]="0" [useGrouping]="false" styleClass="w-full" inputStyleClass="w-full" />
             </div>
           </div>
 
-          <button type="button" class="more-toggle" (click)="quizMore = !quizMore">
-            {{ quizMore ? 'Hide options' : 'Date & notes (optional)' }}
-          </button>
+          <div><p-button [label]="quizMore ? 'Hide options' : 'Date & notes (optional)'" [link]="true" size="small" (onClick)="quizMore = !quizMore" /></div>
           @if (quizMore) {
             <div class="more-block">
               <div class="os-field tight">
                 <label class="os-field-label">Date</label>
                 <app-date-picker [(ngModel)]="quizDate" />
               </div>
-              <textarea class="os-textarea short" rows="2" [(ngModel)]="quizNotes" placeholder="Notes"></textarea>
+              <textarea pTextarea class="w-full" rows="2" [(ngModel)]="quizNotes" placeholder="Notes"></textarea>
             </div>
           } @else {
             <p class="muted tiny">Date {{ quizDate }} · defaults to today</p>
           }
 
           @if (quizError()) { <div class="os-error">{{ quizError() }}</div> }
-          <div class="sheet-actions sticky-actions">
-            <button type="button" class="btn-secondary" (click)="closePanel()">Cancel</button>
-            <button type="button" class="btn-secondary" [disabled]="busy()" (click)="saveQuiz(false)">Save only</button>
-            <button type="button" class="btn-primary" [disabled]="busy()" (click)="saveQuiz(true)">Save & Enter Results</button>
-          </div>
-        </div>
       </div>
-    }
+      <ng-template #footer>
+        <div class="flex flex-wrap justify-end gap-2">
+            <p-button label="Cancel" severity="secondary" [outlined]="true" size="small" (onClick)="closePanel()" />
+            <p-button label="Save only" severity="secondary" [outlined]="true" size="small" [disabled]="busy()" (onClick)="saveQuiz(false)" />
+            <p-button label="Save & Enter Results" size="small" [disabled]="busy()" (onClick)="saveQuiz(true)" />
+        </div>
+      </ng-template>
+    </p-dialog>
 
-    @if (panel() === 'quizResults') {
-      <div class="sheet-backdrop" (click)="closePanel()">
-        <div class="sheet sheet-wide entry-sheet" (click)="$event.stopPropagation()" role="dialog" aria-label="Enter results">
+    <p-dialog
+      [visible]="panel() === 'quizResults'"
+      (visibleChange)="!$event && closePanel()"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: 'min(900px, 96vw)' }"
+      [breakpoints]="{ '640px': '96vw' }">
+      <ng-template #header>
           <div class="sheet-head row-head">
             <div>
               <h3>Enter quiz marks</h3>
@@ -404,6 +424,8 @@ interface SabaqRow {
             </div>
             <span class="progress-pill">{{ quizFilledCount() }} / {{ quizRows.length }} entered</span>
           </div>
+      </ng-template>
+      <div class="grid gap-3">
 
           <div class="entry-table-wrap" (keydown)="onQuizKeydown($event)">
             <table class="entry-table">
@@ -437,7 +459,7 @@ interface SabaqRow {
                     </td>
                     <td class="col-marks">
                       <div class="marks-cell">
-                        <input class="os-input marks-input"
+                        <input pInputText class="marks-input"
                                type="number"
                                min="0"
                                [attr.max]="activeAssessment()?.totalMarks ?? null"
@@ -466,7 +488,7 @@ interface SabaqRow {
                       </div>
                     </td>
                     <td class="col-remark">
-                      <input class="os-input remark-input" placeholder="—"
+                      <input pInputText class="remark-input" placeholder="—"
                              [(ngModel)]="row.remarks" (focus)="quizFocus.set(i)" />
                     </td>
                   </tr>
@@ -476,18 +498,25 @@ interface SabaqRow {
           </div>
 
           @if (quizError()) { <div class="os-error">{{ quizError() }}</div> }
-          <div class="sheet-actions sticky-actions">
-            <button type="button" class="btn-secondary" (click)="closePanel()">Close</button>
-            <button type="button" class="btn-primary" [disabled]="busy() || hasQuizErrors()"
-                    (click)="saveQuizResults()">Save All</button>
-          </div>
-        </div>
       </div>
-    }
+      <ng-template #footer>
+        <div class="flex flex-wrap justify-end gap-2">
+            <p-button label="Close" severity="secondary" [outlined]="true" size="small" (onClick)="closePanel()" />
+            <p-button label="Save All" size="small" [disabled]="busy() || hasQuizErrors()" (onClick)="saveQuizResults()" />
+        </div>
+      </ng-template>
+    </p-dialog>
 
-    @if (panel() === 'sabaq') {
-      <div class="sheet-backdrop" (click)="closePanel()">
-        <div class="sheet sheet-wide entry-sheet" (click)="$event.stopPropagation()" role="dialog" aria-label="Oral Assessment">
+    <p-dialog
+      [visible]="panel() === 'sabaq'"
+      (visibleChange)="!$event && closePanel()"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: 'min(900px, 96vw)' }"
+      [breakpoints]="{ '640px': '96vw' }">
+      <ng-template #header>
           <div class="sheet-head row-head">
             <div>
               <h3>Oral Assessment</h3>
@@ -497,6 +526,8 @@ interface SabaqRow {
               {{ sabaqAssessedCount() }} / {{ sabaqRows.length }} assessed
             </span>
           </div>
+      </ng-template>
+      <div class="grid gap-3">
 
           <div class="star-legend" aria-label="Star rating meaning">
             @for (lv of starLegend; track lv.stars) {
@@ -573,7 +604,7 @@ interface SabaqRow {
                     </td>
                     <td class="col-remark-oral">
                       @if (row.showRemark || row.remarks) {
-                        <input class="os-input remark-input"
+                        <input pInputText class="remark-input"
                                placeholder="Optional remark"
                                [(ngModel)]="row.remarks"
                                [attr.data-sabaq-remark]="i"
@@ -590,13 +621,14 @@ interface SabaqRow {
           </div>
 
           @if (sabaqError()) { <div class="os-error">{{ sabaqError() }}</div> }
-          <div class="sheet-actions sticky-actions">
-            <button type="button" class="btn-secondary" (click)="closePanel()">Cancel</button>
-            <button type="button" class="btn-primary" [disabled]="busy()" (click)="saveSabaq()">Save All</button>
-          </div>
-        </div>
       </div>
-    }
+      <ng-template #footer>
+        <div class="flex flex-wrap justify-end gap-2">
+            <p-button label="Cancel" severity="secondary" [outlined]="true" size="small" (onClick)="closePanel()" />
+            <p-button label="Save All" size="small" [disabled]="busy()" (onClick)="saveSabaq()" />
+        </div>
+      </ng-template>
+    </p-dialog>
   `,
   styles: [`
     .status-line {
@@ -836,7 +868,6 @@ interface SabaqRow {
       .sheet, .sheet-wide, .sheet-sm { border-radius: 12px; }
     }
     @media (max-width: 700px) {
-      .cta-bar .btn-primary, .cta-bar .btn-secondary { flex: 1 1 calc(50% - .25rem); }
       .form-row { grid-template-columns: 1fr 1fr; }
       .col-status, .col-remark { display: none; }
       .mobile-status { display: flex; }

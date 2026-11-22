@@ -1,6 +1,15 @@
 import { Component, OnInit, inject, signal, computed, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
+import { InputNumber } from 'primeng/inputnumber';
+import { Dialog } from 'primeng/dialog';
+import { TableModule } from 'primeng/table';
+import { Tooltip } from 'primeng/tooltip';
+import { IconField } from 'primeng/iconfield';
+import { InputIcon } from 'primeng/inputicon';
 import { PosService } from '../../core/services/pos.service';
 import { PosLookupDto, SalesDto, PAYMENT_METHODS } from '../../core/models/inventory.model';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
@@ -20,17 +29,23 @@ interface PaymentLine { paymentMethod: string; amount: number; referenceNo?: str
 @Component({
   selector: 'app-pos',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent],
+  imports: [
+    CommonModule, FormsModule, PageHeaderComponent,
+    Button, Select, InputText, InputNumber, Dialog, TableModule, Tooltip, IconField, InputIcon
+  ],
   template: `
     <app-page-header title="Point of Sale" subtitle="Search or scan items, build the cart, and checkout">
-      <button class="btn-secondary" (click)="loadHeld()"><span class="material-icons-round">pause_circle</span> Held Invoices ({{ heldInvoices().length }})</button>
+      <p-button [label]="'Held Invoices (' + heldInvoices().length + ')'" icon="pi pi-pause-circle" severity="secondary" [outlined]="true" (onClick)="loadHeld()" />
     </app-page-header>
 
     <div class="pos-layout">
       <!-- Left: search -->
       <div class="pane search-pane">
-        <input #searchBox class="barcode-input" placeholder="Scan barcode or search item / package…"
-               [(ngModel)]="searchTerm" (ngModelChange)="onSearchChange($event)" (keydown.enter)="onEnterSearch()" autofocus />
+        <p-iconfield class="mb-3 block">
+          <p-inputicon class="pi pi-search" />
+          <input pInputText #searchBox class="barcode-input w-full" placeholder="Scan barcode or search item / package…"
+                 [(ngModel)]="searchTerm" (ngModelChange)="onSearchChange($event)" (keydown.enter)="onEnterSearch()" autofocus />
+        </p-iconfield>
         <div class="results">
           @for (r of results(); track r.kind + '-' + r.id) {
             <div class="result" (click)="addToCart(r)">
@@ -47,32 +62,34 @@ interface PaymentLine { paymentMethod: string; amount: number; referenceNo?: str
 
       <!-- Center: cart -->
       <div class="pane cart-pane">
-        <table class="cart-table">
-          <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Disc</th><th>Tax</th><th>Amount</th><th></th></tr></thead>
-          <tbody>
-            @for (line of cart(); track line.kind + '-' + line.id; let i = $index) {
-              <tr>
-                <td>{{ line.name }}</td>
-                <td><input type="number" step="1" min="0.01" [(ngModel)]="line.quantity" class="cell-num" /></td>
-                <td><input type="number" step="0.01" [(ngModel)]="line.price" class="cell-num" /></td>
-                <td><input type="number" step="0.01" [(ngModel)]="line.discount" class="cell-num" /></td>
-                <td><input type="number" step="0.01" [(ngModel)]="line.tax" class="cell-num" /></td>
-                <td class="amt">{{ lineAmount(line) | number:'1.2-2' }}</td>
-                <td><button class="icon-btn danger" (click)="removeLine(i)"><span class="material-icons-round">close</span></button></td>
-              </tr>
-            }
-            @if (!cart().length) { <tr><td colspan="7" class="empty">Cart is empty — search or scan an item to begin.</td></tr> }
-          </tbody>
-        </table>
+        <p-table [value]="cart()" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '36rem' }" [scrollable]="true">
+          <ng-template #header>
+            <tr><th>Item</th><th>Qty</th><th>Price</th><th>Disc</th><th>Tax</th><th>Amount</th><th></th></tr>
+          </ng-template>
+          <ng-template #body let-line let-i="rowIndex">
+            <tr>
+              <td>{{ line.name }}</td>
+              <td><p-inputnumber [(ngModel)]="line.quantity" [min]="0" [minFractionDigits]="0" [maxFractionDigits]="2" styleClass="cell-num" inputStyleClass="cell-num" /></td>
+              <td><p-inputnumber [(ngModel)]="line.price" [minFractionDigits]="0" [maxFractionDigits]="2" styleClass="cell-num" inputStyleClass="cell-num" /></td>
+              <td><p-inputnumber [(ngModel)]="line.discount" [minFractionDigits]="0" [maxFractionDigits]="2" styleClass="cell-num" inputStyleClass="cell-num" /></td>
+              <td><p-inputnumber [(ngModel)]="line.tax" [minFractionDigits]="0" [maxFractionDigits]="2" styleClass="cell-num" inputStyleClass="cell-num" /></td>
+              <td class="amt">{{ lineAmount(line) | number:'1.2-2' }}</td>
+              <td><p-button icon="pi pi-times" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Remove line" pTooltip="Remove" (onClick)="removeLine(i)" /></td>
+            </tr>
+          </ng-template>
+          <ng-template #emptymessage>
+            <tr><td colspan="7" class="empty">Cart is empty — search or scan an item to begin.</td></tr>
+          </ng-template>
+        </p-table>
       </div>
 
       <!-- Right: summary + payment -->
       <div class="pane summary-pane">
         <div class="student-block">
-          <label>Customer Name</label>
-          <input [(ngModel)]="customerName" placeholder="Walk-in customer" />
-          <label>Student ID <span class="hint">(optional — for student sales)</span></label>
-          <input type="number" [(ngModel)]="studentId" placeholder="e.g. 1024" />
+          <label for="pos-cust">Customer Name</label>
+          <input pInputText id="pos-cust" class="w-full" [(ngModel)]="customerName" placeholder="Walk-in customer" />
+          <label for="pos-student">Student ID <span class="hint">(optional — for student sales)</span></label>
+          <p-inputnumber inputId="pos-student" styleClass="w-full" inputStyleClass="w-full" [useGrouping]="false" [(ngModel)]="studentId" placeholder="e.g. 1024" />
         </div>
 
         <div class="totals">
@@ -86,15 +103,13 @@ interface PaymentLine { paymentMethod: string; amount: number; referenceNo?: str
         <div class="payments">
           <label>Payments</label>
           @for (p of payments(); track $index; let i = $index) {
-            <div class="pay-line">
-              <select [(ngModel)]="p.paymentMethod">
-                @for (m of paymentMethods; track m) { <option [value]="m">{{ m }}</option> }
-              </select>
-              <input type="number" step="0.01" [(ngModel)]="p.amount" class="cell-num" />
-              <button class="icon-btn danger" (click)="removePayment(i)"><span class="material-icons-round">close</span></button>
+            <div class="mb-1.5 flex items-center gap-1.5">
+              <p-select class="min-w-0 flex-1" [options]="paymentMethods" [(ngModel)]="p.paymentMethod" appendTo="body" ariaLabel="Payment method" />
+              <p-inputnumber [(ngModel)]="p.amount" [minFractionDigits]="0" [maxFractionDigits]="2" styleClass="cell-num" inputStyleClass="cell-num" />
+              <p-button icon="pi pi-times" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Remove payment" pTooltip="Remove" (onClick)="removePayment(i)" />
             </div>
           }
-          <button type="button" class="btn-secondary add-pay" (click)="addPayment()"><span class="material-icons-round">add</span> Add Payment</button>
+          <p-button type="button" class="add-pay" styleClass="w-full" label="Add Payment" icon="pi pi-plus" severity="secondary" [outlined]="true" size="small" (onClick)="addPayment()" />
           <div class="pay-summary">
             <div><span>Paid</span><strong>{{ paidTotal() | number:'1.2-2' }}</strong></div>
             <div><span>Change</span><strong>{{ changeDue() | number:'1.2-2' }}</strong></div>
@@ -103,115 +118,101 @@ interface PaymentLine { paymentMethod: string; amount: number; referenceNo?: str
 
         @if (error()) { <div class="alert-err">{{ error() }}</div> }
 
-        <div class="actions-col">
-          <button class="btn-secondary" [disabled]="!cart().length || busy()" (click)="holdInvoice()">
-            <span class="material-icons-round">pause_circle</span> Hold Invoice
-          </button>
-          <button class="btn-primary checkout" [disabled]="!cart().length || busy()" (click)="checkout()">
-            <span class="material-icons-round">point_of_sale</span> {{ busy() ? 'Processing…' : 'Complete Sale' }}
-          </button>
+        <div class="flex flex-col gap-2.5">
+          <p-button styleClass="w-full" label="Hold Invoice" icon="pi pi-pause-circle" severity="secondary" [outlined]="true"
+                    [disabled]="!cart().length || busy()" (onClick)="holdInvoice()" />
+          <p-button styleClass="w-full" size="large" [label]="busy() ? 'Processing…' : 'Complete Sale'" icon="pi pi-shopping-cart"
+                    [loading]="busy()" [disabled]="!cart().length || busy()" (onClick)="checkout()" />
         </div>
       </div>
     </div>
 
-    <!-- Held invoices modal -->
-    @if (showHeld()) {
-      <div class="overlay" (click)="showHeld.set(false)">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <div class="modal-hd"><h3>Held Invoices</h3><button class="close-btn" (click)="showHeld.set(false)"><span class="material-icons-round">close</span></button></div>
-          <div class="modal-body">
-            @for (h of heldInvoices(); track h.salesId) {
-              <div class="held-row" (click)="resumeInvoice(h)">
-                <div><strong>{{ h.invoiceNo }}</strong><div class="sub">{{ h.holdReference || h.customerName || 'Walk-in' }} · {{ h.details.length }} items</div></div>
-                <div class="price">{{ h.netAmount | number:'1.2-2' }}</div>
-              </div>
-            }
-            @if (!heldInvoices().length) { <p class="empty">No held invoices.</p> }
-          </div>
+    <!-- Held invoices dialog -->
+    <p-dialog
+      header="Held Invoices"
+      [visible]="showHeld()"
+      (visibleChange)="showHeld.set($event)"
+      [modal]="true" [draggable]="false" [resizable]="false" [dismissableMask]="true"
+      [style]="{ width: '26rem' }" [breakpoints]="{ '640px': '96vw' }">
+      @for (h of heldInvoices(); track h.salesId) {
+        <div class="held-row" (click)="resumeInvoice(h)">
+          <div><strong>{{ h.invoiceNo }}</strong><div class="sub">{{ h.holdReference || h.customerName || 'Walk-in' }} · {{ h.details.length }} items</div></div>
+          <div class="price">{{ h.netAmount | number:'1.2-2' }}</div>
         </div>
-      </div>
-    }
+      }
+      @if (!heldInvoices().length) { <p class="empty">No held invoices.</p> }
+    </p-dialog>
 
     <!-- Receipt (printable) -->
-    @if (receipt()) {
-      <div class="overlay" (click)="receipt.set(null)">
-        <div class="modal receipt-modal" (click)="$event.stopPropagation()">
-          <div class="modal-hd"><h3>Receipt — {{ receipt()!.invoiceNo }}</h3><button class="close-btn" (click)="receipt.set(null)"><span class="material-icons-round">close</span></button></div>
-          <div class="receipt" id="receiptPrint">
-            <h2>School Store</h2>
-            <p>Invoice: {{ receipt()!.invoiceNo }}<br />Date: {{ receipt()!.salesDate | date:'medium' }}<br />Cashier: {{ receipt()!.cashierName }}</p>
-            <hr />
-            @for (d of receipt()!.details; track d.salesDetailId) {
-              <div class="r-line"><span>{{ d.itemName }} × {{ d.quantity }}</span><span>{{ d.amount | number:'1.2-2' }}</span></div>
-            }
-            <hr />
-            <div class="r-line"><span>Gross</span><span>{{ receipt()!.grossAmount | number:'1.2-2' }}</span></div>
-            <div class="r-line"><span>Discount</span><span>{{ receipt()!.discountAmount | number:'1.2-2' }}</span></div>
-            <div class="r-line"><span>Tax</span><span>{{ receipt()!.taxAmount | number:'1.2-2' }}</span></div>
-            <div class="r-line total"><span>Net Total</span><span>{{ receipt()!.netAmount | number:'1.2-2' }}</span></div>
-            <div class="r-line"><span>Paid</span><span>{{ receipt()!.paidAmount | number:'1.2-2' }}</span></div>
-            <div class="r-line"><span>Change</span><span>{{ receipt()!.changeAmount | number:'1.2-2' }}</span></div>
-            @for (p of receipt()!.payments; track p.salesPaymentId) {
-              <div class="r-line"><span>{{ p.paymentMethod }}</span><span>{{ p.amount | number:'1.2-2' }}</span></div>
-            }
-            <hr /><p class="thanks">Thank you!</p>
-          </div>
-          <div class="modal-ft"><button class="btn-primary" (click)="printReceipt()"><span class="material-icons-round">print</span> Print Receipt</button></div>
+    <p-dialog
+      [header]="'Receipt — ' + (receipt()?.invoiceNo ?? '')"
+      [visible]="!!receipt()"
+      (visibleChange)="$event ? null : receipt.set(null)"
+      [modal]="true" [draggable]="false" [resizable]="false" [dismissableMask]="true"
+      [style]="{ width: '22rem' }" [breakpoints]="{ '640px': '96vw' }">
+      @if (receipt(); as rc) {
+        <div class="receipt" id="receiptPrint">
+          <h2>School Store</h2>
+          <p>Invoice: {{ rc.invoiceNo }}<br />Date: {{ rc.salesDate | date:'medium' }}<br />Cashier: {{ rc.cashierName }}</p>
+          <hr />
+          @for (d of rc.details; track d.salesDetailId) {
+            <div class="r-line"><span>{{ d.itemName }} × {{ d.quantity }}</span><span>{{ d.amount | number:'1.2-2' }}</span></div>
+          }
+          <hr />
+          <div class="r-line"><span>Gross</span><span>{{ rc.grossAmount | number:'1.2-2' }}</span></div>
+          <div class="r-line"><span>Discount</span><span>{{ rc.discountAmount | number:'1.2-2' }}</span></div>
+          <div class="r-line"><span>Tax</span><span>{{ rc.taxAmount | number:'1.2-2' }}</span></div>
+          <div class="r-line total"><span>Net Total</span><span>{{ rc.netAmount | number:'1.2-2' }}</span></div>
+          <div class="r-line"><span>Paid</span><span>{{ rc.paidAmount | number:'1.2-2' }}</span></div>
+          <div class="r-line"><span>Change</span><span>{{ rc.changeAmount | number:'1.2-2' }}</span></div>
+          @for (p of rc.payments; track p.salesPaymentId) {
+            <div class="r-line"><span>{{ p.paymentMethod }}</span><span>{{ p.amount | number:'1.2-2' }}</span></div>
+          }
+          <hr /><p class="thanks">Thank you!</p>
         </div>
-      </div>
-    }
+      }
+      <ng-template #footer>
+        <div class="flex justify-end gap-2">
+          <p-button label="Close" severity="secondary" [outlined]="true" (onClick)="receipt.set(null)" />
+          <p-button label="Print Receipt" icon="pi pi-print" (onClick)="printReceipt()" />
+        </div>
+      </ng-template>
+    </p-dialog>
   `,
   styles: [`
     .pos-layout { display:grid; grid-template-columns:280px 1fr 300px; gap:16px; align-items:start; }
-    .pane { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; }
-    .barcode-input { width:100%; padding:11px 12px; border:1.5px solid var(--accent); border-radius:8px; font-size:14px; margin-bottom:12px; background:var(--surface); color:var(--t1); }
+    @media (max-width: 1100px) { .pos-layout { grid-template-columns:1fr; } }
+    .pane { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; min-width:0; }
+    .barcode-input { border-color:var(--accent); }
     .results { display:flex; flex-direction:column; gap:4px; max-height:70vh; overflow-y:auto; }
     .result { display:flex; justify-content:space-between; align-items:center; padding:10px; border-radius:8px; cursor:pointer; border:1px solid var(--border); }
     .result:hover { background:var(--surface-2); }
     .result .sub { font-size:11px; color:var(--t4); margin-top:2px; }
     .result .price { font-weight:700; color:var(--t1); }
-    .cart-table { width:100%; border-collapse:collapse; }
-    .cart-table th { text-align:left; font-size:11px; text-transform:uppercase; color:var(--t4); padding:8px; border-bottom:1px solid var(--border); }
-    .cart-table td { padding:6px 8px; border-bottom:1px solid var(--border); }
-    .cell-num { width:70px; padding:6px 8px; border:1.5px solid var(--border); border-radius:6px; font-size:13px; background:var(--surface); color:var(--t1); }
+    :host ::ng-deep .cell-num { width:5.5rem; }
     .amt { font-weight:700; color:var(--t1); white-space:nowrap; }
-    .icon-btn { border:none; background:transparent; cursor:pointer; padding:5px; color:var(--t3); border-radius:6px; }
-    .icon-btn.danger:hover { color:#ef4444; background:rgba(239,68,68,.08); }
     .empty { text-align:center; color:var(--t4); padding:24px 0; font-size:13px; }
     .student-block { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
     .student-block label { font-size:11px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.5px; }
     .student-block .hint { text-transform:none; font-weight:400; color:var(--t4); }
-    .student-block input { padding:8px 10px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; background:var(--surface); color:var(--t1); margin-bottom:6px; }
     .totals { display:flex; flex-direction:column; gap:6px; padding:12px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); margin-bottom:12px; }
     .totals div { display:flex; justify-content:space-between; font-size:13px; color:var(--t3); }
     .totals .net { font-size:15px; padding-top:6px; border-top:1px dashed var(--border); }
     .totals .net strong { color:var(--accent); }
     .payments label { font-size:11px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.5px; display:block; margin-bottom:8px; }
-    .pay-line { display:flex; gap:6px; margin-bottom:6px; }
-    .pay-line select { flex:1; padding:7px 8px; border:1.5px solid var(--border); border-radius:6px; font-size:12.5px; background:var(--surface); color:var(--t1); }
-    .add-pay { width:100%; justify-content:center; display:flex; align-items:center; gap:6px; margin-bottom:10px; }
+    .add-pay { display:block; margin-bottom:10px; }
     .pay-summary { display:flex; flex-direction:column; gap:4px; font-size:13px; margin-bottom:14px; }
     .pay-summary div { display:flex; justify-content:space-between; }
-    .actions-col { display:flex; flex-direction:column; gap:10px; }
-    .actions-col button { justify-content:center; display:flex; align-items:center; gap:8px; }
-    .checkout { padding:12px; font-size:14px; }
     .alert-err { background:#fee2e2; color:#dc2626; border:1px solid #dc2626; border-radius:8px; padding:10px 14px; font-size:12.5px; margin-bottom:10px; }
-    .overlay { position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; padding:16px; }
-    .modal { background:var(--surface); border-radius:16px; width:100%; max-width:420px; max-height:85vh; display:flex; flex-direction:column; }
-    .modal-hd { display:flex; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid var(--border); background:var(--surface-2); }
-    .modal-hd h3 { font-size:15px; font-weight:700; margin:0; }
-    .close-btn { margin-left:auto; border:none; background:transparent; cursor:pointer; color:var(--t4); padding:6px; border-radius:8px; }
-    .modal-body { padding:16px 20px; overflow-y:auto; }
     .held-row { display:flex; justify-content:space-between; align-items:center; padding:10px; border:1px solid var(--border); border-radius:8px; margin-bottom:8px; cursor:pointer; }
     .held-row:hover { background:var(--surface-2); }
     .held-row .sub { font-size:11px; color:var(--t4); }
-    .receipt-modal { max-width:340px; }
-    .receipt { font-family:monospace; font-size:12.5px; padding:16px 20px; color:var(--t1); }
+    .held-row .price { font-weight:700; color:var(--t1); }
+    .receipt { font-family:monospace; font-size:12.5px; padding:4px 4px; color:var(--t1); }
     .receipt h2 { text-align:center; font-size:16px; margin:0 0 8px; }
     .r-line { display:flex; justify-content:space-between; padding:2px 0; }
     .r-line.total { font-weight:700; font-size:14px; }
     .thanks { text-align:center; }
-    .modal-ft { padding:14px 20px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; }
   `]
 })
 export class PosComponent implements OnInit {
@@ -223,7 +224,7 @@ export class PosComponent implements OnInit {
   customerName = '';
   studentId: number | null = null;
   payments = signal<PaymentLine[]>([{ paymentMethod: 'Cash', amount: 0 }]);
-  paymentMethods = PAYMENT_METHODS;
+  paymentMethods: string[] = [...PAYMENT_METHODS];
 
   busy = signal(false);
   error = signal('');

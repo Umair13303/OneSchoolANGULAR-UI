@@ -1,6 +1,15 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormArray, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormsModule, FormBuilder, FormArray, Validators } from '@angular/forms';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
+import { InputNumber } from 'primeng/inputnumber';
+import { Checkbox } from 'primeng/checkbox';
+import { Dialog } from 'primeng/dialog';
+import { TableModule } from 'primeng/table';
+import { IconField } from 'primeng/iconfield';
+import { InputIcon } from 'primeng/inputicon';
 import { StockService } from '../../../core/services/stock.service';
 import { InventoryService } from '../../../core/services/inventory.service';
 import {
@@ -14,7 +23,10 @@ type Tab = 'current' | 'ledger' | 'adjustments' | 'transfers';
 @Component({
   selector: 'app-stock',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, PageHeaderComponent, DatePickerComponent],
+  imports: [
+    CommonModule, ReactiveFormsModule, FormsModule, PageHeaderComponent, DatePickerComponent,
+    Button, Select, InputText, InputNumber, Checkbox, Dialog, TableModule, IconField, InputIcon
+  ],
   template: `
     <div class="os-page compact">
     <app-page-header [dense]="true" title="Stock Management" subtitle="Current balances, movement history, adjustments and transfers" routeUrl="/inventory/stock" />
@@ -31,218 +43,220 @@ type Tab = 'current' | 'ledger' | 'adjustments' | 'transfers';
 
     @if (tab() === 'current') {
       <div class="os-stage-bar">
-        <div class="os-toolbar-group">
-          <div class="os-field grow">
-            <div class="search-wrap">
-              <span class="material-icons-round search-icon">search</span>
-              <input class="search-input" placeholder="Search item…" [value]="search()" (input)="onSearch($any($event.target).value)" />
-            </div>
-          </div>
-          <label class="chk"><input type="checkbox" [checked]="lowOnly()" (change)="toggleLowOnly()" /> Low / reorder only</label>
+        <div class="flex w-full flex-wrap items-center gap-3">
+          <p-iconfield class="min-w-[220px] flex-1">
+            <p-inputicon class="pi pi-search" />
+            <input pInputText class="w-full" placeholder="Search item…" [value]="search()" (input)="onSearch($any($event.target).value)" />
+          </p-iconfield>
+          <label class="chk" for="stk-low">
+            <p-checkbox inputId="stk-low" [binary]="true" [ngModel]="lowOnly()" (ngModelChange)="lowOnly.set($event)" />
+            Low / reorder only
+          </label>
         </div>
       </div>
       <div class="os-stage-body">
-        <table class="table">
-          <thead><tr><th>Code</th><th>Item</th><th>Category</th><th>On Hand</th><th>Reorder Lvl</th><th>Avg Cost</th><th>Stock Value</th></tr></thead>
-          <tbody>
-            @for (s of filteredStock(); track s.itemId) {
-              <tr>
-                <td>{{ s.itemCode }}</td>
-                <td>{{ s.itemName }}</td>
-                <td>{{ s.categoryName }}</td>
-                <td [class.low]="s.quantityOnHand <= s.reorderLevel">{{ s.quantityOnHand }}</td>
-                <td>{{ s.reorderLevel }}</td>
-                <td>{{ s.averageCost | number:'1.2-2' }}</td>
-                <td>{{ s.stockValue | number:'1.2-2' }}</td>
-              </tr>
-            }
-            @if (!filteredStock().length) { <tr><td colspan="7" class="empty">No stock records.</td></tr> }
-          </tbody>
-        </table>
+        <p-table [value]="filteredStock()" dataKey="itemId" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '44rem' }" [scrollable]="true">
+          <ng-template #header>
+            <tr><th>Code</th><th>Item</th><th>Category</th><th>On Hand</th><th>Reorder Lvl</th><th>Avg Cost</th><th>Stock Value</th></tr>
+          </ng-template>
+          <ng-template #body let-s>
+            <tr>
+              <td>{{ s.itemCode }}</td>
+              <td>{{ s.itemName }}</td>
+              <td>{{ s.categoryName }}</td>
+              <td [class.low]="s.quantityOnHand <= s.reorderLevel">{{ s.quantityOnHand }}</td>
+              <td>{{ s.reorderLevel }}</td>
+              <td>{{ s.averageCost | number:'1.2-2' }}</td>
+              <td>{{ s.stockValue | number:'1.2-2' }}</td>
+            </tr>
+          </ng-template>
+          <ng-template #emptymessage><tr><td colspan="7" class="empty">No stock records.</td></tr></ng-template>
+        </p-table>
       </div>
     }
 
     @if (tab() === 'ledger') {
       <div class="os-stage-bar">
-        <div class="os-toolbar-group">
-          <select [value]="ledgerItemId()" (change)="ledgerItemId.set($any($event.target).value); loadLedger()">
-            <option value="">All Items</option>
-            @for (i of allItems(); track i.itemId) { <option [value]="i.itemId">{{ i.itemName }}</option> }
-          </select>
+        <div class="flex w-full flex-wrap items-center gap-3">
+          <p-select
+            class="w-full sm:w-72"
+            [options]="ledgerItemOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [filter]="true"
+            filterBy="label"
+            appendTo="body"
+            [ngModel]="ledgerItemId()"
+            (ngModelChange)="ledgerItemId.set($event ?? ''); loadLedger()"
+            ariaLabel="Item" />
         </div>
       </div>
       <div class="os-stage-body">
-        <table class="table">
-          <thead><tr><th>Date</th><th>Voucher</th><th>No</th><th>Item</th><th>Qty In</th><th>Qty Out</th><th>Balance</th><th>Cost</th><th>User</th></tr></thead>
-          <tbody>
-            @for (l of ledger(); track l.stockLedgerId) {
-              <tr>
-                <td>{{ l.transactionDate | date:'short' }}</td>
-                <td>{{ l.voucherType }}</td><td>{{ l.voucherNo }}</td><td>{{ l.itemName }}</td>
-                <td class="in">{{ l.qtyIn || '' }}</td><td class="out">{{ l.qtyOut || '' }}</td>
-                <td>{{ l.balance }}</td><td>{{ l.cost | number:'1.2-2' }}</td><td>{{ l.userName }}</td>
-              </tr>
-            }
-            @if (!ledger().length) { <tr><td colspan="9" class="empty">No ledger entries.</td></tr> }
-          </tbody>
-        </table>
+        <p-table [value]="ledger()" dataKey="stockLedgerId" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '56rem' }" [scrollable]="true">
+          <ng-template #header>
+            <tr><th>Date</th><th>Voucher</th><th>No</th><th>Item</th><th>Qty In</th><th>Qty Out</th><th>Balance</th><th>Cost</th><th>User</th></tr>
+          </ng-template>
+          <ng-template #body let-l>
+            <tr>
+              <td>{{ l.transactionDate | date:'short' }}</td>
+              <td>{{ l.voucherType }}</td><td>{{ l.voucherNo }}</td><td>{{ l.itemName }}</td>
+              <td class="in">{{ l.qtyIn || '' }}</td><td class="out">{{ l.qtyOut || '' }}</td>
+              <td>{{ l.balance }}</td><td>{{ l.cost | number:'1.2-2' }}</td><td>{{ l.userName }}</td>
+            </tr>
+          </ng-template>
+          <ng-template #emptymessage><tr><td colspan="9" class="empty">No ledger entries.</td></tr></ng-template>
+        </p-table>
       </div>
     }
 
     @if (tab() === 'adjustments') {
       <div class="os-stage-bar">
-        <div class="os-toolbar-group end">
-          <button class="btn-primary" (click)="openAdj()"><span class="material-icons-round">add</span> New Adjustment</button>
+        <div class="flex w-full items-center justify-end gap-3">
+          <p-button label="New Adjustment" icon="pi pi-plus" (onClick)="openAdj()" />
         </div>
       </div>
       <div class="os-stage-body">
-        <table class="table">
-          <thead><tr><th>No</th><th>Date</th><th>Type</th><th>Lines</th><th>Remarks</th></tr></thead>
-          <tbody>
-            @for (a of adjustments(); track a.stockAdjustmentId) {
-              <tr><td>{{ a.adjustmentNo }}</td><td>{{ a.adjustmentDate }}</td><td>{{ a.adjustmentType }}</td><td>{{ a.details.length }}</td><td>{{ a.remarks || '—' }}</td></tr>
-            }
-            @if (!adjustments().length) { <tr><td colspan="5" class="empty">No adjustments recorded.</td></tr> }
-          </tbody>
-        </table>
+        <p-table [value]="adjustments()" dataKey="stockAdjustmentId" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '36rem' }" [scrollable]="true">
+          <ng-template #header><tr><th>No</th><th>Date</th><th>Type</th><th>Lines</th><th>Remarks</th></tr></ng-template>
+          <ng-template #body let-a>
+            <tr><td>{{ a.adjustmentNo }}</td><td>{{ a.adjustmentDate }}</td><td>{{ a.adjustmentType }}</td><td>{{ a.details.length }}</td><td>{{ a.remarks || '—' }}</td></tr>
+          </ng-template>
+          <ng-template #emptymessage><tr><td colspan="5" class="empty">No adjustments recorded.</td></tr></ng-template>
+        </p-table>
       </div>
     }
 
     @if (tab() === 'transfers') {
       <div class="os-stage-bar">
-        <div class="os-toolbar-group end">
-          <button class="btn-primary" (click)="openTrf()"><span class="material-icons-round">add</span> New Transfer</button>
+        <div class="flex w-full items-center justify-end gap-3">
+          <p-button label="New Transfer" icon="pi pi-plus" (onClick)="openTrf()" />
         </div>
       </div>
       <div class="os-stage-body">
-        <table class="table">
-          <thead><tr><th>No</th><th>Date</th><th>From</th><th>To</th><th>Lines</th></tr></thead>
-          <tbody>
-            @for (t of transfers(); track t.stockTransferId) {
-              <tr><td>{{ t.transferNo }}</td><td>{{ t.transferDate }}</td><td>{{ t.fromLocation }}</td><td>{{ t.toLocation }}</td><td>{{ t.details.length }}</td></tr>
-            }
-            @if (!transfers().length) { <tr><td colspan="5" class="empty">No transfers recorded.</td></tr> }
-          </tbody>
-        </table>
+        <p-table [value]="transfers()" dataKey="stockTransferId" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '36rem' }" [scrollable]="true">
+          <ng-template #header><tr><th>No</th><th>Date</th><th>From</th><th>To</th><th>Lines</th></tr></ng-template>
+          <ng-template #body let-t>
+            <tr><td>{{ t.transferNo }}</td><td>{{ t.transferDate }}</td><td>{{ t.fromLocation }}</td><td>{{ t.toLocation }}</td><td>{{ t.details.length }}</td></tr>
+          </ng-template>
+          <ng-template #emptymessage><tr><td colspan="5" class="empty">No transfers recorded.</td></tr></ng-template>
+        </p-table>
       </div>
     }
 
     </div>
     </div>
 
-    <!-- Adjustment Modal -->
-    @if (showAdj()) {
-      <div class="modal-overlay" (click)="showAdj.set(false)">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <div class="modal-hd"><h3>New Stock Adjustment</h3><button class="close-btn" (click)="showAdj.set(false)"><span class="material-icons-round">close</span></button></div>
-          <form [formGroup]="adjForm" (ngSubmit)="saveAdj()" class="modal-body">
-            <div class="grid2">
-              <div class="field"><label>Date <span class="req">*</span></label><app-date-picker formControlName="adjustmentDate"/></div>
-              <div class="field"><label>Type <span class="req">*</span></label>
-                <select formControlName="adjustmentType">
-                  @for (t of adjTypes; track t.value) { <option [value]="t.value">{{ t.label }}</option> }
-                </select>
-              </div>
-            </div>
-            <div class="field"><label>Remarks</label><input formControlName="remarks" /></div>
-            <table class="lines-table" formArrayName="lines">
-              <thead><tr><th>Item</th><th>Current Qty</th><th>New Qty</th></tr></thead>
-              <tbody>
-                @for (line of adjLines.controls; track $index; let i = $index) {
-                  <tr [formGroupName]="i">
-                    <td>
-                      <select formControlName="itemId" (change)="onAdjItemChange(i)">
-                        <option [ngValue]="null">Select item…</option>
-                        @for (it of allItems(); track it.itemId) { <option [ngValue]="it.itemId">{{ it.itemName }}</option> }
-                      </select>
-                    </td>
-                    <td>{{ currentQtyOf(line.value.itemId) }}</td>
-                    <td><input type="number" step="0.01" formControlName="newQuantity" class="num" /></td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-            <button type="button" class="btn-secondary add-line" (click)="addAdjLine()"><span class="material-icons-round">add</span> Add Item</button>
-            @if (modalError()) { <div class="alert-err">{{ modalError() }}</div> }
-            <div class="modal-ft"><button type="button" class="btn-secondary" (click)="showAdj.set(false)">Cancel</button><button type="submit" class="btn-primary" [disabled]="saving()">Save</button></div>
-          </form>
+    <!-- Adjustment Dialog -->
+    <p-dialog
+      header="New Stock Adjustment"
+      [visible]="showAdj()"
+      (visibleChange)="showAdj.set($event)"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '40rem' }"
+      [breakpoints]="{ '640px': '96vw' }">
+      <form [formGroup]="adjForm" (ngSubmit)="saveAdj()">
+        <div class="grid grid-cols-1 gap-x-3.5 sm:grid-cols-2">
+          <div class="field"><label>Date <span class="req">*</span></label><app-date-picker formControlName="adjustmentDate"/></div>
+          <div class="field"><label>Type <span class="req">*</span></label>
+            <p-select class="w-full" [options]="adjTypes" optionLabel="label" optionValue="value"
+                      appendTo="body" [overlayOptions]="{ baseZIndex: 10050 }" formControlName="adjustmentType" />
+          </div>
         </div>
-      </div>
-    }
+        <div class="field"><label for="adj-remarks">Remarks</label><input pInputText id="adj-remarks" class="w-full" formControlName="remarks" /></div>
+        <div class="w-full overflow-x-auto">
+          <table class="lines-table" formArrayName="lines">
+            <thead><tr><th>Item</th><th>Current Qty</th><th>New Qty</th></tr></thead>
+            <tbody>
+              @for (line of adjLines.controls; track $index; let i = $index) {
+                <tr [formGroupName]="i">
+                  <td class="min-w-[12rem]">
+                    <p-select class="w-full" [options]="allItems()" optionLabel="itemName" optionValue="itemId"
+                              placeholder="Select item…" [filter]="true" filterBy="itemName"
+                              appendTo="body" [overlayOptions]="{ baseZIndex: 10050 }"
+                              formControlName="itemId" (onChange)="onAdjItemChange(i)" />
+                  </td>
+                  <td>{{ currentQtyOf(line.value.itemId) }}</td>
+                  <td><p-inputnumber styleClass="w-28" inputStyleClass="w-28" [minFractionDigits]="0" [maxFractionDigits]="2" formControlName="newQuantity" /></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <p-button type="button" class="add-line" label="Add Item" icon="pi pi-plus" severity="secondary" [outlined]="true" size="small" (onClick)="addAdjLine()" />
+        @if (modalError()) { <div class="alert-err">{{ modalError() }}</div> }
+      </form>
+      <ng-template #footer>
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="showAdj.set(false)" />
+          <p-button [label]="saving() ? 'Saving…' : 'Save'" icon="pi pi-check" [loading]="saving()" [disabled]="saving()" (onClick)="saveAdj()" />
+        </div>
+      </ng-template>
+    </p-dialog>
 
-    <!-- Transfer Modal -->
-    @if (showTrf()) {
-      <div class="modal-overlay" (click)="showTrf.set(false)">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <div class="modal-hd"><h3>New Stock Transfer</h3><button class="close-btn" (click)="showTrf.set(false)"><span class="material-icons-round">close</span></button></div>
-          <form [formGroup]="trfForm" (ngSubmit)="saveTrf()" class="modal-body">
-            <div class="grid2">
-              <div class="field"><label>Date <span class="req">*</span></label><app-date-picker formControlName="transferDate"/></div>
-            </div>
-            <div class="grid2">
-              <div class="field"><label>From Location <span class="req">*</span></label><input formControlName="fromLocation" placeholder="e.g. Main Store" /></div>
-              <div class="field"><label>To Location <span class="req">*</span></label><input formControlName="toLocation" placeholder="e.g. Campus 2" /></div>
-            </div>
-            <div class="field"><label>Remarks</label><input formControlName="remarks" /></div>
-            <table class="lines-table" formArrayName="lines">
-              <thead><tr><th>Item</th><th>Quantity</th></tr></thead>
-              <tbody>
-                @for (line of trfLines.controls; track $index; let i = $index) {
-                  <tr [formGroupName]="i">
-                    <td>
-                      <select formControlName="itemId">
-                        <option [ngValue]="null">Select item…</option>
-                        @for (it of allItems(); track it.itemId) { <option [ngValue]="it.itemId">{{ it.itemName }}</option> }
-                      </select>
-                    </td>
-                    <td><input type="number" step="0.01" formControlName="quantity" class="num" /></td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-            <button type="button" class="btn-secondary add-line" (click)="addTrfLine()"><span class="material-icons-round">add</span> Add Item</button>
-            @if (modalError()) { <div class="alert-err">{{ modalError() }}</div> }
-            <div class="modal-ft"><button type="button" class="btn-secondary" (click)="showTrf.set(false)">Cancel</button><button type="submit" class="btn-primary" [disabled]="saving()">Save</button></div>
-          </form>
+    <!-- Transfer Dialog -->
+    <p-dialog
+      header="New Stock Transfer"
+      [visible]="showTrf()"
+      (visibleChange)="showTrf.set($event)"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '40rem' }"
+      [breakpoints]="{ '640px': '96vw' }">
+      <form [formGroup]="trfForm" (ngSubmit)="saveTrf()">
+        <div class="grid grid-cols-1 gap-x-3.5 sm:grid-cols-2">
+          <div class="field"><label>Date <span class="req">*</span></label><app-date-picker formControlName="transferDate"/></div>
+          <div></div>
+          <div class="field"><label for="trf-from">From Location <span class="req">*</span></label><input pInputText id="trf-from" class="w-full" formControlName="fromLocation" placeholder="e.g. Main Store" /></div>
+          <div class="field"><label for="trf-to">To Location <span class="req">*</span></label><input pInputText id="trf-to" class="w-full" formControlName="toLocation" placeholder="e.g. Campus 2" /></div>
         </div>
-      </div>
-    }
+        <div class="field"><label for="trf-remarks">Remarks</label><input pInputText id="trf-remarks" class="w-full" formControlName="remarks" /></div>
+        <div class="w-full overflow-x-auto">
+          <table class="lines-table" formArrayName="lines">
+            <thead><tr><th>Item</th><th>Quantity</th></tr></thead>
+            <tbody>
+              @for (line of trfLines.controls; track $index; let i = $index) {
+                <tr [formGroupName]="i">
+                  <td class="min-w-[12rem]">
+                    <p-select class="w-full" [options]="allItems()" optionLabel="itemName" optionValue="itemId"
+                              placeholder="Select item…" [filter]="true" filterBy="itemName"
+                              appendTo="body" [overlayOptions]="{ baseZIndex: 10050 }"
+                              formControlName="itemId" />
+                  </td>
+                  <td><p-inputnumber styleClass="w-28" inputStyleClass="w-28" [minFractionDigits]="0" [maxFractionDigits]="2" formControlName="quantity" /></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <p-button type="button" class="add-line" label="Add Item" icon="pi pi-plus" severity="secondary" [outlined]="true" size="small" (onClick)="addTrfLine()" />
+        @if (modalError()) { <div class="alert-err">{{ modalError() }}</div> }
+      </form>
+      <ng-template #footer>
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="showTrf.set(false)" />
+          <p-button [label]="saving() ? 'Saving…' : 'Save'" icon="pi pi-check" [loading]="saving()" [disabled]="saving()" (onClick)="saveTrf()" />
+        </div>
+      </ng-template>
+    </p-dialog>
   `,
   styles: [`
-    /* Removed by the migration: .tabs/.tab/.tab.active (now the global
-       .os-seg segmented control), .filters (now .os-stage-bar), .search (now
-       the global search-wrap and search-input), .toolbar (the Add buttons now
-       sit in a stage bar end group), and .card (now .os-stage).
-       The ledger filter keeps a local rule because nothing global styles a
-       bare select inside a stage bar; declarations are unchanged apart from
-       square corners to match the flat stage. */
-    .os-stage-bar select { padding:9px 12px; border:1.5px solid var(--border); border-radius:0; font-size:13px; background:var(--surface); color:var(--t1); width:auto; }
-    .chk { display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--t3); white-space:nowrap; }
+    .chk { display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--t3); white-space:nowrap; }
     td.low { color:#dc2626; font-weight:700; }
     td.in { color:#059669; font-weight:600; }
     td.out { color:#dc2626; font-weight:600; }
     .empty { text-align:center; color:var(--t4); padding:32px 0; font-size:13px; }
-    /* .overlay removed: both modals now use the global .modal-overlay. */
-    .modal { background:var(--surface); border-radius:16px; width:100%; max-width:560px; margin:auto; }
-    .modal-hd { display:flex; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid var(--border); background:var(--surface-2); }
-    .modal-hd h3 { font-size:15px; font-weight:700; margin:0; }
-    .close-btn { margin-left:auto; border:none; background:transparent; cursor:pointer; color:var(--t4); padding:6px; border-radius:8px; }
-    .modal-body { padding:20px; max-height:75vh; overflow-y:auto; }
-    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:0 14px; }
     .field { display:flex; flex-direction:column; gap:5px; margin-bottom:14px; }
-    label { font-size:11px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.5px; }
+    .field > label { font-size:11px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.5px; }
     .req { color:var(--red); }
-    /* Scoped to the modal. Unscoped it out-specified the global search-input
-       on the new stage-bar search box, and it was also stretching the
-       low-stock filter checkbox to width 100% with input padding. Modal and
-       lines-table fields are unchanged. */
-    .modal-body input, .modal-body select { padding:9px 11px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; background:var(--surface); color:var(--t1); width:100%; }
     .lines-table { width:100%; border-collapse:collapse; margin:10px 0; }
     .lines-table th { text-align:left; font-size:11px; text-transform:uppercase; color:var(--t4); padding:6px 8px; border-bottom:1px solid var(--border); }
     .lines-table td { padding:5px 8px; }
-    .num { width:100px; }
-    .add-line { display:inline-flex; align-items:center; gap:6px; margin-bottom:16px; }
-    .modal-ft { display:flex; justify-content:flex-end; gap:10px; padding-top:12px; border-top:1px solid var(--border); margin-top:4px; }
+    .add-line { display:inline-block; margin-bottom:16px; }
     .alert-err { background:#fee2e2; color:#dc2626; border:1px solid #dc2626; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:10px; }
   `]
 })
@@ -252,7 +266,7 @@ export class StockComponent implements OnInit {
   private fb = inject(FormBuilder);
 
   tab = signal<Tab>('current');
-  adjTypes = ADJUSTMENT_TYPES;
+  adjTypes = [...ADJUSTMENT_TYPES];
 
   currentStock = signal<CurrentStockDto[]>([]);
   search = signal('');
@@ -261,6 +275,7 @@ export class StockComponent implements OnInit {
   ledger = signal<StockLedgerDto[]>([]);
   ledgerItemId = signal('');
   allItems = signal<ItemDto[]>([]);
+  ledgerItemOptions = computed(() => [{ value: '', label: 'All Items' }, ...this.allItems().map(i => ({ value: String(i.itemId), label: i.itemName }))]);
 
   adjustments = signal<StockAdjustmentDto[]>([]);
   transfers = signal<StockTransferDto[]>([]);

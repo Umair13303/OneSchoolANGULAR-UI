@@ -1,6 +1,15 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { SelectButton } from 'primeng/selectbutton';
+import { InputText } from 'primeng/inputtext';
+import { Textarea } from 'primeng/textarea';
+import { Tag } from 'primeng/tag';
+import { Dialog } from 'primeng/dialog';
+import { Drawer } from 'primeng/drawer';
+import { Message } from 'primeng/message';
 import { HomeworkService } from '../../../core/services/homework.service';
 import { AcademicService } from '../../../core/services/academic.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -15,7 +24,6 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { ConfirmDeleteComponent } from '../../../shared/components/confirm-delete/confirm-delete.component';
 import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/confirm-delete.service';
-import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
 import { MenuService } from '../../../core/services/menu.service';
 import {
   classroomReturnQueryFromParamMap,
@@ -23,76 +31,96 @@ import {
 } from '../../classroom/classroom-context.util';
 
 type Tab = 'diary' | 'manage';
+interface SelectOpt<T> { value: T; label: string; }
 
 @Component({
   selector: 'app-homework-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, ConfirmDeleteComponent, DatePickerComponent, OsSelectComponent],
+  imports: [
+    CommonModule, FormsModule, RouterModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent,
+    ConfirmDeleteComponent, DatePickerComponent,
+    Button, Select, SelectButton, InputText, Textarea, Tag, Dialog, Drawer, Message
+  ],
   template: `
     <div class="os-page compact hw-list-page">
       <app-page-header [dense]="true" [title]="pageTitle()" routeUrl="/homework/list">
+        <div class="flex flex-wrap items-center gap-2">
           @if (fromClassroom()) {
-            <a class="btn-secondary" [routerLink]="['/classroom/today']" [queryParams]="classroomReturnQp()">Back to class</a>
+            <p-button label="Back to class" icon="pi pi-arrow-left" severity="secondary" [outlined]="true"
+              [routerLink]="['/classroom/today']" [queryParams]="classroomReturnQp()" />
           }
-        @if (isTeacher()) {
-          <a class="btn-primary" routerLink="/homework/assign"
-             [queryParams]="fromClassroom() ? assignPrefill() : null">+ Assign Homework</a>
-        }
+          @if (isTeacher()) {
+            <p-button label="Assign Homework" icon="pi pi-plus" routerLink="/homework/assign"
+              [queryParams]="fromClassroom() ? assignPrefill() : null" />
+          }
+        </div>
       </app-page-header>
 
     <div class="os-stage">
     @if (isTeacher()) {
       <div class="os-stage-bar">
-        <div class="os-seg" role="tablist">
-          <button type="button" class="os-seg-btn" [class.active]="tab() === 'diary'" (click)="tab.set('diary')">
-            Diary
-          </button>
-          <button type="button" class="os-seg-btn" [class.active]="tab() === 'manage'" (click)="tab.set('manage')">
-            Manage
-          </button>
-        </div>
+        <p-selectbutton
+          [options]="tabOptions"
+          optionLabel="label"
+          optionValue="value"
+          [allowEmpty]="false"
+          [ngModel]="tab()"
+          (ngModelChange)="tab.set($event ?? 'diary')" />
       </div>
     }
 
     <div class="os-stage-bar hw-filters">
-      <div class="os-toolbar-group hw-ids">
-        <div class="os-field inline grow">
+      <div class="flex w-full flex-wrap items-end gap-3">
+        <div class="flex min-w-[140px] flex-1 flex-col gap-1">
           <label class="os-field-label">Year</label>
-          <app-os-select
+          <p-select
+            class="w-full"
             placeholder="All years"
             [options]="yearOptions()"
-            [value]="selectedYear"
-            (valueChange)="selectedYear = $event; onYearChange()" />
+            optionLabel="label"
+            optionValue="value"
+            [showClear]="true"
+            [ngModel]="selectedYear"
+            (ngModelChange)="selectedYear = $event ?? null; onYearChange()" />
         </div>
-        <div class="os-field inline grow">
+        <div class="flex min-w-[140px] flex-1 flex-col gap-1">
           <label class="os-field-label">Class</label>
-          <app-os-select
-            icon="school"
+          <p-select
+            class="w-full"
             placeholder="Select class"
-            [searchable]="classOptions().length > 6"
             [options]="classOptions()"
-            [value]="selectedClass"
-            (valueChange)="selectedClass = $event; load()" />
+            optionLabel="label"
+            optionValue="value"
+            [filter]="classOptions().length > 6"
+            filterBy="label"
+            [showClear]="true"
+            [ngModel]="selectedClass"
+            (ngModelChange)="selectedClass = $event ?? null; load()" />
         </div>
-        <div class="os-field inline grow">
+        <div class="flex min-w-[140px] flex-1 flex-col gap-1">
           <label class="os-field-label">Subject</label>
-          <app-os-select
+          <p-select
+            class="w-full"
             placeholder="All subjects"
             [options]="subjectOptions()"
-            [value]="selectedSubject"
-            (valueChange)="selectedSubject = $event; load()" />
+            optionLabel="label"
+            optionValue="value"
+            [filter]="subjectOptions().length > 6"
+            filterBy="label"
+            [showClear]="true"
+            [ngModel]="selectedSubject"
+            (ngModelChange)="selectedSubject = $event ?? null; load()" />
         </div>
-      </div>
-      <div class="os-toolbar-group hw-dates end">
-        <div class="os-field inline">
+        <div class="flex flex-col gap-1">
           <label class="os-field-label">From</label>
           <div class="os-date-wrap"><app-date-picker [(ngModel)]="fromDate" (dateChange)="load()" /></div>
         </div>
-        <div class="os-field inline">
+        <div class="flex flex-col gap-1">
           <label class="os-field-label">To</label>
           <div class="os-date-wrap"><app-date-picker [(ngModel)]="toDate" (dateChange)="load()" /></div>
         </div>
-        <button type="button" class="btn-secondary btn-sm" (click)="clearFilters()">Clear</button>
+        <p-button label="Clear" icon="pi pi-filter-slash" size="small" severity="secondary" [outlined]="true"
+          (onClick)="clearFilters()" />
       </div>
     </div>
 
@@ -158,8 +186,8 @@ type Tab = 'diary' | 'manage';
               </div>
               <div class="hw-footer">
                 <div class="footer-left">
-                  <span class="tag">{{ hw.className }} {{ hw.section }}</span>
-                  <span class="tag">{{ hw.teacherName }}</span>
+                  <p-tag [value]="(hw.className + ' ' + (hw.section ?? '')).trim()" severity="secondary" />
+                  <p-tag [value]="hw.teacherName" severity="secondary" />
                 </div>
                 <span class="assigned">Assigned: {{ hw.assignedDate }}</span>
               </div>
@@ -202,9 +230,12 @@ type Tab = 'diary' | 'manage';
                     </span>
                   </td>
                   <td class="actions">
-                    <button class="btn-action view"   (click)="openSubmissions(hw)">👁 Submissions</button>
-                    <button class="btn-action edit"   (click)="openEdit(hw)">✏️ Edit</button>
-                    <button class="btn-action delete" (click)="confirmDelete(hw)">🗑 Delete</button>
+                    <p-button label="Submissions" icon="pi pi-eye" size="small" severity="info" [outlined]="true"
+                      (onClick)="openSubmissions(hw)" />
+                    <p-button label="Edit" icon="pi pi-pencil" size="small" severity="secondary" [outlined]="true"
+                      (onClick)="openEdit(hw)" />
+                    <p-button label="Delete" icon="pi pi-trash" size="small" severity="danger" [outlined]="true"
+                      (onClick)="confirmDelete(hw)" />
                   </td>
                 </tr>
               }
@@ -216,17 +247,19 @@ type Tab = 'diary' | 'manage';
     </div>
 
     <!-- ── SUBMISSIONS PANEL ───────────────────────────────────────────────── -->
-    @if (submissionPanel()) {
-      <div class="panel-overlay" (click)="closePanel()">
-        <div class="panel" (click)="$event.stopPropagation()">
-          <div class="panel-header">
-            <div>
-              <h3>Submissions</h3>
-              <p class="panel-sub">{{ activeHw()?.title }} — {{ activeHw()?.subjectName }}</p>
-            </div>
-            <button class="close-btn" (click)="closePanel()">✕</button>
-          </div>
-
+    <p-drawer
+      [visible]="submissionPanel()"
+      (visibleChange)="$event ? null : closePanel()"
+      position="right"
+      [modal]="true"
+      [style]="{ width: '42rem', maxWidth: '100vw' }">
+      <ng-template #header>
+        <div>
+          <h3 class="panel-title">Submissions</h3>
+          <p class="panel-sub">{{ activeHw()?.title }} — {{ activeHw()?.subjectName }}</p>
+        </div>
+      </ng-template>
+        <div class="panel">
           @if (loadingSubs()) { <app-loading /> }
           @else if (submissions().length === 0) {
             <app-empty-state message="No submissions yet." icon="📭" />
@@ -242,13 +275,14 @@ type Tab = 'diary' | 'manage';
                     <td>{{ s.admissionNo }}</td>
                     <td>{{ s.submittedAt ? (s.submittedAt | date:'medium') : '—' }}</td>
                     <td>
-                      <span class="status-pill" [class]="s.status.toLowerCase()">{{ s.status }}</span>
+                      <p-tag [value]="s.status" [severity]="subStatusSeverity(s.status)" [rounded]="true" />
                     </td>
                     <td>
                       @if (s.status !== 'Reviewed') {
-                        <button class="btn-review" (click)="markReviewed(s)">Mark Reviewed</button>
+                        <p-button label="Mark Reviewed" icon="pi pi-check" size="small" severity="secondary"
+                          [outlined]="true" (onClick)="markReviewed(s)" />
                       } @else {
-                        <span class="reviewed-tick">✔ Reviewed</span>
+                        <p-tag value="Reviewed" icon="pi pi-check" severity="success" />
                       }
                     </td>
                   </tr>
@@ -261,25 +295,40 @@ type Tab = 'diary' | 'manage';
             </div>
           }
         </div>
-      </div>
-    }
+    </p-drawer>
 
-    <!-- ── EDIT MODAL ──────────────────────────────────────────────────────── -->
-    @if (editModal()) {
-      <div class="modal-overlay" (click)="editModal.set(false)">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <h3>Edit Homework</h3>
-          <div class="field"><label>Title *</label><input [(ngModel)]="editForm.title" /></div>
-          <div class="field"><label>Description</label><textarea [(ngModel)]="editForm.description" rows="3"></textarea></div>
-          <div class="field"><label>Due Date *</label><app-date-picker [(ngModel)]="editForm.dueDate" /></div>
-          @if (editError()) { <p class="error-msg">{{ editError() }}</p> }
-          <div class="modal-actions">
-            <button class="btn-secondary" (click)="editModal.set(false)">Cancel</button>
-            <button class="btn-primary" (click)="saveEdit()" [disabled]="saving()">{{ saving() ? 'Saving...' : 'Save' }}</button>
-          </div>
+    <!-- ── EDIT DIALOG ─────────────────────────────────────────────────────── -->
+    <p-dialog
+      [visible]="editModal()"
+      (visibleChange)="editModal.set($event)"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      header="Edit Homework"
+      [style]="{ width: '32rem' }"
+      [breakpoints]="{ '640px': '96vw' }">
+      <div class="flex flex-col gap-3">
+        <div class="flex flex-col gap-1">
+          <label class="os-field-label">Title *</label>
+          <input pInputText class="w-full" [(ngModel)]="editForm.title" />
         </div>
+        <div class="flex flex-col gap-1">
+          <label class="os-field-label">Description</label>
+          <textarea pTextarea class="w-full" [(ngModel)]="editForm.description" rows="3"></textarea>
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="os-field-label">Due Date *</label>
+          <app-date-picker [(ngModel)]="editForm.dueDate" />
+        </div>
+        @if (editError()) { <p-message severity="error" icon="pi pi-exclamation-circle" [text]="editError()" /> }
       </div>
-    }
+      <ng-template #footer>
+        <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="editModal.set(false)" />
+        <p-button [label]="saving() ? 'Saving...' : 'Save'" icon="pi pi-save" [loading]="saving()"
+          [disabled]="saving()" (onClick)="saveEdit()" />
+      </ng-template>
+    </p-dialog>
 
     <app-confirm-delete />
     </div>
@@ -291,42 +340,8 @@ type Tab = 'diary' | 'manage';
       flex-wrap: wrap;
       row-gap: 10px;
     }
-    .hw-filters .hw-ids,
-    .hw-filters .hw-dates {
-      flex-wrap: wrap;
-      min-width: 0;
-    }
-    .hw-filters app-os-select {
-      min-width: 0;
-      width: 100%;
-    }
-    .hw-filters .os-field.grow {
-      flex: 1 1 140px;
-      min-width: 0;
-    }
-    @media (max-width: 1100px) {
-      .hw-filters {
-        flex-direction: column;
-        align-items: stretch;
-      }
-      .hw-filters .hw-ids,
-      .hw-filters .hw-dates {
-        width: 100%;
-        margin-left: 0;
-      }
-      .hw-filters .hw-dates {
-        justify-content: flex-start;
-      }
-    }
     @media (max-width: 640px) {
-      .hw-filters .hw-dates {
-        flex-direction: column;
-        align-items: stretch;
-      }
-      .hw-filters .os-date-wrap,
-      .hw-filters .btn-secondary {
-        width: 100%;
-      }
+      .hw-filters .os-date-wrap { width: 100%; }
       .actions { flex-wrap: wrap; }
     }
 
@@ -379,7 +394,6 @@ type Tab = 'diary' | 'manage';
     .hw-footer { display:flex; justify-content:space-between; align-items:center;
       border-top:1px solid var(--border); padding-top:10px; }
     .footer-left { display:flex; gap:8px; }
-    .tag { font-size:11px; padding:2px 8px; background:var(--surface-2); border-radius:8px; color:var(--t3); }
     .assigned { font-size:12px; color:var(--t4); }
 
     /* Manage tab */
@@ -390,30 +404,13 @@ type Tab = 'diary' | 'manage';
     .sub-badge  { padding:3px 10px; border-radius:10px; font-size:12px; background:var(--surface-2); color:var(--t4); }
     .sub-badge.good { background:var(--green-s); color:var(--green); }
     .actions { display:flex; gap:6px; }
-    .btn-action { padding:5px 10px; border:none; border-radius:5px; cursor:pointer; font-size:12px; font-weight:500; font-family:inherit; }
-    .btn-action.view   { background:var(--accent-s); color:var(--accent); }
-    .btn-action.edit   { background:var(--amber-s); color:var(--amber); }
-    .btn-action.delete { background:var(--red-s); color:var(--red); }
 
     /* Submissions panel */
-    .panel-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1000; display:flex; justify-content:flex-end; }
-    .panel { width:680px; max-width:100vw; background:var(--surface); display:flex; flex-direction:column;
-      height:100vh; overflow-y:auto; box-shadow:-4px 0 32px rgba(0,0,0,.2); }
-    .panel-header { display:flex; justify-content:space-between; align-items:flex-start;
-      padding:24px 24px 16px; border-bottom:1px solid var(--border); }
-    .panel-header h3 { color:var(--t1); font-size:18px; }
+    .panel { display:flex; flex-direction:column; min-height:100%; }
+    .panel-title { color:var(--t1); font-size:18px; font-weight:700; margin:0; }
     .panel-sub { color:var(--t4); font-size:13px; margin-top:4px; }
-    .close-btn { border:1px solid var(--border); background:var(--surface-2); font-size:16px; cursor:pointer; color:var(--t3); padding:4px 8px; border-radius:6px; }
-    .panel-stats { display:flex; gap:16px; padding:16px 24px; border-top:1px solid var(--border);
+    .panel-stats { display:flex; gap:16px; padding:16px 0; border-top:1px solid var(--border);
       color:var(--t4); font-size:13px; margin-top:auto; }
-
-    .status-pill { padding:3px 10px; border-radius:12px; font-size:12px; font-weight:600; }
-    .status-pill.pending   { background:var(--surface-2); color:var(--t4); }
-    .status-pill.submitted { background:var(--accent-s); color:var(--accent); }
-    .status-pill.reviewed  { background:var(--green-s); color:var(--green); }
-    .btn-review { padding:4px 10px; border:1px solid var(--border-2); border-radius:5px;
-      background:none; color:var(--t2); font-size:12px; cursor:pointer; font-family:inherit; }
-    .reviewed-tick { color:var(--green); font-size:12px; font-weight:600; }
 
     /* Confirm modal */
     .confirm-modal { text-align:center; }
@@ -482,22 +479,30 @@ export class HomeworkListComponent implements OnInit {
     return q;
   }
 
-  yearOptions = computed<OsSelectOption<number | null>[]>(() => [
-    { value: null, label: 'All years' },
-    ...this.years().map(y => ({ value: y.academicYearId as number | null, label: y.yearLabel }))
-  ]);
+  readonly tabOptions: SelectOpt<Tab>[] = [
+    { value: 'diary', label: 'Diary' },
+    { value: 'manage', label: 'Manage' }
+  ];
 
-  classOptions = computed<OsSelectOption<number>[]>(() =>
+  yearOptions = computed<SelectOpt<number>[]>(() =>
+    this.years().map(y => ({ value: y.academicYearId as number, label: y.yearLabel }))
+  );
+
+  classOptions = computed<SelectOpt<number>[]>(() =>
     this.classes().map(c => ({
       value: c.classId,
       label: `${c.className}${c.section ? ' ' + c.section : ''}`.trim()
     }))
   );
 
-  subjectOptions = computed<OsSelectOption<number | null>[]>(() => [
-    { value: null, label: 'All subjects' },
-    ...this.subjects().map(s => ({ value: s.subjectId as number | null, label: s.subjectName }))
-  ]);
+  subjectOptions = computed<SelectOpt<number>[]>(() =>
+    this.subjects().map(s => ({ value: s.subjectId as number, label: s.subjectName }))
+  );
+
+  subStatusSeverity(status: string): 'secondary' | 'info' | 'success' {
+    const s = status?.toLowerCase();
+    return s === 'reviewed' ? 'success' : s === 'submitted' ? 'info' : 'secondary';
+  }
 
   ngOnInit() {
     this.menuSvc.ensureLoaded().subscribe();

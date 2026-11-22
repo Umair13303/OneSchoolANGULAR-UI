@@ -1,6 +1,14 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
+import { InputNumber } from 'primeng/inputnumber';
+import { Tag } from 'primeng/tag';
+import { Dialog } from 'primeng/dialog';
+import { TableModule } from 'primeng/table';
+import { Tooltip } from 'primeng/tooltip';
 import { InventoryService } from '../../../core/services/inventory.service';
 import { ItemCategoryDto, UnitDto, TaxDto } from '../../../core/models/inventory.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -12,7 +20,10 @@ type Tab = 'categories' | 'units' | 'taxes';
 @Component({
   selector: 'app-inventory-masters',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, PageHeaderComponent, ConfirmDeleteComponent],
+  imports: [
+    CommonModule, ReactiveFormsModule, PageHeaderComponent, ConfirmDeleteComponent,
+    Button, Select, InputText, InputNumber, Tag, Dialog, TableModule, Tooltip
+  ],
   template: `
     <div class="os-page compact">
     <app-page-header [dense]="true" title="Categories, Units &amp; Tax" subtitle="Shared lookup data used by Item Master and POS" routeUrl="/inventory/masters" />
@@ -28,173 +39,179 @@ type Tab = 'categories' | 'units' | 'taxes';
 
     @if (tab() === 'categories') {
       <div class="os-stage-bar">
-        <div class="os-toolbar-group">
+        <div class="flex w-full flex-wrap items-center justify-between gap-3">
           <div class="tab-head"><h3>Item Categories</h3><p>{{ categories().length }} categories</p></div>
-        </div>
-        <div class="os-toolbar-group end">
-          <button class="btn-primary" (click)="openCat()"><span class="material-icons-round">add</span> Add Category</button>
+          <p-button label="Add Category" icon="pi pi-plus" (onClick)="openCat()" />
         </div>
       </div>
       <div class="os-stage-body">
-        <table class="table">
-          <thead><tr><th>Name</th><th>Items</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody>
-            @for (c of categories(); track c.itemCategoryId) {
-              <tr>
-                <td><strong>{{ c.categoryName }}</strong></td>
-                <td>{{ c.itemCount }}</td>
-                <td><span [class]="'badge ' + (c.isActive ? 'badge-green' : 'badge-gray')">{{ c.isActive ? 'Active' : 'Inactive' }}</span></td>
-                <td class="actions">
-                  <button class="icon-btn" (click)="openCat(c)" title="Edit"><span class="material-icons-round">edit</span></button>
-                  <button class="icon-btn danger" (click)="deleteCat(c)" title="Delete"><span class="material-icons-round">delete</span></button>
-                </td>
-              </tr>
-            }
-            @if (!categories().length) { <tr><td colspan="4" class="empty">No categories yet.</td></tr> }
-          </tbody>
-        </table>
+        <p-table [value]="categories()" dataKey="itemCategoryId" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '28rem' }" [scrollable]="true">
+          <ng-template #header><tr><th>Name</th><th>Items</th><th>Status</th><th class="text-right">Actions</th></tr></ng-template>
+          <ng-template #body let-c>
+            <tr>
+              <td><strong>{{ c.categoryName }}</strong></td>
+              <td>{{ c.itemCount }}</td>
+              <td><p-tag [value]="c.isActive ? 'Active' : 'Inactive'" [severity]="c.isActive ? 'success' : 'secondary'" [rounded]="true" /></td>
+              <td>
+                <div class="flex items-center justify-end gap-1 whitespace-nowrap">
+                  <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" severity="secondary" ariaLabel="Edit" pTooltip="Edit" (onClick)="openCat(c)" />
+                  <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Delete" pTooltip="Delete" (onClick)="deleteCat(c)" />
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template #emptymessage><tr><td colspan="4" class="empty">No categories yet.</td></tr></ng-template>
+        </p-table>
       </div>
     }
 
     @if (tab() === 'units') {
       <div class="os-stage-bar">
-        <div class="os-toolbar-group">
+        <div class="flex w-full flex-wrap items-center justify-between gap-3">
           <div class="tab-head"><h3>Units of Measure</h3><p>{{ units().length }} units</p></div>
-        </div>
-        <div class="os-toolbar-group end">
-          <button class="btn-primary" (click)="openUnit()"><span class="material-icons-round">add</span> Add Unit</button>
+          <p-button label="Add Unit" icon="pi pi-plus" (onClick)="openUnit()" />
         </div>
       </div>
       <div class="os-stage-body">
-        <table class="table">
-          <thead><tr><th>Name</th><th>Short</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody>
-            @for (u of units(); track u.unitId) {
-              <tr>
-                <td><strong>{{ u.unitName }}</strong></td>
-                <td>{{ u.shortName }}</td>
-                <td><span [class]="'badge ' + (u.isActive ? 'badge-green' : 'badge-gray')">{{ u.isActive ? 'Active' : 'Inactive' }}</span></td>
-                <td class="actions">
-                  <button class="icon-btn" (click)="openUnit(u)" title="Edit"><span class="material-icons-round">edit</span></button>
-                  <button class="icon-btn danger" (click)="deleteUnit(u)" title="Delete"><span class="material-icons-round">delete</span></button>
-                </td>
-              </tr>
-            }
-            @if (!units().length) { <tr><td colspan="4" class="empty">No units yet.</td></tr> }
-          </tbody>
-        </table>
+        <p-table [value]="units()" dataKey="unitId" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '28rem' }" [scrollable]="true">
+          <ng-template #header><tr><th>Name</th><th>Short</th><th>Status</th><th class="text-right">Actions</th></tr></ng-template>
+          <ng-template #body let-u>
+            <tr>
+              <td><strong>{{ u.unitName }}</strong></td>
+              <td>{{ u.shortName }}</td>
+              <td><p-tag [value]="u.isActive ? 'Active' : 'Inactive'" [severity]="u.isActive ? 'success' : 'secondary'" [rounded]="true" /></td>
+              <td>
+                <div class="flex items-center justify-end gap-1 whitespace-nowrap">
+                  <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" severity="secondary" ariaLabel="Edit" pTooltip="Edit" (onClick)="openUnit(u)" />
+                  <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Delete" pTooltip="Delete" (onClick)="deleteUnit(u)" />
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template #emptymessage><tr><td colspan="4" class="empty">No units yet.</td></tr></ng-template>
+        </p-table>
       </div>
     }
 
     @if (tab() === 'taxes') {
       <div class="os-stage-bar">
-        <div class="os-toolbar-group">
+        <div class="flex w-full flex-wrap items-center justify-between gap-3">
           <div class="tab-head"><h3>Tax Rates</h3><p>{{ taxes().length }} rates</p></div>
-        </div>
-        <div class="os-toolbar-group end">
-          <button class="btn-primary" (click)="openTax()"><span class="material-icons-round">add</span> Add Tax Rate</button>
+          <p-button label="Add Tax Rate" icon="pi pi-plus" (onClick)="openTax()" />
         </div>
       </div>
       <div class="os-stage-body">
-        <table class="table">
-          <thead><tr><th>Name</th><th>Percentage</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody>
-            @for (t of taxes(); track t.taxId) {
-              <tr>
-                <td><strong>{{ t.taxName }}</strong></td>
-                <td>{{ t.taxPercentage }}%</td>
-                <td><span [class]="'badge ' + (t.isActive ? 'badge-green' : 'badge-gray')">{{ t.isActive ? 'Active' : 'Inactive' }}</span></td>
-                <td class="actions">
-                  <button class="icon-btn" (click)="openTax(t)" title="Edit"><span class="material-icons-round">edit</span></button>
-                  <button class="icon-btn danger" (click)="deleteTax(t)" title="Delete"><span class="material-icons-round">delete</span></button>
-                </td>
-              </tr>
-            }
-            @if (!taxes().length) { <tr><td colspan="4" class="empty">No tax rates yet.</td></tr> }
-          </tbody>
-        </table>
+        <p-table [value]="taxes()" dataKey="taxId" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '28rem' }" [scrollable]="true">
+          <ng-template #header><tr><th>Name</th><th>Percentage</th><th>Status</th><th class="text-right">Actions</th></tr></ng-template>
+          <ng-template #body let-t>
+            <tr>
+              <td><strong>{{ t.taxName }}</strong></td>
+              <td>{{ t.taxPercentage }}%</td>
+              <td><p-tag [value]="t.isActive ? 'Active' : 'Inactive'" [severity]="t.isActive ? 'success' : 'secondary'" [rounded]="true" /></td>
+              <td>
+                <div class="flex items-center justify-end gap-1 whitespace-nowrap">
+                  <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" severity="secondary" ariaLabel="Edit" pTooltip="Edit" (onClick)="openTax(t)" />
+                  <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Delete" pTooltip="Delete" (onClick)="deleteTax(t)" />
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template #emptymessage><tr><td colspan="4" class="empty">No tax rates yet.</td></tr></ng-template>
+        </p-table>
       </div>
     }
 
-    <!-- Category Modal -->
     </div>
     </div>
 
-    @if (showCat()) {
-      <div class="modal-overlay" (click)="showCat.set(false)">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <div class="modal-hd"><h3>{{ editingId() ? 'Edit' : 'Add' }} Category</h3><button class="close-btn" (click)="showCat.set(false)"><span class="material-icons-round">close</span></button></div>
-          <form [formGroup]="catForm" (ngSubmit)="saveCat()" class="modal-body">
-            <div class="field"><label>Category Name <span class="req">*</span></label><input formControlName="categoryName" /></div>
-            @if (editingId()) { <div class="field"><label>Status</label><select formControlName="isActive"><option [ngValue]="true">Active</option><option [ngValue]="false">Inactive</option></select></div> }
-            @if (modalError()) { <div class="alert-err">{{ modalError() }}</div> }
-            <div class="modal-ft"><button type="button" class="btn-secondary" (click)="showCat.set(false)">Cancel</button><button type="submit" class="btn-primary" [disabled]="saving()">Save</button></div>
-          </form>
+    <!-- Category Dialog -->
+    <p-dialog
+      [header]="(editingId() ? 'Edit' : 'Add') + ' Category'"
+      [visible]="showCat()"
+      (visibleChange)="showCat.set($event)"
+      [modal]="true" [draggable]="false" [resizable]="false" [dismissableMask]="true"
+      [style]="{ width: '26rem' }" [breakpoints]="{ '640px': '96vw' }">
+      <form [formGroup]="catForm" (ngSubmit)="saveCat()">
+        <div class="field"><label for="cat-name">Category Name <span class="req">*</span></label><input pInputText id="cat-name" class="w-full" formControlName="categoryName" /></div>
+        @if (editingId()) {
+          <div class="field"><label>Status</label>
+            <p-select class="w-full" [options]="statusOptions" optionLabel="label" optionValue="value"
+                      appendTo="body" [overlayOptions]="{ baseZIndex: 10050 }" formControlName="isActive" />
+          </div>
+        }
+        @if (modalError()) { <div class="alert-err">{{ modalError() }}</div> }
+      </form>
+      <ng-template #footer>
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="showCat.set(false)" />
+          <p-button [label]="saving() ? 'Saving…' : 'Save'" icon="pi pi-check" [loading]="saving()" [disabled]="saving()" (onClick)="saveCat()" />
         </div>
-      </div>
-    }
+      </ng-template>
+    </p-dialog>
 
-    <!-- Unit Modal -->
-    @if (showUnit()) {
-      <div class="modal-overlay" (click)="showUnit.set(false)">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <div class="modal-hd"><h3>{{ editingId() ? 'Edit' : 'Add' }} Unit</h3><button class="close-btn" (click)="showUnit.set(false)"><span class="material-icons-round">close</span></button></div>
-          <form [formGroup]="unitForm" (ngSubmit)="saveUnit()" class="modal-body">
-            <div class="field"><label>Unit Name <span class="req">*</span></label><input formControlName="unitName" placeholder="e.g. Piece" /></div>
-            <div class="field"><label>Short Name <span class="req">*</span></label><input formControlName="shortName" placeholder="e.g. Pc" /></div>
-            @if (editingId()) { <div class="field"><label>Status</label><select formControlName="isActive"><option [ngValue]="true">Active</option><option [ngValue]="false">Inactive</option></select></div> }
-            @if (modalError()) { <div class="alert-err">{{ modalError() }}</div> }
-            <div class="modal-ft"><button type="button" class="btn-secondary" (click)="showUnit.set(false)">Cancel</button><button type="submit" class="btn-primary" [disabled]="saving()">Save</button></div>
-          </form>
+    <!-- Unit Dialog -->
+    <p-dialog
+      [header]="(editingId() ? 'Edit' : 'Add') + ' Unit'"
+      [visible]="showUnit()"
+      (visibleChange)="showUnit.set($event)"
+      [modal]="true" [draggable]="false" [resizable]="false" [dismissableMask]="true"
+      [style]="{ width: '26rem' }" [breakpoints]="{ '640px': '96vw' }">
+      <form [formGroup]="unitForm" (ngSubmit)="saveUnit()">
+        <div class="field"><label for="unit-name">Unit Name <span class="req">*</span></label><input pInputText id="unit-name" class="w-full" formControlName="unitName" placeholder="e.g. Piece" /></div>
+        <div class="field"><label for="unit-short">Short Name <span class="req">*</span></label><input pInputText id="unit-short" class="w-full" formControlName="shortName" placeholder="e.g. Pc" /></div>
+        @if (editingId()) {
+          <div class="field"><label>Status</label>
+            <p-select class="w-full" [options]="statusOptions" optionLabel="label" optionValue="value"
+                      appendTo="body" [overlayOptions]="{ baseZIndex: 10050 }" formControlName="isActive" />
+          </div>
+        }
+        @if (modalError()) { <div class="alert-err">{{ modalError() }}</div> }
+      </form>
+      <ng-template #footer>
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="showUnit.set(false)" />
+          <p-button [label]="saving() ? 'Saving…' : 'Save'" icon="pi pi-check" [loading]="saving()" [disabled]="saving()" (onClick)="saveUnit()" />
         </div>
-      </div>
-    }
+      </ng-template>
+    </p-dialog>
 
-    <!-- Tax Modal -->
-    @if (showTax()) {
-      <div class="modal-overlay" (click)="showTax.set(false)">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <div class="modal-hd"><h3>{{ editingId() ? 'Edit' : 'Add' }} Tax Rate</h3><button class="close-btn" (click)="showTax.set(false)"><span class="material-icons-round">close</span></button></div>
-          <form [formGroup]="taxForm" (ngSubmit)="saveTax()" class="modal-body">
-            <div class="field"><label>Tax Name <span class="req">*</span></label><input formControlName="taxName" placeholder="e.g. GST" /></div>
-            <div class="field"><label>Percentage <span class="req">*</span></label><input type="number" step="0.01" formControlName="taxPercentage" /></div>
-            @if (editingId()) { <div class="field"><label>Status</label><select formControlName="isActive"><option [ngValue]="true">Active</option><option [ngValue]="false">Inactive</option></select></div> }
-            @if (modalError()) { <div class="alert-err">{{ modalError() }}</div> }
-            <div class="modal-ft"><button type="button" class="btn-secondary" (click)="showTax.set(false)">Cancel</button><button type="submit" class="btn-primary" [disabled]="saving()">Save</button></div>
-          </form>
+    <!-- Tax Dialog -->
+    <p-dialog
+      [header]="(editingId() ? 'Edit' : 'Add') + ' Tax Rate'"
+      [visible]="showTax()"
+      (visibleChange)="showTax.set($event)"
+      [modal]="true" [draggable]="false" [resizable]="false" [dismissableMask]="true"
+      [style]="{ width: '26rem' }" [breakpoints]="{ '640px': '96vw' }">
+      <form [formGroup]="taxForm" (ngSubmit)="saveTax()">
+        <div class="field"><label for="tax-name">Tax Name <span class="req">*</span></label><input pInputText id="tax-name" class="w-full" formControlName="taxName" placeholder="e.g. GST" /></div>
+        <div class="field"><label for="tax-pct">Percentage <span class="req">*</span></label>
+          <p-inputnumber inputId="tax-pct" styleClass="w-full" inputStyleClass="w-full" suffix="%" [minFractionDigits]="0" [maxFractionDigits]="2" formControlName="taxPercentage" />
         </div>
-      </div>
-    }
+        @if (editingId()) {
+          <div class="field"><label>Status</label>
+            <p-select class="w-full" [options]="statusOptions" optionLabel="label" optionValue="value"
+                      appendTo="body" [overlayOptions]="{ baseZIndex: 10050 }" formControlName="isActive" />
+          </div>
+        }
+        @if (modalError()) { <div class="alert-err">{{ modalError() }}</div> }
+      </form>
+      <ng-template #footer>
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="showTax.set(false)" />
+          <p-button [label]="saving() ? 'Saving…' : 'Save'" icon="pi pi-check" [loading]="saving()" [disabled]="saving()" (onClick)="saveTax()" />
+        </div>
+      </ng-template>
+    </p-dialog>
 
     <app-confirm-delete />
   `,
   styles: [`
-    /* Removed by the migration: .tabs/.tab/.tab.active (now the global
-       .os-seg segmented control), .card (now .os-stage), .card-head chrome
-       (padding, border and background now come from .os-stage-bar), .actions
-       and the three .icon-btn rules (the global .icon-btn supplies size,
-       hover, disabled and focus, and its .danger variant uses --red tokens
-       instead of the hardcoded #ef4444 these rules used).
-       The per-tab title and count are preserved: the same two declarations
-       now target .tab-head inside the second stage bar. */
     .tab-head h3 { font-size:15px; font-weight:700; color:var(--t1); margin:0; }
     .tab-head p { font-size:12px; color:var(--t4); margin:2px 0 0; }
-    .btn-primary { display:inline-flex; align-items:center; gap:6px; }
-    .badge { padding:3px 9px; border-radius:12px; font-size:11.5px; font-weight:600; }
-    .badge-green { background:var(--green-s); color:var(--green); }
-    .badge-gray { background:var(--surface-2); color:var(--t4); }
     .empty { text-align:center; color:var(--t4); padding:32px 0; font-size:13px; }
-    /* .overlay removed: the three modals now use the global .modal-overlay. */
-    .modal { background:var(--surface); border-radius:16px; width:100%; max-width:420px; overflow:hidden; }
-    .modal-hd { display:flex; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid var(--border); background:var(--surface-2); }
-    .modal-hd h3 { font-size:15px; font-weight:700; margin:0; }
-    .close-btn { margin-left:auto; border:none; background:transparent; cursor:pointer; color:var(--t4); padding:6px; border-radius:8px; }
-    .modal-body { padding:20px; }
-    .modal-ft { display:flex; justify-content:flex-end; gap:10px; padding-top:12px; border-top:1px solid var(--border); margin-top:4px; }
     .field { display:flex; flex-direction:column; gap:5px; margin-bottom:14px; }
-    label { font-size:11px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.5px; }
+    .field > label { font-size:11px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.5px; }
     .req { color:var(--red); }
-    input, select { padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13.5px; font-family:inherit; background:var(--surface); color:var(--t1); }
     .alert-err { background:#fee2e2; color:#dc2626; border:1px solid #dc2626; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:10px; }
   `]
 })
@@ -203,6 +220,7 @@ export class InventoryMastersComponent implements OnInit {
   private confirmDelete = inject(ConfirmDeleteService);
   private fb = inject(FormBuilder);
 
+  statusOptions = [{ label: 'Active', value: true }, { label: 'Inactive', value: false }];
   tab = signal<Tab>('categories');
   categories = signal<ItemCategoryDto[]>([]);
   units = signal<UnitDto[]>([]);

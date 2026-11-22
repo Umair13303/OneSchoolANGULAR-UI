@@ -1,8 +1,10 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
 import { FeeService } from '../../../core/services/fee.service';
 import { AcademicService } from '../../../core/services/academic.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -14,7 +16,7 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
 @Component({
   selector: 'app-fee-challan',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent, DatePickerComponent],
+  imports: [CommonModule, FormsModule, PageHeaderComponent, DatePickerComponent, Button, Select],
   template: `
     <app-page-header title="Fee Challan" subtitle="Generate challans for a class then print 3-copy slips" />
 
@@ -41,30 +43,39 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
             <div class="gen-row">
               <div class="field">
                 <label>Academic Year *</label>
-                <select [(ngModel)]="genYearId" (change)="onGenYearChange()">
-                  <option [ngValue]="null">Select year</option>
-                  @for (y of years(); track y.academicYearId) {
-                    <option [ngValue]="y.academicYearId">{{ y.yearLabel }}</option>
-                  }
-                </select>
+                <p-select
+                  class="w-full"
+                  [options]="years()"
+                  optionLabel="yearLabel"
+                  optionValue="academicYearId"
+                  placeholder="Select year"
+                  appendTo="body"
+                  [(ngModel)]="genYearId"
+                  (onChange)="onGenYearChange()" />
               </div>
               <div class="field">
                 <label>Fee Structure *</label>
-                <select [(ngModel)]="selectedGroupKey" (change)="onStructureGroupChange()">
-                  <option value="">Select fee structure</option>
-                  @for (g of structureGroups(); track g.key) {
-                    <option [value]="g.key">{{ g.title }}</option>
-                  }
-                </select>
+                <p-select
+                  class="w-full"
+                  [options]="structureOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Select fee structure"
+                  appendTo="body"
+                  [(ngModel)]="selectedGroupKey"
+                  (onChange)="onStructureGroupChange()" />
               </div>
               <div class="field">
                 <label>Month *</label>
-                <select [(ngModel)]="genMonth" (change)="onMonthChange()">
-                  <option [ngValue]="null">Select month</option>
-                  @for (m of months; track m.value) {
-                    <option [ngValue]="m.value">{{ m.label }}</option>
-                  }
-                </select>
+                <p-select
+                  class="w-full"
+                  [options]="months"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Select month"
+                  appendTo="body"
+                  [(ngModel)]="genMonth"
+                  (onChange)="onMonthChange()" />
               </div>
               <div class="field">
                 <label>Due Date *</label>
@@ -116,10 +127,12 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
           @if (genError()) { <div class="alert error">{{ genError() }}</div> }
 
           <div class="gen-actions">
-            <button class="btn-primary btn-lg" (click)="generate()"
-              [disabled]="generating() || !selectedGroup() || !genMonth || !genDueDate">
-              {{ generating() ? 'Generating...' : '⚡ Generate Challans for ' + (selectedGroup()?.className || '...') }}
-            </button>
+            <p-button
+              [label]="generating() ? 'Generating...' : 'Generate Challans for ' + (selectedGroup()?.className || '...')"
+              icon="pi pi-bolt"
+              [loading]="generating()"
+              [disabled]="generating() || !selectedGroup() || !genMonth || !genDueDate"
+              (onClick)="generate()" />
           </div>
         </div>
       }
@@ -140,9 +153,9 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
             }
             &nbsp;·&nbsp; Due: <strong>{{ genDueDate }}</strong>
           </div>
-          <div class="preview-actions">
-            <button class="btn-secondary" (click)="step = 1">← Back</button>
-            <button class="btn-primary" (click)="printChallan()">🖨️ Print All Challans</button>
+          <div class="preview-actions flex flex-wrap items-center gap-2">
+            <p-button label="Back" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="step = 1" />
+            <p-button label="Print All Challans" icon="pi pi-print" (onClick)="printChallan()" />
           </div>
         </div>
 
@@ -170,7 +183,7 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
                   <td class="amt disc">{{ s.totalDiscount > 0 ? ('PKR ' + (s.totalDiscount | number:'1.0-0')) : '—' }}</td>
                   <td class="amt payable"><strong>PKR {{ s.netPayable | number:'1.0-0' }}</strong></td>
                   <td class="print-col">
-                    <button class="btn-print-row" (click)="printStudent(s.studentId)">🖨️ Print</button>
+                    <p-button label="Print" icon="pi pi-print" size="small" [outlined]="true" (onClick)="printStudent(s.studentId)" />
                   </td>
                 </tr>
               }
@@ -291,7 +304,7 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
     .amt  { text-align:right; font-family:monospace; font-size:13px; }
     .disc { color:#059669; }
     .payable { color:var(--t1); }
-    .print-col { width:80px; text-align:center; }
+    .print-col { width:110px; text-align:center; }
     .btn-print-row { padding:4px 10px; font-size:12px; border:1.5px solid var(--accent);
       background:var(--accent-g); color:var(--accent); border-radius:6px; cursor:pointer;
       font-family:inherit; font-weight:600; transition:background .15s; }
@@ -369,6 +382,9 @@ export class FeeChallanComponent implements OnInit {
   allStructures = signal<FeeStructureDto[]>([]);
 
   selectedGroupKey = '';
+
+  structureOptions = computed(() =>
+    this.structureGroups().map(g => ({ label: g.title, value: g.key })));
 
   // Step 2 – preview & print
   fees           = signal<StudentFeeDto[]>([]);

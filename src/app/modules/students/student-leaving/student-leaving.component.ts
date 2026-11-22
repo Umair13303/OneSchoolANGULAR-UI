@@ -5,11 +5,14 @@ import { StudentService } from '../../../core/services/student.service';
 import { InstituteService } from '../../../core/services/institute.service';
 import { environment } from '../../../../environments/environment';
 import { DatePickerComponent } from '../../../shared/components/date-picker/date-picker.component';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
 
 @Component({
   selector: 'app-student-leaving',
   standalone: true,
-  imports: [CommonModule, FormsModule, DatePickerComponent],
+  imports: [CommonModule, FormsModule, DatePickerComponent, Button, Select, InputText],
   template: `
     <div class="overlay" (click)="onOverlayClick($event)">
       <div class="dialog" (click)="$event.stopPropagation()">
@@ -22,7 +25,8 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
               <h3>Student Leaving</h3>
               <p class="dlg-sub">{{ studentName }} · {{ admissionNo }}</p>
             </div>
-            <button class="dlg-close" (click)="cancel()"><span class="material-icons-round">close</span></button>
+            <p-button class="ml-auto" icon="pi pi-times" severity="secondary" [text]="true" [rounded]="true"
+              size="small" ariaLabel="Close" (onClick)="cancel()" />
           </div>
 
           @if (loadingDues()) {
@@ -69,21 +73,19 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
               </div>
               <div class="field">
                 <label>Reason for Leaving <span class="req">*</span></label>
-                <select [(ngModel)]="leavingReason">
-                  <option value="">Select reason…</option>
-                  <option>Transfer to another school</option>
-                  <option>Family relocation</option>
-                  <option>Financial reasons</option>
-                  <option>Course completion</option>
-                  <option>Disciplinary action</option>
-                  <option>Medical reasons</option>
-                  <option>Other</option>
-                </select>
+                <p-select
+                  class="w-full"
+                  appendTo="body"
+                  [overlayOptions]="overlayOpts"
+                  [options]="reasonOptions"
+                  [(ngModel)]="leavingReason"
+                  placeholder="Select reason…"
+                  ariaLabel="Reason for leaving" />
               </div>
               @if (leavingReason === 'Other') {
                 <div class="field">
                   <label>Specify reason</label>
-                  <input type="text" [(ngModel)]="customReason" placeholder="Enter reason…" />
+                  <input pInputText type="text" class="w-full" [(ngModel)]="customReason" placeholder="Enter reason…" />
                 </div>
               }
 
@@ -93,11 +95,14 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
             </div>
 
             <div class="dlg-footer">
-              <button class="btn-sec" (click)="cancel()">Cancel</button>
-              <button class="btn-danger" (click)="submit()" [disabled]="saving() || !canSubmit()">
-                <span class="material-icons-round">{{ saving() ? 'refresh' : 'exit_to_app' }}</span>
-                {{ saving() ? 'Processing…' : 'Confirm Leaving' }}
-              </button>
+              <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="cancel()" />
+              <p-button
+                [label]="saving() ? 'Processing…' : 'Confirm Leaving'"
+                icon="pi pi-sign-out"
+                severity="danger"
+                [loading]="saving()"
+                [disabled]="saving() || !canSubmit()"
+                (onClick)="submit()" />
             </div>
           }
 
@@ -109,7 +114,8 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
               <h3>Student Withdrawn Successfully</h3>
               <p class="dlg-sub">School Leaving Certificate is ready</p>
             </div>
-            <button class="dlg-close" (click)="cancel()"><span class="material-icons-round">close</span></button>
+            <p-button class="ml-auto" icon="pi pi-times" severity="secondary" [text]="true" [rounded]="true"
+              size="small" ariaLabel="Close" (onClick)="cancel()" />
           </div>
           <div class="dlg-body">
             <div class="cert-preview">
@@ -122,10 +128,8 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
             </div>
           </div>
           <div class="dlg-footer">
-            <button class="btn-sec" (click)="done()">Close</button>
-            <button class="btn-primary" (click)="printCertificate()">
-              <span class="material-icons-round">print</span> Print Certificate
-            </button>
+            <p-button label="Close" severity="secondary" [outlined]="true" (onClick)="done()" />
+            <p-button label="Print Certificate" icon="pi pi-print" (onClick)="printCertificate()" />
           </div>
         }
 
@@ -158,14 +162,6 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
     .dlg-icon.success .material-icons-round { color: var(--green); font-size: 22px; }
     .dlg-header h3 { font-size: 15px; font-weight: 700; color: var(--t1); margin: 0; }
     .dlg-sub { font-size: 12px; color: var(--t4); margin-top: 2px; }
-    .dlg-close {
-      margin-left: auto; width: 30px; height: 30px; border-radius: 8px;
-      border: none; background: none; cursor: pointer; color: var(--t4);
-      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-    }
-    .dlg-close:hover { background: var(--surface-2); color: var(--t1); }
-    .dlg-close .material-icons-round { font-size: 18px; }
-
     .dlg-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
     .dlg-body.center { align-items: center; justify-content: center; min-height: 120px; color: var(--t4); gap: 8px; }
 
@@ -212,28 +208,6 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
       display: flex; justify-content: flex-end; gap: 10px;
       padding: 14px 20px; border-top: 1px solid var(--border);
     }
-    .btn-sec {
-      padding: 9px 18px; border: 1.5px solid var(--border); border-radius: 8px;
-      background: var(--surface-2); color: var(--t2); font-size: 13px; font-weight: 600;
-      cursor: pointer; font-family: inherit;
-    }
-    .btn-danger {
-      display: flex; align-items: center; gap: 6px;
-      padding: 9px 18px; border: none; border-radius: 8px;
-      background: var(--red); color: #fff; font-size: 13px; font-weight: 700;
-      cursor: pointer; font-family: inherit; transition: background .15s;
-    }
-    .btn-danger:hover:not(:disabled) { background: #b91c1c; }
-    .btn-danger:disabled { opacity: .5; cursor: not-allowed; }
-    .btn-danger .material-icons-round { font-size: 16px; }
-    .btn-primary {
-      display: flex; align-items: center; gap: 6px;
-      padding: 9px 18px; border: none; border-radius: 8px;
-      background: var(--accent); color: #fff; font-size: 13px; font-weight: 700;
-      cursor: pointer; font-family: inherit;
-    }
-    .btn-primary .material-icons-round { font-size: 16px; }
-
     .cert-preview { display: flex; flex-direction: column; gap: 0; border-radius: 10px; overflow: hidden; border: 1.5px solid var(--border); }
     .cert-row { display: flex; align-items: baseline; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--border); }
     .cert-row:last-child { border-bottom: none; }
@@ -262,6 +236,17 @@ export class StudentLeavingComponent implements OnInit {
   leavingDate   = new Date().toISOString().slice(0, 10);
   leavingReason = '';
   customReason  = '';
+  /** Raise PrimeNG select overlay above this dialog's backdrop (z-index 1000). */
+  readonly overlayOpts = { baseZIndex: 1050 };
+  reasonOptions = [
+    'Transfer to another school',
+    'Family relocation',
+    'Financial reasons',
+    'Course completion',
+    'Disciplinary action',
+    'Medical reasons',
+    'Other'
+  ];
   forceWithdraw = false;
   today         = new Date().toISOString().slice(0, 10);
 

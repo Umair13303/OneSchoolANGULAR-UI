@@ -1,6 +1,13 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import Swal from 'sweetalert2';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
+import { ToggleSwitch } from 'primeng/toggleswitch';
+import { Checkbox } from 'primeng/checkbox';
+import { Tag } from 'primeng/tag';
 import { SettingsService } from '../../../core/services/settings.service';
 import { ScheduleProfileDto, DayScheduleDto, SchoolSettingsDto } from '../../../core/models/settings.model';
 
@@ -12,7 +19,7 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent, LoadingComponent],
+  imports: [CommonModule, FormsModule, PageHeaderComponent, LoadingComponent, Button, Select, InputText, ToggleSwitch, Checkbox, Tag],
   template: `
 <app-page-header title="School Settings" subtitle="Manage schedule profiles — create, edit and activate one at a time"></app-page-header>
 
@@ -22,10 +29,8 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
 <!-- ═══════════════════════ PROFILES LIST ═══════════════════════════ -->
 @if (!editingProfile() && !periodsProfile()) {
 
-  <div class="toolbar">
-    <button class="btn-primary" (click)="startCreate()">
-      <span class="material-icons-round">add</span> New Profile
-    </button>
+  <div class="mb-4 flex flex-wrap items-center justify-end gap-2">
+    <p-button label="New Profile" icon="pi pi-plus" (onClick)="startCreate()" />
   </div>
 
   @if (profiles().length === 0) {
@@ -40,12 +45,12 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
       <div class="profile-left">
         <div class="profile-name">
           @if (renamingId() === p.id) {
-            <input class="rename-input" [(ngModel)]="renameValue" (keydown.enter)="confirmRename(p.id)" (keydown.escape)="cancelRename()" autofocus />
-            <button class="icon-btn" (click)="confirmRename(p.id)" title="Save"><span class="material-icons-round">check</span></button>
-            <button class="icon-btn" (click)="cancelRename()" title="Cancel"><span class="material-icons-round">close</span></button>
+            <input pInputText class="min-w-[200px]" [(ngModel)]="renameValue" (keydown.enter)="confirmRename(p.id)" (keydown.escape)="cancelRename()" autofocus />
+            <p-button icon="pi pi-check" [text]="true" [rounded]="true" size="small" ariaLabel="Save" (onClick)="confirmRename(p.id)" />
+            <p-button icon="pi pi-times" [text]="true" [rounded]="true" size="small" severity="secondary" ariaLabel="Cancel" (onClick)="cancelRename()" />
           } @else {
             <span class="pname">{{ p.name }}</span>
-            <button class="icon-btn muted" (click)="startRename(p)" title="Rename"><span class="material-icons-round">edit</span></button>
+            <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" severity="secondary" ariaLabel="Rename" (onClick)="startRename(p)" />
           }
         </div>
         <div class="profile-meta">
@@ -64,28 +69,19 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
       </div>
       <div class="profile-right">
         @if (p.isActive) {
-          <span class="active-badge"><span class="material-icons-round">check_circle</span> Active</span>
+          <p-tag value="Active" icon="pi pi-check-circle" severity="success" />
         } @else {
-          <label class="status-toggle" (click)="toggleActive(p)">
-            <span class="sw">
-              <input type="checkbox" [checked]="false" (click)="$event.stopPropagation()" (change)="toggleActive(p)" />
-              <span class="sw-track"><span class="sw-thumb"></span></span>
-            </span>
+          <label class="status-toggle">
+            <p-toggleswitch [ngModel]="false" (onChange)="toggleActive(p)" />
             <span class="status-label">Inactive</span>
           </label>
         }
-        <button class="btn-secondary" (click)="startEdit(p)">
-          <span class="material-icons-round">tune</span> Edit
-        </button>
-        <button class="btn-secondary" (click)="startPeriods(p)">
-          <span class="material-icons-round">view_timeline</span> Period Schedule
-        </button>
-        <button class="btn-secondary" (click)="printSchedule(p)">
-          <span class="material-icons-round">picture_as_pdf</span> PDF View
-        </button>
-        <button class="icon-btn" (click)="copy(p)" title="Duplicate"><span class="material-icons-round">content_copy</span></button>
+        <p-button label="Edit" icon="pi pi-sliders-h" severity="secondary" [outlined]="true" size="small" (onClick)="startEdit(p)" />
+        <p-button label="Period Schedule" icon="pi pi-calendar" severity="secondary" [outlined]="true" size="small" (onClick)="startPeriods(p)" />
+        <p-button label="PDF View" icon="pi pi-file-pdf" severity="secondary" [outlined]="true" size="small" (onClick)="printSchedule(p)" />
+        <p-button icon="pi pi-copy" [text]="true" [rounded]="true" size="small" severity="secondary" ariaLabel="Duplicate" (onClick)="copy(p)" />
         @if (!p.isActive) {
-          <button class="icon-btn danger" (click)="deleteProfile(p.id)" title="Delete"><span class="material-icons-round">delete</span></button>
+          <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Delete" (onClick)="deleteProfile(p.id)" />
         }
       </div>
     </div>
@@ -103,15 +99,13 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
       </div>
       <div class="adm-grid">
         <label class="adm-field">Prefix
-          <input [(ngModel)]="admPrefix" maxlength="10" placeholder="ADM" />
+          <input pInputText class="w-[130px]" [(ngModel)]="admPrefix" maxlength="10" placeholder="ADM" />
         </label>
         <label class="adm-field adm-check">
-          <input type="checkbox" [(ngModel)]="admIncludeYear" /> Include year
+          <p-checkbox [(ngModel)]="admIncludeYear" [binary]="true" inputId="adm-year" /> Include year
         </label>
         <label class="adm-field">Sequence digits
-          <select [(ngModel)]="admPadding">
-            @for (n of [2,3,4,5,6]; track n) { <option [ngValue]="n">{{ n }}</option> }
-          </select>
+          <p-select class="w-[130px]" [options]="admPaddingOptions" [(ngModel)]="admPadding" appendTo="body" [overlayOptions]="{ baseZIndex: 10050 }" />
         </label>
         <div class="adm-preview">
           <span class="adm-preview-label">Next number will look like</span>
@@ -119,9 +113,7 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
         </div>
       </div>
       <div class="save-row">
-        <button class="btn-primary" (click)="saveAdmissionSettings()" [disabled]="admSaving()">
-          <span class="material-icons-round">save</span> {{ admSaving() ? 'Saving…' : 'Save' }}
-        </button>
+        <p-button [label]="admSaving() ? 'Saving…' : 'Save'" icon="pi pi-save" [loading]="admSaving()" [disabled]="admSaving()" (onClick)="saveAdmissionSettings()" />
         @if (admSaveOk()) { <span class="saved-ok"><span class="material-icons-round">check_circle</span> Saved</span> }
         @if (admSaveError()) { <span class="error-msg">{{ admSaveError() }}</span> }
       </div>
@@ -133,16 +125,14 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
 <!-- ═══════════════════════ EDIT PROFILE ════════════════════════════ -->
 @if (editingProfile(); as ep) { @if (!periodsProfile()) {
   <div class="edit-header">
-    <button class="back-btn" (click)="cancelEdit()">
-      <span class="material-icons-round">arrow_back</span> Back
-    </button>
+    <p-button label="Back" icon="pi pi-arrow-left" [text]="true" severity="secondary" size="small" (onClick)="cancelEdit()" />
     @if (isNewProfile()) {
-      <input class="profile-name-input" [(ngModel)]="newProfileName" placeholder="Enter schedule name…" autofocus />
+      <input pInputText class="min-w-[260px]" [(ngModel)]="newProfileName" placeholder="Enter schedule name…" autofocus />
     } @else {
       <div class="edit-title">
         <span class="material-icons-round">tune</span>
         <strong>{{ ep.name }}</strong>
-        @if (ep.isActive) { <span class="active-badge sm"><span class="material-icons-round">check_circle</span> Active</span> }
+        @if (ep.isActive) { <p-tag value="Active" icon="pi pi-check-circle" severity="success" /> }
       </div>
     }
   </div>
@@ -170,40 +160,31 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
                 {{ d.dayName }}
               </td>
               <td class="center-cell">
-                <label class="sw">
-                  <input type="checkbox" [(ngModel)]="d.isWorkingDay" />
-                  <span class="sw-track"><span class="sw-thumb"></span></span>
-                </label>
+                <p-toggleswitch [(ngModel)]="d.isWorkingDay" />
               </td>
               <td>
-                <input type="time" class="tbl-input" [(ngModel)]="d.startTime" [disabled]="!d.isWorkingDay" />
+                <input pInputText type="time" class="w-full" [(ngModel)]="d.startTime" [disabled]="!d.isWorkingDay" />
               </td>
               <td>
-                <input type="time" class="tbl-input" [(ngModel)]="d.endTime" [disabled]="!d.isWorkingDay" />
+                <input pInputText type="time" class="w-full" [(ngModel)]="d.endTime" [disabled]="!d.isWorkingDay" />
               </td>
               <td>
-                <input type="number" class="tbl-input num-input" min="1" max="20"
+                <input pInputText type="number" class="w-[70px] text-center" min="1" max="20"
                        [(ngModel)]="d.numberOfPeriods" [disabled]="!d.isWorkingDay" />
               </td>
               <td class="center-cell">
-                <label class="sw">
-                  <input type="checkbox" [(ngModel)]="d.hasBreak" [disabled]="!d.isWorkingDay" />
-                  <span class="sw-track"><span class="sw-thumb"></span></span>
-                </label>
+                <p-toggleswitch [(ngModel)]="d.hasBreak" [disabled]="!d.isWorkingDay" />
               </td>
               <td>
                 @if (d.hasBreak && d.isWorkingDay) {
-                  <select class="tbl-input" [(ngModel)]="d.breakAfterPeriod">
-                    @for (n of periodNumbers(d.numberOfPeriods); track n) {
-                      <option [value]="n">Period {{ n }}</option>
-                    }
-                  </select>
+                  <p-select class="w-full" [options]="breakAfterOptions(d.numberOfPeriods)" optionLabel="label" optionValue="value"
+                            [(ngModel)]="d.breakAfterPeriod" appendTo="body" [overlayOptions]="{ baseZIndex: 10050 }" />
                 } @else { <span class="na">—</span> }
               </td>
               <td>
                 @if (d.hasBreak && d.isWorkingDay) {
                   <div class="dur-cell">
-                    <input type="number" class="tbl-input num-input" min="10" max="60" [(ngModel)]="d.breakDuration" />
+                    <input pInputText type="number" class="w-[70px] text-center" min="10" max="60" [(ngModel)]="d.breakDuration" />
                     <span class="unit">min</span>
                   </div>
                 } @else { <span class="na">—</span> }
@@ -216,10 +197,8 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
 
     <div class="save-row">
       @if (saveError()) { <p class="error-msg">{{ saveError() }}</p> }
-      <button class="btn-secondary" (click)="cancelEdit()">Cancel</button>
-      <button class="btn-primary" (click)="saveEdit()" [disabled]="saving()">
-        {{ saving() ? 'Saving…' : 'Save Changes' }}
-      </button>
+      <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="cancelEdit()" />
+      <p-button [label]="saving() ? 'Saving…' : 'Save Changes'" icon="pi pi-save" [loading]="saving()" [disabled]="saving()" (onClick)="saveEdit()" />
       @if (saveOk()) { <span class="saved-ok">✓ Saved</span> }
     </div>
   </div>
@@ -230,9 +209,7 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
 
   <!-- Page header row -->
   <div class="edit-header">
-    <button class="back-btn" (click)="periodsProfile.set(null)">
-      <span class="material-icons-round">arrow_back</span> Back
-    </button>
+    <p-button label="Back" icon="pi pi-arrow-left" [text]="true" severity="secondary" size="small" (onClick)="periodsProfile.set(null)" />
     <div class="edit-title">
       <span class="material-icons-round">view_timeline</span>
       <strong>{{ pp.name }}</strong>
@@ -266,18 +243,16 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
               @for (target of generatedDays(); track target.dayOfWeek; let ti = $index) {
                 @if (ti !== di) {
                   <label class="copy-chk">
-                    <input type="checkbox" [checked]="isCopyTarget(ti)" (change)="toggleCopyTarget(ti)" />
+                    <p-checkbox [binary]="true" [ngModel]="isCopyTarget(ti)" (onChange)="toggleCopyTarget(ti)" />
                     {{ target.dayName.slice(0,3) }}
                   </label>
                 }
               }
-              <button class="btn-primary btn-xs" (click)="applyCopy(di)" [disabled]="copyTargets().length === 0">Apply</button>
-              <button class="icon-btn sm" (click)="cancelCopy()"><span class="material-icons-round">close</span></button>
+              <p-button label="Apply" size="small" (onClick)="applyCopy(di)" [disabled]="copyTargets().length === 0" />
+              <p-button icon="pi pi-times" [text]="true" [rounded]="true" size="small" severity="secondary" ariaLabel="Cancel copy" (onClick)="cancelCopy()" />
             </div>
           } @else {
-            <button class="btn-outline btn-xs" (click)="startCopy(di)">
-              <span class="material-icons-round">content_copy</span> Copy to Days
-            </button>
+            <p-button label="Copy to Days" icon="pi pi-copy" [outlined]="true" size="small" (onClick)="startCopy(di)" />
           }
         </div>
       </div>
@@ -300,14 +275,14 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
             <div class="period-time-group">
               <div class="time-field">
                 <label>Start</label>
-                <input type="time" class="tbl-input time-input"
+                <input pInputText type="time" class="w-[110px]"
                        [(ngModel)]="p.startTime"
                        (change)="onPeriodStartChange(di, pi)" />
               </div>
               <span class="time-sep material-icons-round">arrow_forward</span>
               <div class="time-field">
                 <label>End</label>
-                <input type="time" class="tbl-input time-input"
+                <input pInputText type="time" class="w-[110px]"
                        [(ngModel)]="p.endTime"
                        (change)="onPeriodEndChange(di, pi)" />
               </div>
@@ -323,10 +298,7 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
   <!-- Save bar -->
   <div class="card save-row">
     @if (periodSaveError()) { <p class="error-msg">{{ periodSaveError() }}</p> }
-    <button class="btn-primary" (click)="savePeriods(pp.id)" [disabled]="periodSaving()">
-      <span class="material-icons-round">save</span>
-      {{ periodSaving() ? 'Saving…' : 'Save Period Schedule' }}
-    </button>
+    <p-button [label]="periodSaving() ? 'Saving…' : 'Save Period Schedule'" icon="pi pi-save" [loading]="periodSaving()" [disabled]="periodSaving()" (onClick)="savePeriods(pp.id)" />
     @if (periodSaveOk()) { <span class="saved-ok"><span class="material-icons-round">check_circle</span> Saved</span> }
   </div>
 }
@@ -454,11 +426,6 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
     /* ── Fields ────────────────────────────────────────────── */
     .field { display:flex; flex-direction:column; gap:4px; }
     label { font-size:12px; font-weight:500; color:var(--t2); }
-    input[type=text], input[type=time], input[type=number], select {
-      padding:9px 10px; border:1px solid var(--border); border-radius:6px;
-      font-size:13px; background:var(--surface); color:var(--t1); outline:none; transition:.15s;
-    }
-    input:focus, select:focus { border-color:var(--primary); }
 
     .ms-auto { margin-left:auto; }
     .edit-title-sub { font-size:13px; font-weight:400; color:var(--t3); margin-left:4px; }
@@ -527,8 +494,6 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
     .adm-sub { margin:0; font-size:12.5px; color:var(--text-muted,#6b7280); }
     .adm-grid { display:flex; gap:20px; align-items:flex-end; flex-wrap:wrap; padding:14px 20px 0; }
     .adm-field { display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:var(--text-muted,#6b7280); }
-    .adm-field input[type=text], .adm-field input:not([type=checkbox]), .adm-field select {
-      padding:8px 10px; border:1px solid var(--border,#e5e7eb); border-radius:8px; font-size:13.5px; width:130px; }
     .adm-check { flex-direction:row; align-items:center; gap:8px; padding-bottom:9px; }
     .adm-preview { display:flex; flex-direction:column; gap:4px; margin-left:auto; }
     .adm-preview-label { font-size:11.5px; color:var(--text-muted,#6b7280); }
@@ -719,10 +684,19 @@ export class SettingsComponent implements OnInit {
 
   // ── Delete ──────────────────────────────────────────────────────────────────
   deleteProfile(id: number) {
-    if (!confirm('Delete this profile?')) return;
-    this.svc.deleteProfile(id).subscribe({
-      next: () => this.profiles.update(list => list.filter(p => p.id !== id)),
-      error: (e: any) => alert(e?.error?.error ?? 'Cannot delete.'),
+    Swal.fire({
+      title: 'Delete this profile?',
+      text: 'This cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      confirmButtonColor: '#dc2626',
+    }).then(res => {
+      if (!res.isConfirmed) return;
+      this.svc.deleteProfile(id).subscribe({
+        next: () => this.profiles.update(list => list.filter(p => p.id !== id)),
+        error: (e: any) => Swal.fire({ icon: 'error', title: 'Cannot delete', text: e?.error?.error ?? 'Cannot delete.' }),
+      });
     });
   }
 
@@ -970,6 +944,12 @@ export class SettingsComponent implements OnInit {
 
   countWorkingDays(days: DayScheduleDto[]): number {
     return days.filter(d => d.isWorkingDay).length;
+  }
+
+  readonly admPaddingOptions = [2, 3, 4, 5, 6];
+
+  breakAfterOptions(total: number): { label: string; value: number }[] {
+    return this.periodNumbers(total).map(n => ({ label: `Period ${n}`, value: n }));
   }
 
   periodNumbers(total: number): number[] {

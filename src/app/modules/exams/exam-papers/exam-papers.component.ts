@@ -2,6 +2,12 @@ import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormsModule, FormBuilder, FormArray, FormGroup, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
+import { Tag } from 'primeng/tag';
+import { Message } from 'primeng/message';
+import { Tooltip } from 'primeng/tooltip';
 import { Subscription, merge } from 'rxjs';
 import { ExamService }     from '../../../core/services/exam.service';
 import { AcademicService } from '../../../core/services/academic.service';
@@ -14,9 +20,10 @@ import { ClassDto } from '../../../core/models/academic.model';
 import { ConfirmDeleteComponent } from '../../../shared/components/confirm-delete/confirm-delete.component';
 import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/confirm-delete.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
-import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
 import { MenuService } from '../../../core/services/menu.service';
 import Swal from 'sweetalert2';
+
+interface SelectOpt { value: string; label: string; }
 
 const SECTION_TYPES = [
   { value: 'Objective',   label: 'Objective / MCQs'  },
@@ -31,43 +38,40 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
 @Component({
   selector: 'app-exam-papers',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterModule, ConfirmDeleteComponent, PageHeaderComponent, OsSelectComponent],
+  imports: [
+    CommonModule, ReactiveFormsModule, FormsModule, RouterModule, ConfirmDeleteComponent, PageHeaderComponent,
+    Button, Select, InputText, Tag, Message, Tooltip
+  ],
   template: `
     <div class="os-page compact exam-papers-page">
     <app-page-header [dense]="true" [title]="pageTitle()" routeUrl="/exams/papers">
-      <a class="btn-secondary" routerLink="/exams/question-bank">
-        <span class="material-icons-round">library_books</span> Question Bank
-      </a>
-      <button type="button" class="btn-secondary" (click)="openFiftyMarksPaper()" title="Create paper with 50 total marks and A/B/C sections">
-        <span class="material-icons-round">score</span> 50 Marks Paper
-      </button>
-      <button type="button" class="btn-secondary" (click)="openHundredMarksPaper()" title="Create paper with 100 total marks and A/B/C sections">
-        <span class="material-icons-round">score</span> 100 Marks Paper
-      </button>
-      <button class="btn-primary" (click)="openForm()">
-        <span class="material-icons-round">add</span> New Paper
-      </button>
+      <div class="flex flex-wrap items-center gap-2">
+        <p-button label="Question Bank" icon="pi pi-book" severity="secondary" [outlined]="true"
+          routerLink="/exams/question-bank" />
+        <p-button label="50 Marks Paper" icon="pi pi-file" severity="secondary" [outlined]="true"
+          pTooltip="Create paper with 50 total marks and A/B/C sections" (onClick)="openFiftyMarksPaper()" />
+        <p-button label="100 Marks Paper" icon="pi pi-file" severity="secondary" [outlined]="true"
+          pTooltip="Create paper with 100 total marks and A/B/C sections" (onClick)="openHundredMarksPaper()" />
+        <p-button label="New Paper" icon="pi pi-plus" (onClick)="openForm()" />
+      </div>
     </app-page-header>
 
     <div class="os-toolbar">
-      <div class="os-toolbar-group">
-        <div class="os-field inline grow">
+      <div class="flex w-full flex-wrap items-end gap-3">
+        <div class="flex min-w-[200px] flex-1 flex-col gap-1">
           <label class="os-field-label">Class</label>
-          <app-os-select
-            icon="school"
-            placeholder="All classes"
-            [searchable]="classFilterOptions().length > 6"
-            [options]="classFilterOptions()"
-            [value]="filterClass"
-            (valueChange)="filterClass = $event ?? ''; load()" />
+          <p-select class="w-full" placeholder="All classes" [options]="classFilterOptions()"
+            optionLabel="label" optionValue="value"
+            [filter]="classFilterOptions().length > 6" filterBy="label"
+            [ngModel]="filterClass" [ngModelOptions]="{standalone:true}"
+            (ngModelChange)="filterClass = $event ?? ''; load()" />
         </div>
-        <div class="os-field inline grow">
+        <div class="flex min-w-[200px] flex-1 flex-col gap-1">
           <label class="os-field-label">Type</label>
-          <app-os-select
-            placeholder="All types"
-            [options]="typeFilterOptions"
-            [value]="filterType"
-            (valueChange)="filterType = $event ?? ''; load()" />
+          <p-select class="w-full" placeholder="All types" [options]="typeFilterOptions"
+            optionLabel="label" optionValue="value"
+            [ngModel]="filterType" [ngModelOptions]="{standalone:true}"
+            (ngModelChange)="filterType = $event ?? ''; load()" />
         </div>
       </div>
     </div>
@@ -85,7 +89,7 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
               <p>Complete both tabs then save</p>
             </div>
           </div>
-          <button class="icon-btn" (click)="closeForm()"><span class="material-icons-round">close</span></button>
+          <p-button icon="pi pi-times" severity="secondary" [outlined]="true" size="small" ariaLabel="Close" (onClick)="closeForm()" />
         </div>
 
         <!-- Tab bar -->
@@ -113,86 +117,69 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
               <div class="fg two">
                 <div class="fi">
                   <label>Academic Year *</label>
-                  <select formControlName="academicYearId">
-                    <option value="">— Select —</option>
-                    @for (y of years(); track y.academicYearId) {
-                      <option [value]="y.academicYearId">{{ y.yearLabel }}</option>
-                    }
-                  </select>
+                  <p-select class="w-full" formControlName="academicYearId" placeholder="— Select —"
+                    [options]="years()" optionLabel="yearLabel" optionValue="academicYearId" />
                 </div>
                 <div class="fi">
                   <label>Class *</label>
-                  <select formControlName="classId">
-                    <option value="">— Select —</option>
-                    @for (c of classes(); track c.classId) {
-                      <option [value]="c.classId">{{ c.className }}</option>
-                    }
-                  </select>
+                  <p-select class="w-full" formControlName="classId" placeholder="— Select —"
+                    [options]="classes()" optionLabel="className" optionValue="classId"
+                    [filter]="classes().length > 8" filterBy="className" />
                 </div>
               </div>
 
               <div class="fg two">
                 <div class="fi">
                   <label>Subject *</label>
-                  <select formControlName="subjectId">
-                    <option value="">— Select —</option>
-                    @for (s of subjects(); track s.subjectId) {
-                      <option [value]="s.subjectId">{{ s.subjectName }}</option>
-                    }
-                  </select>
+                  <p-select class="w-full" formControlName="subjectId" placeholder="— Select —"
+                    [options]="subjects()" optionLabel="subjectName" optionValue="subjectId"
+                    [filter]="subjects().length > 8" filterBy="subjectName" />
                 </div>
                 <div class="fi">
                   <label>Exam Type *</label>
-                  <select formControlName="examType">
-                    <option value="">— Select —</option>
-                    @for (t of examTypes; track t.value) {
-                      <option [value]="t.value">{{ t.label }}</option>
-                    }
-                  </select>
+                  <p-select class="w-full" formControlName="examType" placeholder="— Select —"
+                    [options]="examTypes" optionLabel="label" optionValue="value" />
                 </div>
               </div>
 
               <div class="fg two">
                 <div class="fi">
                   <label>Class Group</label>
-                  <select formControlName="classGroup">
-                    @for (g of classGroups; track g.value) {
-                      <option [value]="g.value">{{ g.label }}</option>
-                    }
-                  </select>
+                  <p-select class="w-full" formControlName="classGroup"
+                    [options]="classGroups" optionLabel="label" optionValue="value" />
                 </div>
                 <div class="fi">
                   <label>Duration (minutes)</label>
-                  <input type="number" formControlName="durationMinutes" placeholder="e.g. 180" min="0" />
+                  <input pInputText class="w-full" type="number" formControlName="durationMinutes" placeholder="e.g. 180" min="0" />
                 </div>
               </div>
 
               <div class="fg">
                 <div class="fi full">
                   <label>Paper Title *</label>
-                  <input formControlName="title" placeholder="e.g. Mathematics Final Term 2025" (input)="onTitleInput()" />
+                  <input pInputText class="w-full" formControlName="title" placeholder="e.g. Mathematics Final Term 2025" (input)="onTitleInput()" />
                 </div>
               </div>
 
               <div class="fg two">
                 <div class="fi">
                   <label>Total Marks *</label>
-                  <input type="number" formControlName="totalMarks" placeholder="100" min="0" />
+                  <input pInputText class="w-full" type="number" formControlName="totalMarks" placeholder="100" min="0" />
                 </div>
                 <div class="fi">
                   <label>Pass Marks *</label>
-                  <input type="number" formControlName="passMarks" placeholder="33" min="0" />
+                  <input pInputText class="w-full" type="number" formControlName="passMarks" placeholder="33" min="0" />
                 </div>
               </div>
 
               <div class="fg two">
                 <div class="fi">
                   <label>Syllabus note (free text)</label>
-                  <input formControlName="syllabusNote" placeholder="e.g. Chapter 1 – 5" />
+                  <input pInputText class="w-full" formControlName="syllabusNote" placeholder="e.g. Chapter 1 – 5" />
                 </div>
                 <div class="fi">
                   <label>Instructions for Students</label>
-                  <input formControlName="instructions" placeholder="e.g. Attempt all questions…" />
+                  <input pInputText class="w-full" formControlName="instructions" placeholder="e.g. Attempt all questions…" />
                 </div>
               </div>
 
@@ -217,9 +204,8 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
                         </label>
                       }
                     }
-                    <button type="button" class="btn-secondary btn-sm" [disabled]="savingSyllabus()" (click)="saveSyllabus()">
-                      Save Exam Syllabus
-                    </button>
+                    <p-button label="Save Exam Syllabus" icon="pi pi-save" size="small" severity="secondary" [outlined]="true"
+                      [loading]="savingSyllabus()" [disabled]="savingSyllabus()" (onClick)="saveSyllabus()" />
                     @if (syllabusMsg()) { <div class="muted">{{ syllabusMsg() }}</div> }
                   }
                 </div>
@@ -259,12 +245,10 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
                   <span class="material-icons-round">segment</span>
                   <p>No sections yet — add manually or apply a marks template.</p>
                   <div class="tpl-btns">
-                    <button type="button" class="btn-secondary" (click)="applyFiftyMarksTemplate()">
-                      <span class="material-icons-round">score</span> 50-mark template
-                    </button>
-                    <button type="button" class="btn-secondary" (click)="applyHundredMarksTemplate()">
-                      <span class="material-icons-round">score</span> 100-mark template
-                    </button>
+                    <p-button label="50-mark template" icon="pi pi-file" severity="secondary" [outlined]="true"
+                      (onClick)="applyFiftyMarksTemplate()" />
+                    <p-button label="100-mark template" icon="pi pi-file" severity="secondary" [outlined]="true"
+                      (onClick)="applyHundredMarksTemplate()" />
                   </div>
                 </div>
               }
@@ -278,63 +262,56 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
                       <span class="sec-num" [style.background]="SEG_COLORS[i % SEG_COLORS.length]">{{ i + 1 }}</span>
                       <span class="sec-title-text">{{ sg.get('sectionName')?.value || 'Section ' + (i+1) }}</span>
                       <span class="sec-type-label">{{ labelOf(sg.get('sectionType')?.value) }}</span>
-                      <button type="button" class="sec-del-btn" (click)="removeSection(i)">
-                        <span class="material-icons-round">delete_outline</span>
-                      </button>
+                      <p-button icon="pi pi-trash" severity="danger" [text]="true" [rounded]="true" size="small"
+                        ariaLabel="Remove section" (onClick)="removeSection(i)" />
                     </div>
                     <div class="fg two">
                       <div class="fi">
                         <label>Section Name</label>
-                        <input formControlName="sectionName" placeholder="e.g. Section A" />
+                        <input pInputText class="w-full" formControlName="sectionName" placeholder="e.g. Section A" />
                       </div>
                       <div class="fi">
                         <label>Section Type</label>
-                        <select formControlName="sectionType">
-                          @for (st of sectionTypes; track st.value) {
-                            <option [value]="st.value">{{ st.label }}</option>
-                          }
-                        </select>
+                        <p-select class="w-full" formControlName="sectionType"
+                          [options]="sectionTypes" optionLabel="label" optionValue="value" />
                       </div>
                     </div>
                     <div class="fg three">
                       <div class="fi">
                         <label>Allocated Marks</label>
-                        <input type="number" formControlName="allocatedMarks" placeholder="0" min="0" />
+                        <input pInputText class="w-full" type="number" formControlName="allocatedMarks" placeholder="0" min="0" />
                       </div>
                       <div class="fi">
                         <label>Total Questions</label>
-                        <input type="number" formControlName="totalQuestions" placeholder="e.g. 20" min="0" />
+                        <input pInputText class="w-full" type="number" formControlName="totalQuestions" placeholder="e.g. 20" min="0" />
                       </div>
                       <div class="fi">
                         <label>Marks / Question</label>
-                        <input type="number" formControlName="marksPerQuestion" placeholder="1" min="0" />
+                        <input pInputText class="w-full" type="number" formControlName="marksPerQuestion" placeholder="1" min="0" />
                       </div>
                     </div>
                     <div class="fg two">
                       <div class="fi">
                         <label>Attempt (leave blank = all compulsory)</label>
-                        <input type="number" formControlName="attemptQuestions" placeholder="e.g. 15" min="0" />
+                        <input pInputText class="w-full" type="number" formControlName="attemptQuestions" placeholder="e.g. 15" min="0" />
                       </div>
                       <div class="fi">
                         <label>Section Note</label>
-                        <input formControlName="sectionNote" placeholder='e.g. Attempt any 5' />
+                        <input pInputText class="w-full" formControlName="sectionNote" placeholder='e.g. Attempt any 5' />
                       </div>
                     </div>
                   </div>
                 </div>
               }
 
-              <button type="button" class="btn-add-section" (click)="addSection()">
-                <span class="material-icons-round">add_circle_outline</span> Add Section
-              </button>
+              <p-button label="Add Section" icon="pi pi-plus-circle" severity="secondary" [outlined]="true"
+                styleClass="w-full" class="block w-full" (onClick)="addSection()" />
 
             </div>
             <!-- end tab 1 -->
 
             @if (formError()) {
-              <div class="alert-error">
-                <span class="material-icons-round">error_outline</span> {{ formError() }}
-              </div>
+              <p-message severity="error" icon="pi pi-exclamation-circle" styleClass="mt-2.5 w-full" [text]="formError()" />
             }
 
           </form>
@@ -342,20 +319,14 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
 
         <!-- Panel footer -->
         <div class="panel-footer">
-          <button type="button" class="btn-secondary" (click)="closeForm()">Cancel</button>
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="closeForm()" />
           @if (activeTab() === 0) {
-            <button type="button" class="btn-primary" (click)="goNext()">
-              Next: Paper Settings <span class="material-icons-round">arrow_forward</span>
-            </button>
+            <p-button label="Next: Paper Settings" icon="pi pi-arrow-right" iconPos="right" (onClick)="goNext()" />
           }
           @if (activeTab() === 1) {
-            <button type="button" class="btn-secondary" (click)="activeTab.set(0)">
-              <span class="material-icons-round">arrow_back</span> Back
-            </button>
-            <button type="button" class="btn-primary" [disabled]="saving()" (click)="save()">
-              @if (saving()) { <span class="material-icons-round spin">refresh</span> Saving… }
-              @else { <span class="material-icons-round">save</span> {{ editPaper() ? 'Update Paper' : 'Create Paper' }} }
-            </button>
+            <p-button label="Back" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="activeTab.set(0)" />
+            <p-button [label]="saving() ? 'Saving…' : (editPaper() ? 'Update Paper' : 'Create Paper')" icon="pi pi-save"
+              [loading]="saving()" [disabled]="saving()" (onClick)="save()" />
           }
         </div>
 
@@ -378,10 +349,9 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
         @for (p of papers(); track p.examPaperId) {
           <div class="paper-card" [class.draft]="p.isDraft" [class.locked]="p.isLocked">
             <div class="pc-header">
-              <div class="pc-type-badge">{{ p.examType }}</div>
-              <div class="pc-status" [class.draft]="p.isDraft" [class.published]="!p.isDraft">
-                {{ p.isDraft ? 'Draft' : p.isLocked ? 'Locked' : 'Published' }}
-              </div>
+              <p-tag [value]="p.examType" severity="info" [rounded]="true" />
+              <p-tag [value]="p.isDraft ? 'Draft' : p.isLocked ? 'Locked' : 'Published'"
+                [severity]="p.isDraft ? 'warn' : p.isLocked ? 'danger' : 'success'" [rounded]="true" />
             </div>
             <div class="pc-body">
               <h3>{{ p.title }}</h3>
@@ -406,23 +376,20 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
               }
             </div>
             <div class="pc-actions">
-              <button class="btn-sm btn-questions" (click)="designQuestions(p)">
-                <span class="material-icons-round">quiz</span> Questions
-              </button>
-              <button class="btn-sm btn-outline" (click)="downloadPdf(p)" title="Download paper PDF">
-                <span class="material-icons-round">picture_as_pdf</span> PDF
-              </button>
+              <p-button label="Questions" icon="pi pi-question-circle" size="small" severity="help" [outlined]="true"
+                (onClick)="designQuestions(p)" />
+              <p-button label="PDF" icon="pi pi-file-pdf" size="small" severity="secondary" [outlined]="true"
+                pTooltip="Download paper PDF" (onClick)="downloadPdf(p)" />
               @if (p.isDraft) {
-                <button class="btn-sm btn-success" (click)="publish(p)">
-                  <span class="material-icons-round">publish</span> Publish
-                </button>
+                <p-button label="Publish" icon="pi pi-upload" size="small" severity="success" [outlined]="true"
+                  (onClick)="publish(p)" />
               }
-              <button class="btn-sm btn-outline" (click)="openForm(p)" [disabled]="p.isLocked">
-                <span class="material-icons-round">edit</span>
-              </button>
-              <button class="btn-sm btn-danger" (click)="deletePaper(p)" [disabled]="p.isLocked">
-                <span class="material-icons-round">delete</span>
-              </button>
+              <div class="ml-auto flex gap-1.5">
+                <p-button icon="pi pi-pencil" size="small" severity="secondary" [outlined]="true"
+                  ariaLabel="Edit" (onClick)="openForm(p)" [disabled]="p.isLocked" />
+                <p-button icon="pi pi-trash" size="small" severity="danger" [outlined]="true"
+                  ariaLabel="Delete" (onClick)="deletePaper(p)" [disabled]="p.isLocked" />
+              </div>
             </div>
           </div>
         }
@@ -434,16 +401,6 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
   `,
   styles: [`
     :host { display:block; min-width:0; }
-    .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
-    .ph-left { display:flex; align-items:center; gap:12px; }
-    .ph-icon { width:44px; height:44px; border-radius:12px; background:var(--accent-s); display:flex; align-items:center; justify-content:center; }
-    .ph-icon .material-icons-round { color:var(--accent); font-size:22px; }
-    .ph-left h1 { font-size:18px; font-weight:700; color:var(--t1); margin:0 0 2px; }
-    .ph-left p  { font-size:12px; color:var(--t3); margin:0; }
-
-    .filter-bar { display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
-    .filter-bar select { padding:8px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; background:var(--surface); color:var(--t1); outline:none; }
-
     .empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px; color:var(--t4); gap:10px; text-align:center; }
     .empty-state .material-icons-round { font-size:48px; opacity:.3; }
 
@@ -453,10 +410,6 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
     .paper-card.draft  { border-left:3px solid #f59e0b; }
     .paper-card.locked { border-left:3px solid #ef4444; opacity:.85; }
     .pc-header { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--surface-2); border-bottom:1px solid var(--border); }
-    .pc-type-badge { font-size:11px; font-weight:700; color:var(--accent); background:var(--accent-s); padding:3px 8px; border-radius:99px; }
-    .pc-status { font-size:11px; font-weight:700; padding:3px 8px; border-radius:99px; }
-    .pc-status.draft { background:#fef3c7; color:#92400e; }
-    .pc-status.published { background:var(--green-s); color:var(--green); }
     .pc-body { padding:14px; }
     .pc-body h3 { font-size:14px; font-weight:700; color:var(--t1); margin:0 0 8px; }
     .pc-meta { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
@@ -475,18 +428,6 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
     .spill.st-practical   { background:#dcfce7; color:#166534; border-color:#86efac; }
     .spill.st-oral        { background:#fce7f3; color:#9d174d; border-color:#f9a8d4; }
     .pc-actions { display:flex; gap:6px; padding:10px 14px; border-top:1px solid var(--border); background:var(--surface-2); }
-    .btn-sm { display:flex; align-items:center; gap:4px; padding:5px 10px; border-radius:7px; font-size:12px; font-weight:600; border:none; cursor:pointer; transition:all .15s; }
-    .btn-sm .material-icons-round { font-size:14px; }
-    .btn-sm:disabled { opacity:.4; cursor:not-allowed; }
-    .btn-success  { background:var(--green-s); color:var(--green); border:1px solid var(--green-b) !important; }
-    .btn-success:hover:not(:disabled) { background:var(--green); color:#fff; }
-    .btn-outline  { background:var(--surface); color:var(--t2); border:1px solid var(--border) !important; }
-    .btn-outline:hover:not(:disabled) { border-color:var(--accent) !important; color:var(--accent); }
-    .btn-danger   { background:var(--red-s); color:var(--red); border:1px solid var(--red-b) !important; margin-left:auto; }
-    .btn-danger:hover:not(:disabled)  { background:var(--red); color:#fff; }
-    .btn-questions { background:#ede9fe; color:#6d28d9; border:1px solid #c4b5fd !important; }
-    .btn-questions:hover { background:#6d28d9; color:#fff; }
-
     /* Inline Panel */
     .inline-panel { background:var(--surface); border:1.5px solid var(--accent); border-radius:16px; margin-bottom:24px; overflow:hidden; box-shadow:0 4px 24px rgba(0,0,0,.08); }
 
@@ -496,10 +437,6 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
     .mh-icon .material-icons-round { color:var(--accent); font-size:20px; }
     .panel-header h2 { font-size:16px; font-weight:700; color:var(--t1); margin:0 0 2px; }
     .panel-header p  { font-size:12px; color:var(--t3); margin:0; }
-    .icon-btn { width:32px; height:32px; border-radius:8px; border:1.5px solid var(--border); background:var(--surface); color:var(--t3); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
-    .icon-btn:hover { border-color:var(--red); color:var(--red); }
-    .icon-btn .material-icons-round { font-size:17px; }
-
     .modal-tabs { display:flex; border-bottom:2px solid var(--border); background:var(--surface-2); }
     .mtab { display:flex; align-items:center; gap:7px; padding:12px 24px; font-size:13px; font-weight:600; color:var(--t3); background:none; border:none; border-bottom:2px solid transparent; margin-bottom:-2px; cursor:pointer; transition:all .15s; }
     .mtab .material-icons-round { font-size:15px; }
@@ -517,9 +454,6 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
     .fi { display:flex; flex-direction:column; gap:5px; }
     .fi.full { flex:1; }
     label { font-size:11px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.4px; }
-    input, select, textarea { padding:8px 11px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; background:var(--surface); color:var(--t1); outline:none; width:100%; transition:border-color .15s; box-sizing:border-box; }
-    input:focus, select:focus, textarea:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-g); }
-
     /* Alloc bar */
     .alloc-wrap { margin-bottom:16px; position:sticky; top:-22px; z-index:10; background:var(--surface); padding:10px 0 8px; margin-top:-10px; }
     .alloc-bar  { display:flex; height:8px; border-radius:99px; overflow:hidden; background:var(--border); gap:2px; margin-bottom:5px; }
@@ -547,7 +481,6 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
       display:flex; gap:8px; align-items:center; font-size: .85rem; cursor:pointer;
     }
     .syl-tp { padding-left: 18px; color: #475569; }
-    .btn-sm { font-size: .8rem; padding: .35rem .7rem; width: fit-content; margin-top: 6px; }
     .sec-card:hover { border-color:var(--accent); }
     .sec-card-bar  { width:5px; flex-shrink:0; }
     .sec-card-body { flex:1; padding:14px 16px; }
@@ -555,21 +488,6 @@ const SEG_COLORS = ['#7c3aed','#0369a1','#b45309','#15803d','#be185d','#1d4ed8',
     .sec-num  { width:22px; height:22px; border-radius:50%; color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
     .sec-title-text { font-size:13px; font-weight:700; color:var(--t1); flex:1; }
     .sec-type-label { font-size:11px; color:var(--t3); font-weight:600; }
-    .sec-del-btn { display:flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:7px; border:1.5px solid var(--border); background:none; color:var(--t4); cursor:pointer; transition:all .15s; }
-    .sec-del-btn:hover { background:var(--red-s); border-color:var(--red-b); color:var(--red); }
-    .sec-del-btn .material-icons-round { font-size:15px; }
-
-    .btn-add-section { display:flex; align-items:center; justify-content:center; gap:6px; width:100%; padding:11px; border:2px dashed var(--accent); border-radius:9px; background:none; color:var(--accent); font-size:13px; font-weight:600; cursor:pointer; transition:all .15s; margin-top:4px; }
-    .btn-add-section:hover { background:var(--accent-s); }
-    .btn-add-section .material-icons-round { font-size:18px; }
-
-    .alert-error { display:flex; align-items:center; gap:8px; padding:10px 14px; background:var(--red-s); border:1px solid var(--red-b); border-radius:8px; font-size:13px; color:var(--red); margin-top:10px; }
-    .alert-error .material-icons-round { font-size:16px; }
-
-    .btn-primary   { display:flex; align-items:center; gap:6px; padding:9px 18px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; text-decoration:none; }
-    .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
-    .btn-secondary { display:flex; align-items:center; gap:6px; padding:9px 18px; background:var(--surface); color:var(--t2); border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; text-decoration:none; }
-    .btn-primary .material-icons-round, .btn-secondary .material-icons-round { font-size:16px; }
 
     @keyframes spin { to { transform:rotate(360deg); } }
     .spin { animation:spin .8s linear infinite; display:inline-block; }
@@ -620,12 +538,12 @@ export class ExamPapersComponent implements OnInit, OnDestroy {
     this.menuSvc.titleForRoute('/exams/papers', 'Paper Setup')
   );
 
-  classFilterOptions = computed<OsSelectOption<string>[]>(() => [
+  classFilterOptions = computed<SelectOpt[]>(() => [
     { value: '', label: 'All classes' },
     ...this.classes().map(c => ({ value: String(c.classId), label: c.className as string }))
   ]);
 
-  readonly typeFilterOptions: OsSelectOption<string>[] = [
+  readonly typeFilterOptions: SelectOpt[] = [
     { value: '', label: 'All types' },
     ...EXAM_TYPES.map(t => ({ value: String(t.value), label: t.label }))
   ];

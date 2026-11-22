@@ -1,4 +1,5 @@
-/* Self-hosted — avoid blank icons/text while Google Fonts CDN is slow or blocked */
+/* Self-hosted — Plus Jakarta Sans for a modern product UI (Inter kept as fallback) */
+@import '@fontsource-variable/plus-jakarta-sans/wght.css';
 @import '@fontsource-variable/inter/wght.css';
 
 /* Material Symbols: public/fonts + font-display:block so ligature names
@@ -15,23 +16,23 @@
    LIGHT THEME
 ═══════════════════════════════════════════════════ */
 :root, [data-theme="light"] {
-  /* Backgrounds — cool mist so elevated white stages read as the hero surface */
-  --bg:          #e9eef5;
-  --bg-glow:     #f5f8fc;
+  /* Backgrounds — cool mist; surfaces lift cleanly for admin chrome */
+  --bg:          #e8eef6;
+  --bg-glow:     #f3f7fc;
   --surface:     #ffffff;
-  --surface-2:   #f7f8fa;
-  --surface-3:   #eef0f3;
+  --surface-2:   #f5f7fb;
+  --surface-3:   #ebeef5;
 
-  /* Borders */
-  --border:      #e4e6ea;
-  --border-2:    #cdd0d6;
+  /* Borders — quieter hairlines */
+  --border:      #e2e8f0;
+  --border-2:    #cbd5e1;
 
-  /* Brand / Accent — indigo-blue */
+  /* Brand / Accent — indigo-blue (unchanged product identity) */
   --accent:      #4f6ef7;
   --accent-h:    #3d5ce5;
   --accent-d:    #2a44cc;
   --accent-s:    #eef1ff;
-  --accent-g:    rgba(79,110,247,0.14);
+  --accent-g:    rgba(79,110,247,0.12);
   --accent-rgb:  79,110,247;
 
   /* Semantic */
@@ -101,62 +102,71 @@
   --fab-padding-right:  calc(var(--fab-inset-right) + var(--fab-size) + var(--fab-gap));
   --fab-page-pad:       calc(var(--fab-inset-bottom) + var(--fab-size) + 22px + var(--teacher-dock-h));
 
-  /* Radius */
+  /* Radius — tighter professional scale */
   --r:           8px;
   --r-sm:        6px;
-  --r-lg:        12px;
-  --r-xl:        16px;
-  --r-2xl:       20px;
+  --r-lg:        10px;
+  --r-xl:        14px;
+  --r-2xl:       18px;
 
-  /* Shadows */
-  --sh-xs:   0 1px 2px rgba(0,0,0,0.05);
-  --sh:      0 1px 4px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
-  --sh-md:   0 4px 16px rgba(0,0,0,0.07), 0 2px 6px rgba(0,0,0,0.04);
-  --sh-lg:   0 12px 40px rgba(0,0,0,0.10), 0 4px 14px rgba(0,0,0,0.06);
-  --sh-xl:   0 24px 64px rgba(0,0,0,0.12), 0 8px 24px rgba(0,0,0,0.08);
+  /* Shadows — soft elevation, less muddy */
+  --sh-xs:   0 1px 2px rgba(15,23,42,0.04);
+  --sh:      0 1px 2px rgba(15,23,42,0.04), 0 4px 12px rgba(15,23,42,0.04);
+  --sh-md:   0 4px 14px rgba(15,23,42,0.06), 0 2px 4px rgba(15,23,42,0.04);
+  --sh-lg:   0 12px 32px rgba(15,23,42,0.08), 0 4px 12px rgba(15,23,42,0.04);
+  --sh-xl:   0 20px 48px rgba(15,23,42,0.10), 0 8px 20px rgba(15,23,42,0.06);
+
+  /* Type scale helpers */
+  --fs-title:    1.35rem;
+  --fs-subtitle: 0.8125rem;
+  --fs-body:     0.9375rem;
+  --fs-label:    0.6875rem;
+  --lh-tight:    1.25;
+  --lh-body:     1.5;
+
   /* Form Control Dimensions */
-  --input-h:           42px;
+  --input-h:           40px;
   --input-h-mobile:    44px;
-  --btn-h:             42px;
-  --btn-h-sm:          36px;
-  --btn-h-lg:          48px;
+  --btn-h:             40px;
+  --btn-h-sm:          34px;
+  --btn-h-lg:          46px;
 
   /* Form Layout Spacing */
   --form-gap-x:        16px;
   --form-gap-y:        14px;
-  --form-section-gap:  20px;
-  --form-pad:          22px;
+  --form-section-gap:  18px;
+  --form-pad:          20px;
   --form-pad-mobile:   16px;
-  --form-actions-gap:  12px;
+  --form-actions-gap:  10px;
 
   /* Form Elements Radius */
   --r-input:           8px;
-  --r-card:            16px;
-  --r-modal:           20px;
+  --r-card:            14px;
+  --r-modal:           16px;
 
   /* Form Focus & State Shadows */
-  --input-shadow-focus: 0 0 0 3.5px var(--accent-g);
-  --input-shadow-error: 0 0 0 3.5px var(--red-s);
+  --input-shadow-focus: 0 0 0 3px var(--accent-g);
+  --input-shadow-error: 0 0 0 3px var(--red-s);
 }
 
 /* ═══════════════════════════════════════════════════
    DARK THEME
 ═══════════════════════════════════════════════════ */
 [data-theme="dark"] {
-  --bg:          #0d0f14;
-  --bg-glow:     #141824;
-  --surface:     #161922;
-  --surface-2:   #1e2130;
-  --surface-3:   #252840;
+  --bg:          #0b0e14;
+  --bg-glow:     #121722;
+  --surface:     #141824;
+  --surface-2:   #1a1f2e;
+  --surface-3:   #222838;
 
-  --border:      #252b3b;
-  --border-2:    #323a52;
+  --border:      #273044;
+  --border-2:    #35405a;
 
   --accent:      #6680ff;
   --accent-h:    #7b93ff;
   --accent-d:    #4f6ef7;
-  --accent-s:    rgba(102,128,255,0.12);
-  --accent-g:    rgba(102,128,255,0.18);
+  --accent-s:    rgba(102,128,255,0.14);
+  --accent-g:    rgba(102,128,255,0.20);
   --accent-rgb:  102,128,255;
 
   --green:       #4ade80;
@@ -177,53 +187,67 @@
   --t4:          #475569;
   --t5:          #334155;
 
-  --sh-xs:   0 1px 2px rgba(0,0,0,0.3);
-  --sh:      0 1px 4px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.3);
-  --sh-md:   0 4px 16px rgba(0,0,0,0.5), 0 2px 6px rgba(0,0,0,0.35);
-  --sh-lg:   0 12px 40px rgba(0,0,0,0.6), 0 4px 14px rgba(0,0,0,0.4);
-  --sh-xl:   0 24px 64px rgba(0,0,0,0.7), 0 8px 24px rgba(0,0,0,0.5);
+  --sh-xs:   0 1px 2px rgba(0,0,0,0.35);
+  --sh:      0 1px 2px rgba(0,0,0,0.35), 0 4px 14px rgba(0,0,0,0.28);
+  --sh-md:   0 4px 16px rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.3);
+  --sh-lg:   0 12px 36px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.35);
+  --sh-xl:   0 20px 52px rgba(0,0,0,0.55), 0 8px 20px rgba(0,0,0,0.4);
+
+  --fs-title:    1.35rem;
+  --fs-subtitle: 0.8125rem;
+  --fs-body:     0.9375rem;
+  --fs-label:    0.6875rem;
+  --lh-tight:    1.25;
+  --lh-body:     1.5;
 
   /* Form Control Dimensions */
-  --input-h:           42px;
+  --input-h:           40px;
   --input-h-mobile:    44px;
-  --btn-h:             42px;
-  --btn-h-sm:          36px;
-  --btn-h-lg:          48px;
+  --btn-h:             40px;
+  --btn-h-sm:          34px;
+  --btn-h-lg:          46px;
 
   /* Form Layout Spacing */
   --form-gap-x:        16px;
   --form-gap-y:        14px;
-  --form-section-gap:  20px;
-  --form-pad:          22px;
+  --form-section-gap:  18px;
+  --form-pad:          20px;
   --form-pad-mobile:   16px;
-  --form-actions-gap:  12px;
+  --form-actions-gap:  10px;
 
   /* Form Elements Radius */
   --r-input:           8px;
-  --r-card:            16px;
-  --r-modal:           20px;
+  --r-card:            14px;
+  --r-modal:           16px;
 
   /* Form Focus & State Shadows */
-  --input-shadow-focus: 0 0 0 3.5px var(--accent-g);
-  --input-shadow-error: 0 0 0 3.5px var(--red-s);
+  --input-shadow-focus: 0 0 0 3px var(--accent-g);
+  --input-shadow-error: 0 0 0 3px var(--red-s);
 }
 
 /* ═══════════════════════════════════════════════════
    BASE RESET & BODY
+   Keep this inside @layer base so PrimeNG (css layer "primeng")
+   can apply its own padding — unlayered * { padding:0 } was
+   wiping every p-button / p-tag / p-datatable cell.
 ═══════════════════════════════════════════════════ */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+}
 
 html { font-size: 14px; }
 
 body {
-  font-family: 'Inter Variable', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', 'Inter Variable', Inter,
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: var(--bg);
   background-image:
-    radial-gradient(1200px 600px at 12% -10%, var(--bg-glow, #f5f8fc) 0%, transparent 55%),
-    radial-gradient(900px 480px at 100% 0%, color-mix(in srgb, var(--accent) 6%, transparent) 0%, transparent 50%);
+    radial-gradient(1100px 520px at 8% -12%, var(--bg-glow, #f5f8fc) 0%, transparent 52%),
+    radial-gradient(800px 420px at 100% 0%, color-mix(in srgb, var(--accent) 5%, transparent) 0%, transparent 48%);
   background-attachment: fixed;
   color: var(--t1);
-  line-height: 1.55;
+  line-height: var(--lh-body, 1.5);
+  letter-spacing: -0.011em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -272,19 +296,20 @@ body.os-scroll-locked {
 ═══════════════════════════════════════════════════ */
 .card {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-card, 16px);
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  border-radius: var(--r-card, 14px);
   box-shadow: var(--sh);
+  overflow: hidden;
 }
 
 /* Standard Form Section Container */
 .form-section, .card.form-section {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-card, 16px);
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  border-radius: var(--r-card, 14px);
   box-shadow: var(--sh-xs);
-  padding: var(--form-pad, 22px);
-  margin-bottom: var(--form-section-gap, 20px);
+  padding: var(--form-pad, 20px);
+  margin-bottom: var(--form-section-gap, 18px);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
@@ -360,25 +385,37 @@ body.os-scroll-locked {
 /* ═══════════════════════════════════════════════════
    TABLES
 ═══════════════════════════════════════════════════ */
-.table { width: 100%; border-collapse: collapse; }
+.table { width: 100%; border-collapse: separate; border-spacing: 0; }
 .table th {
-  padding: 11px 14px;
-  font-size: 11px; font-weight: 700;
-  color: var(--t4); text-transform: uppercase;
-  letter-spacing: 0.6px; white-space: nowrap;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-2); text-align: left;
+  padding: 11px 16px;
+  font-size: 11px; font-weight: 750;
+  color: #64748b; text-transform: uppercase;
+  letter-spacing: 0.55px; white-space: nowrap;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f1f5f9;
+  text-align: left;
   vertical-align: middle;
 }
 .table td {
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  border-bottom: 1px solid #eef2f7;
   color: var(--t2); font-size: 13.5px;
   vertical-align: middle;
 }
+.table tbody tr:nth-child(even) td { background: #fafbfc; }
 .table tr:last-child td { border-bottom: none; }
-.table tbody tr { transition: background 0.1s; }
-.table tbody tr:hover td { background: var(--surface-2); }
+.table tbody tr { transition: background 0.12s ease; }
+.table tbody tr:hover td { background: color-mix(in srgb, var(--accent) 5%, #f8fafc) !important; }
+[data-theme="dark"] .table th {
+  background: var(--surface-2); color: var(--t3); border-bottom-color: var(--border);
+}
+[data-theme="dark"] .table td { border-bottom-color: var(--border); }
+[data-theme="dark"] .table tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--surface-2) 55%, transparent);
+}
+[data-theme="dark"] .table tbody tr:hover td {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-2)) !important;
+}
 
 .actions {
   display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px;
@@ -390,18 +427,18 @@ body.os-scroll-locked {
 ═══════════════════════════════════════════════════ */
 .btn-primary {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  height: var(--btn-h, 42px);
-  padding: 0 18px;
+  height: var(--btn-h, 40px);
+  padding: 0 16px;
   background: var(--accent); color: #fff;
   border: none; border-radius: var(--r-input, 8px);
   font-size: 13px; font-weight: 600; font-family: inherit;
-  cursor: pointer; letter-spacing: 0.1px;
+  cursor: pointer; letter-spacing: 0.01em;
   transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
-  box-shadow: 0 1px 4px rgba(var(--accent-rgb),0.4);
+  box-shadow: 0 1px 2px rgba(var(--accent-rgb),0.25), 0 4px 10px rgba(var(--accent-rgb),0.18);
 }
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-h);
-  box-shadow: 0 4px 14px rgba(var(--accent-rgb),0.45);
+  box-shadow: 0 2px 6px rgba(var(--accent-rgb),0.28), 0 8px 18px rgba(var(--accent-rgb),0.22);
   transform: translateY(-1px);
 }
 .btn-primary:active:not(:disabled) { transform: translateY(0); }

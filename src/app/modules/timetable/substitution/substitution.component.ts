@@ -1,6 +1,10 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
+import { Tooltip } from 'primeng/tooltip';
 import { forkJoin } from 'rxjs';
 import { SubstitutionService, DaySlotDto } from '../../../core/services/substitution.service';
 import { AcademicService } from '../../../core/services/academic.service';
@@ -17,26 +21,30 @@ const DAY_NAMES: Record<number, string> = { 1:'Monday', 2:'Tuesday', 3:'Wednesda
 @Component({
   selector: 'app-substitution',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent, LoadingComponent, DatePickerComponent],
+  imports: [CommonModule, FormsModule, PageHeaderComponent, LoadingComponent, DatePickerComponent, Button, Select, InputText, Tooltip],
   template: `
     <app-page-header title="Teacher Substitutions"
       subtitle="Assign a substitute teacher for a specific date when the regular teacher is absent" />
 
     <!-- Top bar -->
     <div class="topbar card">
-      <div class="tb-row">
+      <div class="tb-row flex flex-wrap items-end gap-4">
         <div class="sel-wrap">
           <span class="sel-label">Date</span>
           <app-date-picker [(ngModel)]="selectedDate" (dateChange)="onDateChange()" />
         </div>
         <div class="sel-wrap">
           <span class="sel-label">Class (optional)</span>
-          <select [(ngModel)]="selectedClass" (change)="load()">
-            <option [ngValue]="null">All Classes</option>
-            @for (c of classes(); track c.classId) {
-              <option [ngValue]="c.classId">{{ c.className }}{{ c.section ? ' · ' + c.section : '' }}</option>
-            }
-          </select>
+          <p-select
+            class="min-w-[200px]"
+            [options]="classOptions()"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="All Classes"
+            [showClear]="true"
+            appendTo="body"
+            [(ngModel)]="selectedClass"
+            (onChange)="load()" />
         </div>
       </div>
       @if (isOffDay()) {
@@ -124,32 +132,47 @@ const DAY_NAMES: Record<number, string> = { 1:'Monday', 2:'Tuesday', 3:'Wednesda
                 <div class="edit-form" (click)="$event.stopPropagation()">
                   <div class="ef-row">
                     <label class="ef-label">Substitute Teacher</label>
-                    <select class="ef-select" [(ngModel)]="editTeacherId">
-                      <option [ngValue]="null">— select teacher —</option>
-                      @for (t of otherTeachers(slot.originalTeacherId); track t.userId) {
-                        <option [ngValue]="t.userId">{{ t.fullName }}</option>
-                      }
-                    </select>
+                    <p-select
+                      class="w-full"
+                      size="small"
+                      [options]="teacherOptionsFor(slot.originalTeacherId)"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="— select teacher —"
+                      appendTo="body"
+                      [filter]="true"
+                      [(ngModel)]="editTeacherId" />
                   </div>
                   <div class="ef-row">
                     <label class="ef-label">Reason (optional)</label>
-                    <input class="ef-input" type="text" [(ngModel)]="editReason" placeholder="e.g. Sick leave" />
+                    <input pInputText class="w-full" type="text" [(ngModel)]="editReason" placeholder="e.g. Sick leave" />
                   </div>
-                  <div class="ef-actions">
-                    <button class="ef-cancel" (click)="cancelEdit()">Cancel</button>
-                    <button class="ef-save" [disabled]="!editTeacherId || saving()"
-                      (click)="saveSubstitution(slot)">
-                      {{ saving() ? 'Saving…' : slot.substitutionId ? 'Update' : 'Assign' }}
-                    </button>
+                  <div class="ef-actions flex items-center gap-2">
+                    <p-button label="Cancel" size="small" severity="secondary" [outlined]="true" (onClick)="cancelEdit()" />
+                    <p-button
+                      size="small"
+                      [label]="saving() ? 'Saving…' : slot.substitutionId ? 'Update' : 'Assign'"
+                      [loading]="saving()"
+                      [disabled]="!editTeacherId || saving()"
+                      (onClick)="saveSubstitution(slot)" />
                   </div>
                 </div>
               } @else {
-                <div class="action-btns">
-                  <button class="btn-assign" (click)="startEdit(slot)">
-                    {{ slot.substitutionId ? '✏️ Edit' : '+ Assign Sub' }}
-                  </button>
+                <div class="action-btns flex items-center gap-2">
+                  <p-button
+                    [label]="slot.substitutionId ? 'Edit' : 'Assign Sub'"
+                    [icon]="slot.substitutionId ? 'pi pi-pencil' : 'pi pi-plus'"
+                    size="small"
+                    (onClick)="startEdit(slot)" />
                   @if (slot.substitutionId) {
-                    <button class="btn-revert" (click)="revertSubstitution(slot)" title="Revert to original teacher">✕</button>
+                    <p-button
+                      icon="pi pi-times"
+                      size="small"
+                      severity="danger"
+                      [outlined]="true"
+                      ariaLabel="Revert to original teacher"
+                      pTooltip="Revert to original teacher"
+                      (onClick)="revertSubstitution(slot)" />
                   }
                 </div>
               }
@@ -306,6 +329,26 @@ export class SubstitutionComponent implements OnInit {
 
   otherTeachers(originalTeacherId: number): UserListDto[] {
     return this.allTeachers().filter(t => t.userId !== originalTeacherId);
+  }
+
+  classOptions = computed(() =>
+    this.classes().map(c => ({
+      label: `${c.className}${c.section ? ' · ' + c.section : ''}`,
+      value: c.classId
+    })));
+
+  // Memoised so p-select gets a stable array reference per change-detection pass.
+  private optsTeachersRef: UserListDto[] | null = null;
+  private optsOriginalId: number | null = null;
+  private optsCache: { label: string; value: number }[] = [];
+  teacherOptionsFor(originalTeacherId: number): { label: string; value: number }[] {
+    const all = this.allTeachers();
+    if (all !== this.optsTeachersRef || originalTeacherId !== this.optsOriginalId) {
+      this.optsTeachersRef = all;
+      this.optsOriginalId = originalTeacherId;
+      this.optsCache = this.otherTeachers(originalTeacherId).map(t => ({ label: t.fullName, value: t.userId }));
+    }
+    return this.optsCache;
   }
 
   startEdit(slot: DaySlotDto) {

@@ -1,6 +1,14 @@
 import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Button } from 'primeng/button';
+import { Tag } from 'primeng/tag';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
+import { Textarea } from 'primeng/textarea';
+import { Checkbox } from 'primeng/checkbox';
+import { RadioButton } from 'primeng/radiobutton';
+import { Message } from 'primeng/message';
 import {
   AI_QUESTION_TYPES,
   GenerateQuestionsResponse,
@@ -10,7 +18,7 @@ import {
 @Component({
   selector: 'app-ai-review-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, Button, Tag, Select, InputText, Textarea, Checkbox, RadioButton, Message],
   template: `
     <div class="ai-review os-stage">
       <div class="ai-review-head">
@@ -18,27 +26,32 @@ import {
           <h3>Review AI draft</h3>
           <p class="sub">Edit and select questions, then add them to the Question Bank. Nothing is saved until you approve.</p>
         </div>
-        <div class="head-actions">
-          <button type="button" class="btn-ghost" (click)="selectAll()" [disabled]="saving()">Select all</button>
-          <button type="button" class="btn-ghost" (click)="deselectAll()" [disabled]="saving()">Deselect all</button>
-          <button type="button" class="btn-ghost" (click)="discard.emit()" [disabled]="saving()">Discard</button>
-          <button type="button" class="btn-primary" (click)="addSelected()" [disabled]="saving() || selectedCount() === 0">
-            @if (saving()) { Saving… } @else { Add selected ({{ selectedCount() }}) }
-          </button>
+        <div class="head-actions flex flex-wrap items-center gap-2">
+          <p-button label="Select all" size="small" severity="secondary" [outlined]="true"
+            (onClick)="selectAll()" [disabled]="saving()" />
+          <p-button label="Deselect all" size="small" severity="secondary" [outlined]="true"
+            (onClick)="deselectAll()" [disabled]="saving()" />
+          <p-button label="Discard" size="small" severity="danger" [outlined]="true"
+            (onClick)="discard.emit()" [disabled]="saving()" />
+          <p-button size="small" icon="pi pi-check" [loading]="saving()"
+            [label]="saving() ? 'Saving…' : 'Add selected (' + selectedCount() + ')'"
+            (onClick)="addSelected()" [disabled]="saving() || selectedCount() === 0" />
         </div>
       </div>
 
       <div class="ai-review-body">
         @if (warnings().length) {
-          <div class="os-alert warn">
-            @for (w of warnings(); track w) { <div>{{ w }}</div> }
-          </div>
+          <p-message severity="warn" styleClass="mb-2.5 w-full">
+            <div>
+              @for (w of warnings(); track w) { <div>{{ w }}</div> }
+            </div>
+          </p-message>
         }
         @if (error()) {
-          <div class="os-alert error">{{ error() }}</div>
+          <p-message severity="error" styleClass="mb-2.5 w-full" [text]="error()" />
         }
         @if (ok()) {
-          <div class="os-alert ok">{{ ok() }}</div>
+          <p-message severity="success" styleClass="mb-2.5 w-full" [text]="ok()" />
         }
 
         <div class="ai-section-label">Draft questions ({{ items().length }})</div>
@@ -48,29 +61,29 @@ import {
             <article class="draft-item" [class.selected]="q.selected">
               <header class="draft-head">
                 <label class="sel">
-                  <input type="checkbox" [(ngModel)]="q.selected" [disabled]="saving()" />
+                  <p-checkbox [binary]="true" [(ngModel)]="q.selected" [disabled]="saving()" />
                   <span class="q-title">Q{{ i + 1 }} · {{ typeLabel(q.questionTypeId || q.questionType) }}</span>
                 </label>
                 @if (q.difficulty) {
-                  <span class="diff">{{ q.difficulty }}</span>
+                  <p-tag [value]="q.difficulty" severity="secondary" />
                 }
               </header>
 
               <div class="draft-body">
                 <div class="os-field">
                   <label class="os-field-label">Question</label>
-                  <textarea class="os-input" rows="2" [(ngModel)]="q.questionText" [disabled]="saving()"
+                  <textarea pTextarea class="w-full" rows="2" [(ngModel)]="q.questionText" [disabled]="saving()"
                     [attr.dir]="q.language === 'ur' || q.language === 'ur-en' ? 'rtl' : 'ltr'"></textarea>
                 </div>
 
                 <div class="meta-row">
                   <div class="os-field marks">
                     <label class="os-field-label">Marks</label>
-                    <input class="os-input" type="number" min="1" [(ngModel)]="q.marks" [disabled]="saving()" />
+                    <input pInputText class="w-full" type="number" min="1" [(ngModel)]="q.marks" [disabled]="saving()" />
                   </div>
                   <div class="os-field grow">
                     <label class="os-field-label">Explanation</label>
-                    <input class="os-input" [(ngModel)]="q.questionNote" [disabled]="saving()" />
+                    <input pInputText class="w-full" [(ngModel)]="q.questionNote" [disabled]="saving()" />
                   </div>
                 </div>
 
@@ -79,12 +92,13 @@ import {
                     <div class="os-field-label opts-label">Options</div>
                     @for (o of q.options; track o.optionLabel) {
                       <label class="opt">
-                        <input type="radio" [name]="'ai-correct-' + q.clientKey"
-                          [checked]="o.isCorrect"
-                          (change)="setCorrect(q, o.optionLabel)"
+                        <p-radiobutton [name]="'ai-correct-' + q.clientKey"
+                          [value]="o.optionLabel"
+                          [ngModel]="correctLabel(q)"
+                          (ngModelChange)="setCorrect(q, $event)"
                           [disabled]="saving()" />
                         <span class="lbl">{{ o.optionLabel }}</span>
-                        <input class="os-input" [(ngModel)]="o.optionText" [disabled]="saving()" />
+                        <input pInputText class="w-full" [(ngModel)]="o.optionText" [disabled]="saving()" />
                       </label>
                     }
                   </div>
@@ -92,16 +106,14 @@ import {
                 @if ((q.questionTypeId || q.questionType) === 2) {
                   <div class="os-field correct-field">
                     <label class="os-field-label">Correct</label>
-                    <select class="os-input" [(ngModel)]="q.isTrue" [disabled]="saving()">
-                      <option [ngValue]="true">True</option>
-                      <option [ngValue]="false">False</option>
-                    </select>
+                    <p-select class="w-full" [options]="trueFalseOptions" optionLabel="label" optionValue="value"
+                      appendTo="body" [(ngModel)]="q.isTrue" [disabled]="saving()" />
                   </div>
                 }
                 @if ((q.questionTypeId || q.questionType) === 3 || (q.questionTypeId || q.questionType) === 4) {
                   <div class="os-field">
                     <label class="os-field-label">Correct / model answer</label>
-                    <textarea class="os-input" rows="2" [(ngModel)]="q.correctAnswer" [disabled]="saving()"></textarea>
+                    <textarea pTextarea class="w-full" rows="2" [(ngModel)]="q.correctAnswer" [disabled]="saving()"></textarea>
                   </div>
                 }
               </div>
@@ -153,53 +165,6 @@ import {
       align-items: center;
     }
 
-    .ai-review .btn-ghost {
-      height: 32px;
-      padding: 0 12px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--t2);
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      border-radius: 0;
-    }
-    .ai-review .btn-ghost:hover:not(:disabled) {
-      background: var(--surface-2);
-      color: var(--t1);
-    }
-    .ai-review .btn-ghost:disabled { opacity: .5; cursor: not-allowed; }
-
-    .ai-review .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      height: 32px;
-      min-height: 32px;
-      padding: 0 14px;
-      border: none;
-      border-radius: 0;
-      background: var(--accent);
-      color: #fff;
-      font-size: 12.5px;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: 0 1px 4px rgba(var(--accent-rgb), 0.35);
-      white-space: nowrap;
-    }
-    .ai-review .btn-primary:hover:not(:disabled) {
-      background: var(--accent-h);
-      box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.4);
-    }
-    .ai-review .btn-primary:disabled {
-      background: var(--surface-2);
-      color: var(--t4);
-      box-shadow: none;
-      cursor: not-allowed;
-      opacity: 1;
-      border: 1px solid var(--border);
-    }
-
     .ai-review-body {
       padding: 12px 14px 14px;
       background: var(--surface);
@@ -215,17 +180,6 @@ import {
       letter-spacing: .05em;
       line-height: 1.2;
     }
-
-    .os-alert {
-      margin: 0 0 10px;
-      padding: 8px 10px;
-      font-size: 12px;
-      border-radius: 0;
-      line-height: 1.35;
-    }
-    .os-alert.warn { background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; }
-    .os-alert.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-    .os-alert.ok { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
 
     .draft-list {
       display: flex;
@@ -275,7 +229,6 @@ import {
       cursor: pointer;
       margin: 0;
     }
-    .sel input { flex-shrink: 0; accent-color: var(--accent); }
     .q-title {
       font-size: 13px;
       font-weight: 700;
@@ -283,19 +236,6 @@ import {
       line-height: 1.3;
       min-width: 0;
     }
-    .diff {
-      flex-shrink: 0;
-      font-size: 11px;
-      font-weight: 600;
-      padding: 2px 8px;
-      background: var(--surface);
-      color: var(--t3);
-      border: 1px solid var(--border);
-      border-radius: 0;
-      text-transform: uppercase;
-      letter-spacing: .03em;
-    }
-
     .draft-body {
       display: flex;
       flex-direction: column;
@@ -313,38 +253,6 @@ import {
       letter-spacing: .02em;
       line-height: 1.2;
     }
-    .os-input {
-      width: 100%;
-      height: 34px;
-      padding: 0 10px;
-      border: 1px solid var(--border);
-      border-radius: 0 !important;
-      font-size: 13px;
-      font-family: inherit;
-      background: var(--surface);
-      color: var(--t1);
-      box-sizing: border-box;
-    }
-    .os-input:disabled {
-      background: var(--surface-2);
-      color: var(--t4);
-      cursor: not-allowed;
-      opacity: 1;
-    }
-    .os-input:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: var(--input-shadow-focus);
-    }
-    textarea.os-input {
-      height: auto;
-      min-height: 52px;
-      max-height: 96px;
-      padding: 8px 10px;
-      resize: vertical;
-      line-height: 1.4;
-    }
-
     .meta-row {
       display: grid;
       grid-template-columns: 88px minmax(0, 1fr);
@@ -368,7 +276,6 @@ import {
       margin: 0;
       min-width: 0;
     }
-    .opt input[type="radio"] { accent-color: var(--accent); }
     .opt .lbl {
       font-size: 12px;
       font-weight: 700;
@@ -380,20 +287,25 @@ import {
       .ai-review-head { padding: 10px; }
       .ai-review-body { padding: 10px; }
       .head-actions { width: 100%; }
-      .ai-review .btn-primary { flex: 1; }
       .meta-row { grid-template-columns: 1fr; }
       .correct-field { max-width: none; }
     }
     @media (max-width: 420px) {
       .head-actions { flex-direction: column; align-items: stretch; }
-      .ai-review .btn-ghost,
-      .ai-review .btn-primary { width: 100%; }
       .draft-head { flex-wrap: wrap; }
     }
   `]
 })
 export class AiReviewPanelComponent {
   readonly questionTypes = AI_QUESTION_TYPES;
+  readonly trueFalseOptions = [
+    { label: 'True', value: true },
+    { label: 'False', value: false }
+  ];
+
+  correctLabel(q: GeneratedQuestionDraftDto): string | null {
+    return q.options?.find(o => o.isCorrect)?.optionLabel ?? null;
+  }
 
   items = signal<GeneratedQuestionDraftDto[]>([]);
   warnings = signal<string[]>([]);
@@ -437,7 +349,7 @@ export class AiReviewPanelComponent {
     this.items.update(list => list.map(i => ({ ...i, selected: false })));
   }
 
-  setCorrect(q: GeneratedQuestionDraftDto, label: string) {
+  setCorrect(q: GeneratedQuestionDraftDto, label: string | null) {
     for (const o of q.options) o.isCorrect = o.optionLabel === label;
   }
 

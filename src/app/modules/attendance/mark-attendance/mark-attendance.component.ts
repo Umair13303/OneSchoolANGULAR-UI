@@ -15,7 +15,11 @@ import { PeriodDto } from '../../../core/models/timetable.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
-import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
+import { OsSelectOption } from '../../../shared/components/os-select/os-select.component';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
+import { Tooltip } from 'primeng/tooltip';
 import { MenuService } from '../../../core/services/menu.service';
 import {
   classroomReturnQueryFromParamMap,
@@ -53,7 +57,7 @@ export interface Row {
 @Component({
   selector: 'app-mark-attendance',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, DatePickerComponent, OsSelectComponent],
+  imports: [CommonModule, FormsModule, RouterModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, DatePickerComponent, Button, Select, InputText, Tooltip],
   template: `
     <div class="os-page compact mark-att-page">
     <app-page-header [dense]="true" [title]="pageTitle()" routeUrl="/attendance/mark" />
@@ -75,13 +79,16 @@ export interface Row {
             </span>
           } @else {
             <div class="ctx-period-pick">
-              <app-os-select
-                icon="schedule"
+              <p-select
+                class="w-full"
+                [options]="periodOptions()"
+                optionLabel="label"
+                optionValue="value"
                 placeholder="Select period…"
                 ariaLabel="Select period"
-                [options]="periodOptions()"
-                [value]="selectedPeriod"
-                (valueChange)="selectedPeriod = $event; onPeriodChange()" />
+                appendTo="body"
+                [ngModel]="selectedPeriod"
+                (ngModelChange)="selectedPeriod = $event; onPeriodChange()" />
             </div>
           }
           <span class="ctx-sep">·</span>
@@ -96,32 +103,44 @@ export interface Row {
             <span class="day-chip chip-work"><span class="material-icons-round">check_circle</span> Working</span>
           }
           @if (rows().length && !isOffDay()) {
-            <button type="button" class="icon-refresh" (click)="search()" [disabled]="searching()" title="Reload roster">
-              <span class="material-icons-round" [class.spin]="searching()">refresh</span>
-            </button>
+            <p-button
+              icon="pi pi-refresh"
+              severity="secondary"
+              [outlined]="true"
+              ariaLabel="Reload roster"
+              pTooltip="Reload roster"
+              [loading]="searching()"
+              [disabled]="searching()"
+              (onClick)="search()" />
           }
         </div>
       } @else {
-        <div class="os-toolbar-group att-fields">
+        <div class="os-toolbar-group att-fields flex flex-wrap items-center gap-2">
           <div class="os-field inline grow">
-            <app-os-select
-              icon="school"
+            <p-select
+              class="w-full"
+              [options]="classOptions()"
+              optionLabel="label"
+              optionValue="value"
               placeholder="Class…"
               ariaLabel="Select class"
-              [searchable]="classOptions().length > 6"
-              [options]="classOptions()"
-              [value]="selectedClass"
-              (valueChange)="selectedClass = $event; onClassChange()" />
+              appendTo="body"
+              [filter]="classOptions().length > 6"
+              [ngModel]="selectedClass"
+              (ngModelChange)="selectedClass = $event; onClassChange()" />
           </div>
           <div class="os-field inline grow period-field">
-            <app-os-select
-              icon="schedule"
+            <p-select
+              class="w-full"
+              [options]="periodOptions()"
+              optionLabel="label"
+              optionValue="value"
               [placeholder]="selectedClass ? 'Period…' : 'Class first…'"
               ariaLabel="Select period"
+              appendTo="body"
               [disabled]="!selectedClass"
-              [options]="periodOptions()"
-              [value]="selectedPeriod"
-              (valueChange)="selectedPeriod = $event; onPeriodChange()" />
+              [ngModel]="selectedPeriod"
+              (ngModelChange)="selectedPeriod = $event; onPeriodChange()" />
           </div>
           <div class="os-field inline date-field">
             <div class="os-date-wrap">
@@ -139,23 +158,22 @@ export interface Row {
             <span class="day-chip chip-work"><span class="material-icons-round">check_circle</span> Working</span>
           }
           @if (rows().length) {
-            <button type="button" class="icon-refresh" (click)="search()"
-                    [disabled]="!selectedClass || !selectedPeriod || searching() || isOffDay()"
-                    title="Reload roster">
-              <span class="material-icons-round" [class.spin]="searching()">refresh</span>
-            </button>
+            <p-button
+              icon="pi pi-refresh"
+              severity="secondary"
+              [outlined]="true"
+              ariaLabel="Reload roster"
+              pTooltip="Reload roster"
+              [loading]="searching()"
+              [disabled]="!selectedClass || !selectedPeriod || searching() || isOffDay()"
+              (onClick)="search()" />
           } @else {
-            <button type="button" class="search-btn btn-primary"
-                    [disabled]="!selectedClass || !selectedPeriod || searching() || isOffDay()"
-                    (click)="search()">
-              @if (searching()) {
-                <span class="spin material-icons-round btn-icon">sync</span>
-                <span>Loading…</span>
-              } @else {
-                <span class="material-icons-round btn-icon">groups</span>
-                <span>Load students</span>
-              }
-            </button>
+            <p-button
+              [label]="searching() ? 'Loading…' : 'Load students'"
+              icon="pi pi-users"
+              [loading]="searching()"
+              [disabled]="!selectedClass || !selectedPeriod || searching() || isOffDay()"
+              (onClick)="search()" />
           }
         </div>
       }
@@ -213,33 +231,21 @@ export interface Row {
             <div class="roster-controls">
               <div class="roster-search-box">
                 <span class="material-icons-round search-lens">search</span>
-                <input type="text"
+                <input pInputText type="text"
                        [ngModel]="searchFilter()"
                        (ngModelChange)="searchFilter.set($event)"
                        placeholder="Search name or admission #…"
-                       class="search-input" />
+                       class="search-input w-full" />
                 @if (searchFilter()) {
                   <button type="button" class="clear-search-btn" (click)="searchFilter.set('')">
                     <span class="material-icons-round">close</span>
                   </button>
                 }
               </div>
-              <div class="bulk-actions-group">
-                <button type="button" class="bulk-btn btn-bp" (click)="markAll('Present')">
-                  <span class="material-icons-round">done_all</span>
-                  <span class="bulk-txt">All present</span>
-                  <span class="bulk-txt-sm">All P</span>
-                </button>
-                <button type="button" class="bulk-btn btn-ba" (click)="markAll('Absent')">
-                  <span class="material-icons-round">close</span>
-                  <span class="bulk-txt">All absent</span>
-                  <span class="bulk-txt-sm">All A</span>
-                </button>
-                <button type="button" class="bulk-btn btn-bl" (click)="markAll('Leave')">
-                  <span class="material-icons-round">pause</span>
-                  <span class="bulk-txt">All leave</span>
-                  <span class="bulk-txt-sm">All L</span>
-                </button>
+              <div class="bulk-actions-group flex flex-wrap items-center gap-2">
+                <p-button label="All present" icon="pi pi-check-circle" severity="success" [outlined]="true" size="small" (onClick)="markAll('Present')" />
+                <p-button label="All absent" icon="pi pi-times-circle" severity="danger" [outlined]="true" size="small" (onClick)="markAll('Absent')" />
+                <p-button label="All leave" icon="pi pi-pause-circle" severity="warn" [outlined]="true" size="small" (onClick)="markAll('Leave')" />
               </div>
               <span class="hint-tip">Everyone starts Present — tap Absents / Leaves only</span>
             </div>
@@ -313,29 +319,31 @@ export interface Row {
             </span>
           }
           @if (fromClassroom() && !dirty() && successMsg()) {
-            <a class="btn-secondary btn-sm back-class" [routerLink]="['/classroom/today']" [queryParams]="classroomReturnQp()">
-              Back to class
-            </a>
+            <p-button
+              label="Back to class"
+              size="small"
+              severity="secondary"
+              [outlined]="true"
+              [routerLink]="['/classroom/today']"
+              [queryParams]="classroomReturnQp()" />
           }
         </div>
-        <div class="save-right">
+        <div class="save-right flex items-center justify-end gap-2">
           @if (fromClassroom() && !(successMsg() && !dirty())) {
-            <a class="btn-secondary btn-sm back-class" [routerLink]="['/classroom/today']" [queryParams]="classroomReturnQp()">
-              Cancel
-            </a>
+            <p-button
+              label="Cancel"
+              size="small"
+              severity="secondary"
+              [outlined]="true"
+              [routerLink]="['/classroom/today']"
+              [queryParams]="classroomReturnQp()" />
           }
-          <button type="button" class="save-action-btn"
-                  [class.ready]="canSave()"
-                  (click)="submit()"
-                  [disabled]="!canSave() || saving() || isOffDay()">
-            @if (saving()) {
-              <span class="spin material-icons-round">sync</span>
-              <span>Saving…</span>
-            } @else {
-              <span class="material-icons-round">save</span>
-              <span>Save</span>
-            }
-          </button>
+          <p-button
+            [label]="saving() ? 'Saving…' : 'Save'"
+            icon="pi pi-save"
+            [loading]="saving()"
+            [disabled]="!canSave() || saving() || isOffDay()"
+            (onClick)="submit()" />
         </div>
       </div>
     }

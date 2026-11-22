@@ -1,6 +1,9 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { TableModule } from 'primeng/table';
 import { InventoryReportService } from '../../../core/services/inventory-report.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { DatePickerComponent } from '../../../shared/components/date-picker/date-picker.component';
@@ -52,65 +55,58 @@ const REPORTS: ReportDef[] = [
 @Component({
   selector: 'app-inventory-reports',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent, DatePickerComponent],
+  imports: [CommonModule, FormsModule, PageHeaderComponent, DatePickerComponent, Button, Select, TableModule],
   template: `
     <div class="os-page compact">
     <app-page-header [dense]="true" title="Reports" subtitle="Purchase, Sales, Inventory, Financial and Package reports" routeUrl="/inventory/reports" />
 
     <div class="os-stage">
       <div class="os-stage-bar">
-        <div class="os-toolbar-group">
-          <!-- Native grouped select kept deliberately: app-os-select has no
-               optgroup support, so converting it would flatten the five report
-               families. Options, order, grouping and change handler untouched. -->
-          <select [(ngModel)]="reportKey" (ngModelChange)="run()">
-            @for (grp of groups; track grp) {
-              <optgroup [label]="grp">
-                @for (r of reportsIn(grp); track r.value) { <option [value]="r.value">{{ r.label }}</option> }
-              </optgroup>
-            }
-          </select>
+        <div class="flex w-full flex-wrap items-center gap-3">
+          <p-select
+            class="w-full sm:w-64"
+            [options]="reportOptions"
+            [group]="true"
+            optionLabel="label"
+            optionValue="value"
+            optionGroupLabel="label"
+            optionGroupChildren="items"
+            appendTo="body"
+            [(ngModel)]="reportKey"
+            (ngModelChange)="run()"
+            ariaLabel="Report" />
           <div class="os-field"><app-date-picker [(ngModel)]="from"/></div>
           <div class="os-field"><app-date-picker [(ngModel)]="to"/></div>
-          <button class="btn-primary" (click)="run()">Run Report</button>
-        </div>
-        @if (grossProfitSummary()) {
-          <div class="os-toolbar-group end">
-            <div class="mini-summary">
+          <p-button label="Run Report" icon="pi pi-play" (onClick)="run()" />
+          @if (grossProfitSummary()) {
+            <div class="mini-summary ml-auto">
               Overall Profit: <strong>{{ grossProfitSummary()!.profit | number:'1.2-2' }}</strong> ({{ grossProfitSummary()!.marginPercent }}% margin)
             </div>
-          </div>
-        }
+          }
+        </div>
       </div>
 
       <div class="os-stage-body">
-      <table class="table">
-        <thead><tr>@for (c of currentDef().columns; track c.key) { <th>{{ c.label }}</th> }</tr></thead>
-        <tbody>
-          @for (row of rows(); track $index) {
+        <p-table [value]="rows()" [columns]="currentDef().columns" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '40rem' }" [scrollable]="true">
+          <ng-template #header let-columns>
+            <tr>@for (c of columns; track c.key) { <th>{{ c.label }}</th> }</tr>
+          </ng-template>
+          <ng-template #body let-row let-columns="columns">
             <tr>
-              @for (c of currentDef().columns; track c.key) {
+              @for (c of columns; track c.key) {
                 <td>{{ c.money ? (row[c.key] | number:'1.2-2') : row[c.key] }}</td>
               }
             </tr>
-          }
-          @if (!rows().length) { <tr><td [attr.colspan]="currentDef().columns.length" class="empty">{{ loading() ? 'Loading…' : 'No data for the selected filters.' }}</td></tr> }
-        </tbody>
-      </table>
+          </ng-template>
+          <ng-template #emptymessage>
+            <tr><td [attr.colspan]="currentDef().columns.length" class="empty">{{ loading() ? 'Loading…' : 'No data for the selected filters.' }}</td></tr>
+          </ng-template>
+        </p-table>
       </div>
     </div>
     </div>
   `,
   styles: [`
-    /* Removed by the canonical migration: .toolbar (now .os-stage-bar), .grow
-       (the bar's space-between plus .os-toolbar-group.end positions the summary),
-       .card (now .os-stage), and the dead ".toolbar input" half of the control
-       rule — app-date-picker is view-encapsulated, so that selector never
-       reached its internal input.
-       The native grouped select still needs local styling because nothing
-       global styles a bare <select> inside a stage bar. Declarations kept
-       as-is apart from square corners, to match the flat stage. */
-    .os-stage-bar select { padding:9px 12px; border:1.5px solid var(--border); border-radius:0; font-size:13px; background:var(--surface); color:var(--t1); }
     .mini-summary { font-size:13px; color:var(--t3); }
     .mini-summary strong { color:var(--t1); }
     .empty { text-align:center; color:var(--t4); padding:32px 0; font-size:13px; }
@@ -120,6 +116,7 @@ export class InventoryReportsComponent implements OnInit {
   private svc = inject(InventoryReportService);
 
   reports = REPORTS;
+  reportOptions = ['Purchase', 'Sales', 'Inventory', 'Financial', 'Package'].map(g => ({ label: g, items: REPORTS.filter(r => r.group === g).map(r => ({ label: r.label, value: r.value })) }));
   groups = ['Purchase', 'Sales', 'Inventory', 'Financial', 'Package'];
   reportsIn(g: string) { return this.reports.filter(r => r.group === g); }
 

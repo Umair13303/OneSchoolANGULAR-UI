@@ -11,11 +11,13 @@ import { StudentService } from '../../core/services/student.service';
 import { StudentListDto } from '../../core/models/student.model';
 import { TimetableEntryDto, DAY_NAMES } from '../../core/models/timetable.model';
 import { forkJoin } from 'rxjs';
+import { finalize } from 'rxjs/operators';
+import { Button } from 'primeng/button';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, Button],
   template: `
     <!-- ═══ Hero ═══ -->
     <div class="hero" [class.hero-teacher]="isTeacher()">
@@ -37,28 +39,23 @@ import { forkJoin } from 'rxjs';
       </div>
 
       @if (isTeacher()) {
-        <div class="hero-actions">
+        <div class="hero-actions flex flex-wrap items-center gap-2">
           @if (focusClass(); as focus) {
-            <a class="hero-cta hero-cta-primary"
-               [routerLink]="['/classroom/today']"
-               [queryParams]="classroomQp(focus)">
-              <span class="material-icons-round">play_lesson</span>
-              {{ currentClass() ? 'Start current class' : 'Start next class' }}
-            </a>
+            <p-button
+              [label]="currentClass() ? 'Start current class' : 'Start next class'"
+              icon="pi pi-play"
+              size="small"
+              tabindex="-1"
+              [routerLink]="['/classroom/today']"
+              [queryParams]="classroomQp(focus)" />
           } @else {
-            <a routerLink="/classroom/today" class="hero-cta hero-cta-primary">
-              <span class="material-icons-round">play_lesson</span>
-              Today's Classroom
-            </a>
+            <p-button label="Today's Classroom" icon="pi pi-play" size="small" tabindex="-1"
+                      routerLink="/classroom/today" />
           }
-          <a routerLink="/attendance/mark" class="hero-cta">
-            <span class="material-icons-round">how_to_reg</span>
-            Mark Attendance
-          </a>
-          <a routerLink="/homework/list" class="hero-cta">
-            <span class="material-icons-round">fact_check</span>
-            Homework Diary
-          </a>
+          <p-button label="Mark Attendance" icon="pi pi-check-square" severity="secondary" [outlined]="true"
+                    size="small" tabindex="-1" routerLink="/attendance/mark" />
+          <p-button label="Homework Diary" icon="pi pi-book" severity="secondary" [outlined]="true"
+                    size="small" tabindex="-1" routerLink="/homework/list" />
         </div>
       } @else {
         <div class="hero-date-chip">
@@ -112,9 +109,10 @@ import { forkJoin } from 'rxjs';
                   {{ cur.className }}{{ cur.section ? ' · ' + cur.section : '' }}
                   · {{ fmt(cur.startTime) }}–{{ fmt(cur.endTime) }}
                 </span>
-                <a class="td-focus-cta" [routerLink]="['/classroom/today']" [queryParams]="classroomQp(cur)">
-                  Start class →
-                </a>
+                <div class="flex flex-wrap items-center gap-2">
+                  <p-button label="Start class" icon="pi pi-arrow-right" iconPos="right" size="small"
+                            tabindex="-1" [routerLink]="['/classroom/today']" [queryParams]="classroomQp(cur)" />
+                </div>
               } @else {
                 <strong class="muted">No class right now</strong>
                 <span class="td-focus-meta">{{ nextClass() ? 'See what is next' : 'Free period' }}</span>
@@ -128,9 +126,11 @@ import { forkJoin } from 'rxjs';
                   {{ nxt.className }}{{ nxt.section ? ' · ' + nxt.section : '' }}
                   · {{ fmt(nxt.startTime) }}–{{ fmt(nxt.endTime) }}
                 </span>
-                <a class="td-focus-cta" [routerLink]="['/classroom/today']" [queryParams]="classroomQp(nxt)">
-                  Start class →
-                </a>
+                <div class="flex flex-wrap items-center gap-2">
+                  <p-button label="Start class" icon="pi pi-arrow-right" iconPos="right" size="small"
+                            severity="secondary" [outlined]="true"
+                            tabindex="-1" [routerLink]="['/classroom/today']" [queryParams]="classroomQp(nxt)" />
+                </div>
               } @else if (currentClass()) {
                 <strong class="muted">Last class of the day</strong>
                 <span class="td-focus-meta">Finish this period, then you’re done</span>
@@ -448,7 +448,7 @@ import { forkJoin } from 'rxjs';
                 <h2>Couldn’t load your schedule</h2>
                 <p>The connection was slow or timed out. You can still use the shortcuts below.</p>
               </div>
-              <button class="td-retry" type="button" (click)="loadTeacherSchedule()">Try again</button>
+              <p-button label="Try again" icon="pi pi-refresh" size="small" (onClick)="loadTeacherSchedule()" />
             </div>
           } @else {
             <div class="td-empty-main">
@@ -740,27 +740,35 @@ import { forkJoin } from 'rxjs';
     /* Hero */
     .hero {
       display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 16px; gap: 16px;
+      margin-bottom: 20px; gap: 18px;
       background:
-        radial-gradient(ellipse 80% 120% at 100% 0%, rgba(var(--accent-rgb), 0.10), transparent 55%),
-        linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%);
-      border: 1px solid var(--border); border-radius: var(--r-xl);
-      padding: 16px 20px; box-shadow: var(--sh);
+        radial-gradient(ellipse 70% 140% at 100% -10%, rgba(var(--accent-rgb), 0.16), transparent 52%),
+        linear-gradient(135deg, var(--surface) 0%, color-mix(in srgb, var(--accent-s) 35%, var(--surface)) 100%);
+      border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+      border-radius: 18px;
+      padding: 22px 24px; box-shadow: var(--sh-md);
       position: relative; overflow: hidden;
       animation: td-rise 0.45s ease both;
     }
+    .hero::after {
+      content: '';
+      position: absolute; right: -40px; top: -40px;
+      width: 160px; height: 160px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(var(--accent-rgb), 0.12), transparent 70%);
+      pointer-events: none;
+    }
     .hero-copy { min-width: 0; position: relative; z-index: 1; flex: 1; }
     .eyebrow {
-      font-size: 10px; font-weight: 700; color: var(--accent);
-      text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;
+      font-size: 10px; font-weight: 750; color: var(--accent);
+      text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 6px;
       display: flex; align-items: center; gap: 8px;
     }
-    .eyebrow::before { content: ''; width: 14px; height: 2px; background: var(--accent); border-radius: 2px; }
+    .eyebrow::before { content: ''; width: 16px; height: 2px; background: var(--accent); border-radius: 2px; }
     h1 {
-      font-size: 22px; font-weight: 800; color: var(--t1); letter-spacing: -0.4px;
-      line-height: 1.15; margin: 0;
+      font-size: 26px; font-weight: 800; color: var(--t1); letter-spacing: -0.55px;
+      line-height: 1.12; margin: 0;
     }
-    .hero-sub { font-size: 12.5px; color: var(--t4); margin-top: 4px; line-height: 1.35; }
+    .hero-sub { font-size: 13px; color: var(--t3); margin-top: 6px; line-height: 1.4; }
     .hero-actions {
       display: flex; flex-wrap: nowrap; gap: 8px; justify-content: flex-end;
       position: relative; z-index: 1; flex-shrink: 0;
@@ -782,36 +790,54 @@ import { forkJoin } from 'rxjs';
     .hero-cta-primary:hover { background: var(--accent-h); color: #fff; border-color: var(--accent-h); }
     .hero-date-chip {
       display: inline-flex; align-items: center; gap: 8px;
-      padding: 8px 12px; border-radius: 10px;
-      background: var(--surface); border: 1px solid var(--border);
-      font-size: 12px; font-weight: 650; color: var(--t2);
+      padding: 10px 14px; border-radius: 12px;
+      background: color-mix(in srgb, var(--surface) 88%, transparent);
+      border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+      box-shadow: var(--sh-xs);
+      font-size: 12.5px; font-weight: 650; color: var(--t2);
       position: relative; z-index: 1; white-space: nowrap;
+      backdrop-filter: blur(8px);
     }
-    .hero-date-chip .material-icons-round { font-size: 15px; color: var(--accent); }
+    .hero-date-chip .material-icons-round { font-size: 16px; color: var(--accent); }
 
     /* Stat widgets */
     .stats-grid {
       display: grid; grid-template-columns: repeat(4, 1fr);
-      gap: 16px; margin-bottom: 20px;
+      gap: 14px; margin-bottom: 20px;
     }
     @media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
 
     .stat-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--r-xl); padding: 20px;
+      background: var(--surface);
+      border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+      border-radius: 16px; padding: 18px 18px 18px 16px;
       box-shadow: var(--sh); position: relative; overflow: hidden;
       display: flex; align-items: center; gap: 14px;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute; left: 0; top: 14px; bottom: 14px;
+      width: 3px; border-radius: 0 3px 3px 0;
+      background: var(--clr);
+      opacity: 0.85;
+    }
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--sh-md);
+      border-color: color-mix(in srgb, var(--clr) 28%, var(--border));
     }
     .stat-icon {
-      width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0;
+      width: 46px; height: 46px; border-radius: 13px; flex-shrink: 0;
       background: var(--bg); display: flex; align-items: center; justify-content: center;
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--clr) 16%, transparent);
     }
-    .stat-icon .material-icons-round { font-size: 24px; color: var(--clr); font-variation-settings: 'FILL' 1; }
-    .stat-value { font-size: 28px; font-weight: 800; color: var(--t1); line-height: 1; }
-    .stat-label { font-size: 12px; color: var(--t4); font-weight: 600; margin-top: 4px; }
+    .stat-icon .material-icons-round { font-size: 22px; color: var(--clr); font-variation-settings: 'FILL' 1; }
+    .stat-value { font-size: 30px; font-weight: 800; color: var(--t1); line-height: 1; letter-spacing: -0.6px; }
+    .stat-label { font-size: 12px; color: var(--t3); font-weight: 600; margin-top: 5px; letter-spacing: 0.01em; }
     .stat-bg-icon {
-      position: absolute; right: -8px; bottom: -8px;
-      font-size: 72px; color: var(--clr); opacity: 0.06;
+      position: absolute; right: -6px; bottom: -10px;
+      font-size: 78px; color: var(--clr); opacity: 0.07;
       font-variation-settings: 'FILL' 1; pointer-events: none;
     }
 
@@ -1252,7 +1278,8 @@ import { forkJoin } from 'rxjs';
     }
     @media (max-width: 560px) {
       .td-shortcuts { grid-template-columns: 1fr; }
-      .hero-cta { flex: 1 1 auto; justify-content: center; }
+      .hero-actions p-button { flex: 1 1 auto; }
+      .hero-actions p-button ::ng-deep .p-button { width: 100%; justify-content: center; }
     }
     @media (max-width: 480px) {
       .hero { padding: 12px 14px; }
@@ -1473,6 +1500,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     if (this.isTeacher()) {
+      this.loading.set(false);
       this.loadTeacherSchedule();
       this.clockTimer = setInterval(() => this.nowTick.set(Date.now()), 30_000);
       // Load working days for correct day columns
@@ -1491,7 +1519,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
       summary:  this.dashSvc.getSummary(),
       classes:  this.acSvc.getClasses(),
       subjects: this.acSvc.getSubjects(),
-    }).subscribe({
+    }).pipe(
+      finalize(() => this.loading.set(false))
+    ).subscribe({
       next: ({ users, summary, classes, subjects }) => {
         const teachers = users.filter(u => u.roleName?.toLowerCase() === 'teacher' && u.isActive);
 
@@ -1535,10 +1565,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
             { day: 'Sat', present: Math.round(total * 0.60), absent: Math.round(total * 0.40) },
           ]);
         }
-
-        this.loading.set(false);
       },
-      error: () => this.loading.set(false)
+      error: () => { /* loading cleared in finalize */ }
     });
   }
 

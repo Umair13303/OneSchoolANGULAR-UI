@@ -4,6 +4,9 @@ import { Router, RouterModule } from '@angular/router';
 import { CurriculumService } from '../../../core/services/curriculum.service';
 import { MenuService } from '../../../core/services/menu.service';
 import { CoursePlanListDto, TeacherCourseSlotDto } from '../../../core/models/curriculum.model';
+import { Button } from 'primeng/button';
+import { Tag } from 'primeng/tag';
+import { ProgressBar } from 'primeng/progressbar';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
@@ -16,7 +19,8 @@ import { catchError } from 'rxjs/operators';
   standalone: true,
   imports: [
     CommonModule, RouterModule,
-    PageHeaderComponent, LoadingComponent, EmptyStateComponent
+    PageHeaderComponent, LoadingComponent, EmptyStateComponent,
+    Button, Tag, ProgressBar
   ],
   template: `
     <div class="os-page compact mc-page">
@@ -27,7 +31,7 @@ import { catchError } from 'rxjs/operators';
         subtitle="Build lessons for your classes, then teach from Classroom" />
 
       @if (bannerError()) {
-        <div class="banner err">{{ bannerError() }}</div>
+        <div class="mb-3 rounded-[10px] bg-red-50 px-3.5 py-2.5 text-[0.88rem] font-semibold text-red-700">{{ bannerError() }}</div>
       }
 
       @if (loading()) { <app-loading /> }
@@ -54,7 +58,7 @@ import { catchError } from 'rxjs/operators';
                     <span class="mc-icon start" aria-hidden="true">
                       <span class="material-icons-round">auto_stories</span>
                     </span>
-                    <span class="mc-pill new">New</span>
+                    <p-tag value="New" severity="info" [rounded]="true" />
                   </div>
                   <strong class="mc-title">{{ s.subjectName }}</strong>
                   <span class="mc-meta">{{ classLabel(s) }} · {{ s.yearLabel }}</span>
@@ -95,9 +99,7 @@ import { catchError } from 'rxjs/operators';
                         {{ c.status === 'Published' ? 'menu_book' : 'edit_note' }}
                       </span>
                     </span>
-                    <span class="mc-pill" [attr.data-status]="c.status">
-                      {{ c.status === 'Draft' ? 'Not published' : c.status }}
-                    </span>
+                    <p-tag [value]="c.status === 'Draft' ? 'Not published' : c.status" [severity]="c.status === 'Published' ? 'success' : c.status === 'Draft' ? 'warn' : 'secondary'" [rounded]="true" />
                   </div>
 
                   <h3 class="mc-title">{{ heading(c) }}</h3>
@@ -114,9 +116,7 @@ import { catchError } from 'rxjs/operators';
                   </div>
 
                   @if (c.topicCount) {
-                    <div class="mc-bar" aria-hidden="true">
-                      <div class="mc-fill" [style.width.%]="pct(c)"></div>
-                    </div>
+                    <p-progressbar class="mt-1.5 block" [value]="pct(c)" [showValue]="false" [style]="{ height: '6px' }" />
                   }
 
                   @if (c.status === 'Draft' && c.topicCount === 0) {
@@ -126,13 +126,19 @@ import { catchError } from 'rxjs/operators';
                   }
 
                   <div class="mc-actions">
-                    <a class="btn-primary mc-btn"
-                       [routerLink]="['/curriculum/plans', c.coursePlanId]">
-                      {{ c.status === 'Draft' && c.topicCount === 0 ? 'Add content' : 'Edit' }}
-                    </a>
+                    <p-button class="mc-btn"
+                              styleClass="w-full"
+                              [label]="c.status === 'Draft' && c.topicCount === 0 ? 'Add content' : 'Edit'"
+                              icon="pi pi-pencil"
+                              [routerLink]="['/curriculum/plans', c.coursePlanId]" />
                     @if (c.status === 'Published') {
-                      <a class="btn-secondary mc-btn"
-                         [routerLink]="['/curriculum/workspace', c.coursePlanId]">Teach</a>
+                      <p-button class="mc-btn"
+                                styleClass="w-full"
+                                label="Teach"
+                                icon="pi pi-play"
+                                severity="secondary"
+                                [outlined]="true"
+                                [routerLink]="['/curriculum/workspace', c.coursePlanId]" />
                     }
                   </div>
                 </article>
@@ -145,11 +151,6 @@ import { catchError } from 'rxjs/operators';
   `,
   styles: [`
     :host { display: block; }
-
-    .banner.err {
-      margin-bottom: .75rem; padding: .65rem .85rem; border-radius: 10px;
-      background: #fef2f2; color: #b91c1c; font-size: .88rem; font-weight: 600;
-    }
 
     .mc-sec { margin-bottom: 1.5rem; }
 
@@ -235,15 +236,6 @@ import { catchError } from 'rxjs/operators';
     .mc-icon.pub { background: #dcfce7; color: #15803d; }
     .mc-icon .material-icons-round { font-size: 22px; }
 
-    .mc-pill {
-      font-size: .68rem; font-weight: 800; letter-spacing: .02em;
-      padding: .2rem .55rem; border-radius: 999px;
-      background: #f1f5f9; color: #475569;
-    }
-    .mc-pill.new { background: #dbeafe; color: #1d4ed8; }
-    .mc-pill[data-status="Published"] { background: #dcfce7; color: #166534; }
-    .mc-pill[data-status="Draft"] { background: #fef3c7; color: #92400e; }
-
     .mc-title {
       margin: 0;
       font-size: 1.02rem;
@@ -256,15 +248,6 @@ import { catchError } from 'rxjs/operators';
       font-size: .8rem; color: #64748b; line-height: 1.35;
     }
     .dot { color: #cbd5e1; }
-
-    .mc-bar {
-      margin-top: .35rem;
-      height: 6px;
-      background: #f1f5f9;
-      border-radius: 999px;
-      overflow: hidden;
-    }
-    .mc-fill { height: 100%; background: #16a34a; border-radius: inherit; }
 
     .mc-hint {
       margin: .35rem 0 0;
@@ -296,13 +279,7 @@ import { catchError } from 'rxjs/operators';
     .mc-actions:has(> :nth-child(2)) {
       grid-template-columns: 1fr 1fr;
     }
-    .mc-btn {
-      width: 100%;
-      justify-content: center;
-      text-align: center;
-      min-height: 38px;
-      font-weight: 700 !important;
-    }
+    .mc-btn { display: block; width: 100%; }
 
     .soft { background: #f8fafc; }
 

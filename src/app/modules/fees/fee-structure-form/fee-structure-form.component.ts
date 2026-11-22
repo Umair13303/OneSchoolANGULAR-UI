@@ -3,6 +3,11 @@ import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { forkJoin } from 'rxjs';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
+import { InputNumber } from 'primeng/inputnumber';
+import { Tooltip } from 'primeng/tooltip';
 import { FeeService } from '../../../core/services/fee.service';
 import { AcademicService } from '../../../core/services/academic.service';
 import { FeeTypeDto, FEE_CATEGORIES } from '../../../core/models/fee.model';
@@ -14,13 +19,17 @@ interface RowError { feeTypeId?: boolean; amount?: boolean; }
 @Component({
   selector: 'app-fee-structure-form',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, Button, Select, InputText, InputNumber, Tooltip],
   template: `
     <!-- Page Header -->
     <div class="pg-header">
-      <button class="back-btn" (click)="cancel()" title="Back to Fee Structures">
-        <span class="material-icons-round">arrow_back</span>
-      </button>
+      <p-button
+        icon="pi pi-arrow-left"
+        severity="secondary"
+        [outlined]="true"
+        ariaLabel="Back to Fee Structures"
+        pTooltip="Back to Fee Structures"
+        (onClick)="cancel()" />
       <div>
         <h1 class="pg-title">Create Fee Structure</h1>
         <p class="pg-sub">Define fee types and amounts for a class and academic year</p>
@@ -43,27 +52,34 @@ interface RowError { feeTypeId?: boolean; amount?: boolean; }
           <div class="row-2">
             <div class="field">
               <label>Academic Year <span class="req">*</span></label>
-              <select [(ngModel)]="yearId" (change)="onYearChange()">
-                <option [ngValue]="null">Select year…</option>
-                @for (y of years(); track y.academicYearId) {
-                  <option [ngValue]="y.academicYearId">{{ y.yearLabel }}</option>
-                }
-              </select>
+              <p-select
+                class="w-full"
+                [options]="years()"
+                optionLabel="yearLabel"
+                optionValue="academicYearId"
+                placeholder="Select year…"
+                appendTo="body"
+                [(ngModel)]="yearId"
+                (onChange)="onYearChange()" />
             </div>
             <div class="field">
               <label>Class <span class="req">*</span></label>
-              <select [(ngModel)]="classId" (change)="onClassChange()" [disabled]="!yearId">
-                <option [ngValue]="null">{{ yearId ? 'Select class…' : 'Pick a year first' }}</option>
-                @for (c of classes(); track c.classId) {
-                  <option [ngValue]="c.classId">{{ c.className }}</option>
-                }
-              </select>
+              <p-select
+                class="w-full"
+                [options]="classes()"
+                optionLabel="className"
+                optionValue="classId"
+                [placeholder]="yearId ? 'Select class…' : 'Pick a year first'"
+                appendTo="body"
+                [disabled]="!yearId"
+                [(ngModel)]="classId"
+                (onChange)="onClassChange()" />
             </div>
           </div>
 
           <div class="field">
             <label>Structure Title <span class="req">*</span></label>
-            <input [(ngModel)]="title" placeholder="e.g. Class 1 (2024-25)"
+            <input pInputText class="w-full" [(ngModel)]="title" placeholder="e.g. Class 1 (2024-25)"
               [class.inp-err]="titleError" />
             @if (titleError) { <span class="err-msg">Title is required.</span> }
             @else { <span class="hint"><span class="material-icons-round" style="font-size:12px;vertical-align:-2px">info</span> Auto-filled when you select a class. Used for challan &amp; fee assignment.</span> }
@@ -88,13 +104,16 @@ interface RowError { feeTypeId?: boolean; amount?: boolean; }
           @for (row of feeRows; track $index; let i = $index) {
             <div class="fee-row" [class.fee-row-err]="rowErrors[i]?.feeTypeId || rowErrors[i]?.amount">
               <div class="rt-wrap">
-                <select [(ngModel)]="row.feeTypeId" (change)="onRowTypeChange(i)"
-                  [class.inp-err]="rowErrors[i]?.feeTypeId">
-                  <option [ngValue]="null">Select fee type…</option>
-                  @for (ft of feeTypes(); track ft.feeTypeId) {
-                    <option [ngValue]="ft.feeTypeId">{{ ft.name }}</option>
-                  }
-                </select>
+                <p-select
+                  class="w-full"
+                  [options]="feeTypes()"
+                  optionLabel="name"
+                  optionValue="feeTypeId"
+                  placeholder="Select fee type…"
+                  appendTo="body"
+                  [invalid]="!!rowErrors[i]?.feeTypeId"
+                  [(ngModel)]="row.feeTypeId"
+                  (onChange)="onRowTypeChange(i)" />
                 @if (rowCategory(i)) {
                   <span [class]="'cat-tag cat-' + rowCategory(i).toLowerCase()">
                     {{ feeCategoryLabel(rowCategory(i)) }}
@@ -102,23 +121,37 @@ interface RowError { feeTypeId?: boolean; amount?: boolean; }
                 }
               </div>
 
-              <div class="amt-wrap" [class.inp-err-wrap]="rowErrors[i]?.amount">
-                <span class="curr">PKR</span>
-                <input type="number" [(ngModel)]="row.amount"
-                  placeholder="0" min="1"
-                  (change)="rowErrors[i] && (rowErrors[i].amount = false)" />
-              </div>
+              <p-inputnumber
+                [(ngModel)]="row.amount"
+                prefix="PKR "
+                placeholder="0"
+                [min]="1"
+                [useGrouping]="false"
+                [invalid]="!!rowErrors[i]?.amount"
+                styleClass="w-full"
+                inputStyleClass="w-full text-right"
+                (onInput)="rowErrors[i] && (rowErrors[i].amount = false)" />
 
-              <button class="btn-del" (click)="removeRow(i)"
-                [disabled]="feeRows.length === 1" title="Remove">
-                <span class="material-icons-round">delete_outline</span>
-              </button>
+              <p-button
+                icon="pi pi-trash"
+                severity="danger"
+                [outlined]="true"
+                size="small"
+                ariaLabel="Remove"
+                pTooltip="Remove"
+                [disabled]="feeRows.length === 1"
+                (onClick)="removeRow(i)" />
             </div>
           }
 
-          <button class="btn-add" (click)="addRow()">
-            <span class="material-icons-round">add</span> Add Fee Type
-          </button>
+          <p-button
+            class="mt-2.5 block"
+            styleClass="w-full"
+            label="Add Fee Type"
+            icon="pi pi-plus"
+            severity="secondary"
+            [outlined]="true"
+            (onClick)="addRow()" />
         </div>
 
         <!-- Error -->
@@ -129,15 +162,13 @@ interface RowError { feeTypeId?: boolean; amount?: boolean; }
         }
 
         <!-- Actions -->
-        <div class="actions">
-          <button class="btn-secondary" (click)="cancel()">Cancel</button>
-          <button class="btn-primary" (click)="save()" [disabled]="saving()">
-            @if (saving()) {
-              <span class="material-icons-round spin">autorenew</span> Saving…
-            } @else {
-              <span class="material-icons-round">add_circle</span> Create Structure
-            }
-          </button>
+        <div class="actions flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="cancel()" />
+          <p-button
+            [label]="saving() ? 'Saving…' : 'Create Structure'"
+            [icon]="saving() ? 'pi pi-spin pi-spinner' : 'pi pi-plus-circle'"
+            [disabled]="saving()"
+            (onClick)="save()" />
         </div>
       </div>
 

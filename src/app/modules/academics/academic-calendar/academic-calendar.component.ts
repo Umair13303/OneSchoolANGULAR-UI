@@ -2,7 +2,13 @@ import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Button } from 'primeng/button';
+import { InputText } from 'primeng/inputtext';
+import { Textarea } from 'primeng/textarea';
+import { Dialog } from 'primeng/dialog';
+import { Tooltip } from 'primeng/tooltip';
 import { AcademicService } from '../../../core/services/academic.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { AcademicYear, AcademicCalendarEvent, CalendarEventType, CreateCalendarEventDto, CreateCalendarEventTypeDto } from '../../../core/models/academic.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { DatePickerComponent } from '../../../shared/components/date-picker/date-picker.component';
@@ -17,41 +23,55 @@ const ICON_OPTIONS = [
 @Component({
   selector: 'app-academic-calendar',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent, LoadingComponent, DatePickerComponent],
+  imports: [
+    CommonModule, FormsModule, PageHeaderComponent, LoadingComponent, DatePickerComponent,
+    Button, InputText, Textarea, Dialog, Tooltip
+  ],
   template: `
+    <div class="os-page compact">
     <app-page-header
       [title]="year()?.yearLabel ? year()!.yearLabel + ' — Academic Calendar' : 'Academic Calendar'"
-      subtitle="Manage holidays, exams, sports days and other events">
-      <button class="btn-secondary" (click)="router.navigate(['/academics/years'])">
-        <span class="material-icons-round" style="font-size:16px">arrow_back</span> Back
-      </button>
-      <button class="btn-outline" (click)="showTypesPanel.set(!showTypesPanel())">
-        <span class="material-icons-round" style="font-size:16px">tune</span> Event Types
-      </button>
-      <button class="btn-primary" (click)="openAdd()">+ Add Event</button>
+      [dense]="true">
+      @if (canManage()) {
+        <p-button
+          label="Back"
+          icon="pi pi-arrow-left"
+          severity="secondary"
+          [outlined]="true"
+          (onClick)="router.navigate(['/academics/years'])" />
+        <p-button
+          label="Event Types"
+          icon="pi pi-sliders-h"
+          severity="secondary"
+          [outlined]="true"
+          (onClick)="showTypesPanel.set(!showTypesPanel())" />
+        <p-button label="Add Event" icon="pi pi-plus" (onClick)="openAdd()" />
+      }
     </app-page-header>
 
     <!-- Event Types management panel -->
-    @if (showTypesPanel()) {
-      <div class="types-panel card">
-        <div class="types-panel-hd">
+    @if (canManage() && showTypesPanel()) {
+      <div class="os-stage">
+        <div class="os-stage-bar">
           <div>
             <div class="types-panel-title">Event Types</div>
             <div class="types-panel-sub">Customize categories for calendar events</div>
           </div>
-          <button class="btn-primary btn-sm" (click)="openAddType()">+ Add Type</button>
+          <p-button label="Add Type" icon="pi pi-plus" size="small" (onClick)="openAddType()" />
         </div>
 
-        <div class="types-list">
+        <div class="os-stage-body flex flex-col">
           @for (t of eventTypes(); track t.calendarEventTypeId) {
             <div class="type-row">
               <div class="type-badge-preview" [style.background]="t.color + '22'" [style.color]="t.color">
                 <span class="material-icons-round">{{ t.icon }}</span>
               </div>
               <span class="type-name">{{ t.name }}</span>
-              <div class="type-row-actions">
-                <button class="btn-icon" (click)="openEditType(t)"><span class="material-icons-round">edit</span></button>
-                <button class="btn-icon danger" (click)="deleteType(t)"><span class="material-icons-round">delete</span></button>
+              <div class="flex gap-1">
+                <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" severity="secondary"
+                          ariaLabel="Edit type" pTooltip="Edit" (onClick)="openEditType(t)" />
+                <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger"
+                          ariaLabel="Delete type" pTooltip="Delete" (onClick)="deleteType(t)" />
               </div>
             </div>
           }
@@ -61,30 +81,37 @@ const ICON_OPTIONS = [
 
     @if (loading()) { <app-loading /> }
     @else {
+      <div class="os-stage">
+        <!-- Event type filter tabs -->
+        <div class="os-stage-bar">
+          <div class="type-tabs">
+            <button type="button" class="type-tab" [class.active]="filterTypeId() === null" (click)="filterTypeId.set(null)">
+              <span class="material-icons-round">grid_view</span> All
+              <span class="tab-count">{{ events().length }}</span>
+            </button>
+            @for (t of eventTypes(); track t.calendarEventTypeId) {
+              <button type="button" class="type-tab" [class.active]="filterTypeId() === t.calendarEventTypeId"
+                  (click)="filterTypeId.set(t.calendarEventTypeId)"
+                  [style.--tc]="t.color" [style.--tb]="t.color + '18'">
+                <span class="material-icons-round">{{ t.icon }}</span>
+                {{ t.name }}
+                <span class="tab-count">{{ countByType(t.calendarEventTypeId) }}</span>
+              </button>
+            }
+          </div>
+        </div>
 
-      <!-- Event type filter tabs -->
-      <div class="type-tabs">
-        <button class="type-tab" [class.active]="filterTypeId() === null" (click)="filterTypeId.set(null)">
-          <span class="material-icons-round">grid_view</span> All
-          <span class="tab-count">{{ events().length }}</span>
-        </button>
-        @for (t of eventTypes(); track t.calendarEventTypeId) {
-          <button class="type-tab" [class.active]="filterTypeId() === t.calendarEventTypeId"
-              (click)="filterTypeId.set(t.calendarEventTypeId)"
-              [style.--tc]="t.color" [style.--tb]="t.color + '18'">
-            <span class="material-icons-round">{{ t.icon }}</span>
-            {{ t.name }}
-            <span class="tab-count">{{ countByType(t.calendarEventTypeId) }}</span>
-          </button>
-        }
-      </div>
-
+        <div class="os-stage-body">
       @if (filtered().length === 0) {
-        <div class="empty-state card">
+        <div class="empty-state">
           <span class="material-icons-round empty-icon">event_note</span>
           <div class="empty-title">No events yet</div>
           <div class="empty-sub">Add holidays, exams and other key dates for this academic year.</div>
-          <button class="btn-primary" style="margin-top:16px" (click)="openAdd()">+ Add First Event</button>
+          @if (canManage()) {
+            @if (canManage()) {
+              <p-button class="mt-3" label="Add First Event" icon="pi pi-plus" size="small" (onClick)="openAdd()" />
+            }
+          }
         </div>
       } @else {
         @for (group of groupedEvents(); track group.month) {
@@ -94,7 +121,7 @@ const ICON_OPTIONS = [
               {{ group.month }}
               <span class="month-count">{{ group.events.length }} event{{ group.events.length !== 1 ? 's' : '' }}</span>
             </div>
-            <div class="events-list card">
+            <div class="events-list">
               @for (e of group.events; track e.academicCalendarEventId; let last = $last) {
                 <div class="event-row" [class.last]="last">
                   <div class="event-type-badge"
@@ -119,226 +146,260 @@ const ICON_OPTIONS = [
                       <span class="event-date-to">{{ e.endDate | date:'dd MMM' }}</span>
                     }
                   </div>
-                  <div class="event-actions">
-                    <button class="btn-icon" (click)="openEdit(e)"><span class="material-icons-round">edit</span></button>
-                    <button class="btn-icon danger" (click)="confirmDelete(e)"><span class="material-icons-round">delete</span></button>
-                  </div>
+                  @if (canManage()) {
+                    <div class="flex shrink-0 gap-1">
+                      <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" severity="secondary"
+                                ariaLabel="Edit event" pTooltip="Edit" (onClick)="openEdit(e)" />
+                      <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger"
+                                ariaLabel="Delete event" pTooltip="Delete" (onClick)="confirmDelete(e)" />
+                    </div>
+                  }
                 </div>
               }
             </div>
           </div>
         }
       }
+        </div>
+      </div>
     }
+    </div>
 
-    <!-- Add/Edit Event Modal -->
-    @if (showModal()) {
-      <div class="modal-overlay" (click)="closeModal()">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <div class="modal-header">
-            @if (selectedType()) {
-              <span class="material-icons-round modal-hd-icon" [style.color]="selectedType()!.color">{{ selectedType()!.icon }}</span>
-            }
-            <h3>{{ editingId() ? 'Edit Event' : 'Add Event' }}</h3>
-          </div>
+    <!-- Add/Edit Event Dialog -->
+    <p-dialog
+      [visible]="showModal()"
+      (visibleChange)="showModal.set($event)"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '30rem' }"
+      [breakpoints]="{ '640px': '96vw' }">
 
-          <div class="field">
-            <label>Event Type *</label>
-            @if (eventTypes().length === 0) {
-              <p class="hint-msg">No event types yet. <button class="link-btn" (click)="closeModal(); showTypesPanel.set(true)">Add one first →</button></p>
-            } @else {
-              <div class="type-grid">
-                @for (t of eventTypes(); track t.calendarEventTypeId) {
-                  <div class="type-option"
-                      [class.selected]="form.calendarEventTypeId === t.calendarEventTypeId"
-                      [style.--tc]="t.color" [style.--tb]="t.color + '18'"
-                      (click)="form.calendarEventTypeId = t.calendarEventTypeId">
-                    <span class="material-icons-round" [style.color]="t.color">{{ t.icon }}</span>
-                    <span>{{ t.name }}</span>
-                  </div>
-                }
+      <ng-template #header>
+        <div class="flex items-center gap-2.5">
+          @if (selectedType()) {
+            <span class="material-icons-round modal-hd-icon" [style.color]="selectedType()!.color">{{ selectedType()!.icon }}</span>
+          }
+          <h3 class="dlg-title">{{ editingId() ? 'Edit Event' : 'Add Event' }}</h3>
+        </div>
+      </ng-template>
+
+      <div class="flex flex-col gap-1.5 mb-3.5">
+        <label class="lbl">Event Type *</label>
+        @if (eventTypes().length === 0) {
+          <p class="hint-msg">No event types yet. <p-button label="Add one first →" [link]="true" size="small" (onClick)="closeModal(); showTypesPanel.set(true)" /></p>
+        } @else {
+          <div class="type-grid">
+            @for (t of eventTypes(); track t.calendarEventTypeId) {
+              <div class="type-option"
+                  [class.selected]="form.calendarEventTypeId === t.calendarEventTypeId"
+                  [style.--tc]="t.color" [style.--tb]="t.color + '18'"
+                  (click)="form.calendarEventTypeId = t.calendarEventTypeId">
+                <span class="material-icons-round" [style.color]="t.color">{{ t.icon }}</span>
+                <span>{{ t.name }}</span>
               </div>
             }
           </div>
+        }
+      </div>
 
-          <div class="field">
-            <label>Title *</label>
-            <input [(ngModel)]="form.title" placeholder="e.g. Eid ul Fitr" />
-          </div>
+      <div class="flex flex-col gap-1.5 mb-3.5">
+        <label class="lbl" for="ev-title">Title *</label>
+        <input pInputText id="ev-title" class="w-full" [(ngModel)]="form.title" placeholder="e.g. Eid ul Fitr" />
+      </div>
 
-          <div class="field-row">
-            <div class="field">
-              <label>Start Date *</label>
-              <app-date-picker [(ngModel)]="form.startDate" (dateChange)="onStartChange()" />
-            </div>
-            <div class="field">
-              <label>End Date <span class="optional">(optional)</span></label>
-              <app-date-picker [(ngModel)]="form.endDate" [min]="form.startDate" />
-            </div>
-          </div>
-
-          <div class="field">
-            <label>Description <span class="optional">(optional)</span></label>
-            <textarea [(ngModel)]="form.description" rows="2" placeholder="Any additional notes…"></textarea>
-          </div>
-
-          @if (modalError()) { <p class="error-msg">{{ modalError() }}</p> }
-          <div class="modal-actions">
-            <button class="btn-secondary" (click)="closeModal()">Cancel</button>
-            <button class="btn-primary" (click)="save()" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
-          </div>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div class="flex flex-col gap-1.5 mb-3.5">
+          <label class="lbl">Start Date *</label>
+          <app-date-picker [(ngModel)]="form.startDate" (dateChange)="onStartChange()" />
+        </div>
+        <div class="flex flex-col gap-1.5 mb-3.5">
+          <label class="lbl">End Date <span class="optional">(optional)</span></label>
+          <app-date-picker [(ngModel)]="form.endDate" [min]="form.startDate" />
         </div>
       </div>
-    }
 
-    <!-- Add/Edit Event Type Modal -->
-    @if (showTypeModal()) {
-      <div class="modal-overlay" (click)="closeTypeModal()">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <h3>{{ editingTypeId() ? 'Edit Event Type' : 'Add Event Type' }}</h3>
+      <div class="flex flex-col gap-1.5 mb-3.5">
+        <label class="lbl" for="ev-desc">Description <span class="optional">(optional)</span></label>
+        <textarea pTextarea id="ev-desc" class="w-full" [(ngModel)]="form.description" rows="2" [autoResize]="true" placeholder="Any additional notes…"></textarea>
+      </div>
 
-          <div class="field">
-            <label>Name *</label>
-            <input [(ngModel)]="typeForm.name" placeholder="e.g. Parent-Teacher Meeting" />
-          </div>
+      @if (modalError()) { <p class="error-msg">{{ modalError() }}</p> }
 
-          <div class="field">
-            <label>Color *</label>
-            <div class="color-row">
-              @for (c of colorPalette; track c) {
-                <div class="color-swatch" [style.background]="c"
-                    [class.selected]="typeForm.color === c"
-                    (click)="typeForm.color = c"></div>
-              }
-              <input type="color" [(ngModel)]="typeForm.color" class="color-custom" title="Custom color" />
-            </div>
-          </div>
+      <ng-template #footer>
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="closeModal()" />
+          <p-button
+            [label]="saving() ? 'Saving…' : 'Save'"
+            icon="pi pi-check"
+            [loading]="saving()"
+            [disabled]="saving()"
+            (onClick)="save()" />
+        </div>
+      </ng-template>
+    </p-dialog>
 
-          <div class="field">
-            <label>Icon *</label>
-            <div class="icon-grid">
-              @for (ic of iconOptions; track ic) {
-                <div class="icon-option" [class.selected]="typeForm.icon === ic"
-                    [style.color]="typeForm.color"
-                    (click)="typeForm.icon = ic" [title]="ic">
-                  <span class="material-icons-round">{{ ic }}</span>
-                </div>
-              }
-            </div>
-          </div>
+    <!-- Add/Edit Event Type Dialog -->
+    <p-dialog
+      [header]="editingTypeId() ? 'Edit Event Type' : 'Add Event Type'"
+      [visible]="showTypeModal()"
+      (visibleChange)="showTypeModal.set($event)"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '32rem' }"
+      [breakpoints]="{ '640px': '96vw' }">
 
-          <div class="type-preview">
-            <div class="type-preview-badge" [style.background]="typeForm.color + '22'" [style.color]="typeForm.color">
-              <span class="material-icons-round">{{ typeForm.icon }}</span>
-            </div>
-            <span class="type-preview-name">{{ typeForm.name || 'Preview' }}</span>
-          </div>
+      <div class="flex flex-col gap-1.5 mb-3.5">
+        <label class="lbl" for="type-name">Name *</label>
+        <input pInputText id="type-name" class="w-full" [(ngModel)]="typeForm.name" placeholder="e.g. Parent-Teacher Meeting" />
+      </div>
 
-          @if (typeModalError()) { <p class="error-msg">{{ typeModalError() }}</p> }
-          <div class="modal-actions">
-            <button class="btn-secondary" (click)="closeTypeModal()">Cancel</button>
-            <button class="btn-primary" (click)="saveType()" [disabled]="savingType()">{{ savingType() ? 'Saving…' : 'Save' }}</button>
-          </div>
+      <div class="flex flex-col gap-1.5 mb-3.5">
+        <label class="lbl">Color *</label>
+        <div class="flex flex-wrap items-center gap-2">
+          @for (c of colorPalette; track c) {
+            <div class="color-swatch" [style.background]="c"
+                [class.selected]="typeForm.color === c"
+                (click)="typeForm.color = c"></div>
+          }
+          <input type="color" [(ngModel)]="typeForm.color" class="color-custom" title="Custom color" />
         </div>
       </div>
-    }
+
+      <div class="flex flex-col gap-1.5 mb-3.5">
+        <label class="lbl">Icon *</label>
+        <div class="icon-grid">
+          @for (ic of iconOptions; track ic) {
+            <div class="icon-option" [class.selected]="typeForm.icon === ic"
+                [style.color]="typeForm.color"
+                (click)="typeForm.icon = ic" [title]="ic">
+              <span class="material-icons-round">{{ ic }}</span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="type-preview">
+        <div class="type-preview-badge" [style.background]="typeForm.color + '22'" [style.color]="typeForm.color">
+          <span class="material-icons-round">{{ typeForm.icon }}</span>
+        </div>
+        <span class="type-preview-name">{{ typeForm.name || 'Preview' }}</span>
+      </div>
+
+      @if (typeModalError()) { <p class="error-msg">{{ typeModalError() }}</p> }
+
+      <ng-template #footer>
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="closeTypeModal()" />
+          <p-button
+            [label]="savingType() ? 'Saving…' : 'Save'"
+            icon="pi pi-check"
+            [loading]="savingType()"
+            [disabled]="savingType()"
+            (onClick)="saveType()" />
+        </div>
+      </ng-template>
+    </p-dialog>
 
     <!-- Delete Event Confirmation -->
-    @if (deleteTarget()) {
-      <div class="modal-overlay" (click)="deleteTarget.set(null)">
-        <div class="modal confirm-modal" (click)="$event.stopPropagation()">
-          <span class="material-icons-round confirm-icon">delete_forever</span>
-          <h3>Delete Event?</h3>
-          <p>Delete <strong>{{ deleteTarget()!.title }}</strong>? This cannot be undone.</p>
-          <div class="modal-actions">
-            <button class="btn-secondary" (click)="deleteTarget.set(null)">Cancel</button>
-            <button class="btn-danger" (click)="doDelete()" [disabled]="saving()">{{ saving() ? 'Deleting…' : 'Delete' }}</button>
-          </div>
-        </div>
+    <p-dialog
+      header="Delete Event?"
+      [visible]="!!deleteTarget()"
+      (visibleChange)="!$event && deleteTarget.set(null)"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '24rem' }"
+      [breakpoints]="{ '640px': '96vw' }">
+
+      <div class="flex flex-col items-center text-center">
+        <span class="material-icons-round confirm-icon">delete_forever</span>
+        <p class="confirm-text">Delete <strong>{{ deleteTarget()?.title }}</strong>? This cannot be undone.</p>
       </div>
-    }
+
+      <ng-template #footer>
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="deleteTarget.set(null)" />
+          <p-button
+            [label]="saving() ? 'Deleting…' : 'Delete'"
+            icon="pi pi-trash"
+            severity="danger"
+            [loading]="saving()"
+            [disabled]="saving()"
+            (onClick)="doDelete()" />
+        </div>
+      </ng-template>
+    </p-dialog>
   `,
   styles: [`
     /* ── Types panel ─────────────────────────────────────────── */
-    .types-panel { padding:0; overflow:hidden; margin-bottom:20px; }
-    .types-panel-hd { display:flex; justify-content:space-between; align-items:center; padding:14px 18px; border-bottom:1px solid var(--border); }
     .types-panel-title { font-size:13px; font-weight:800; color:var(--t1); }
     .types-panel-sub { font-size:11px; color:var(--t4); margin-top:2px; }
-    .btn-sm { padding:6px 14px; font-size:12px; }
 
-    .types-list { display:flex; flex-direction:column; }
-    .type-row { display:flex; align-items:center; gap:12px; padding:10px 18px; border-bottom:1px solid var(--border); }
+    .type-row { display:flex; align-items:center; gap:10px; padding:6px 14px; border-bottom:1px solid var(--border); }
     .type-row:last-child { border-bottom:none; }
-    .type-badge-preview { width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-    .type-badge-preview .material-icons-round { font-size:18px; font-variation-settings:'FILL' 1; }
+    .type-badge-preview { width:28px; height:28px; border-radius:7px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .type-badge-preview .material-icons-round { font-size:16px; font-variation-settings:'FILL' 1; }
     .type-name { flex:1; font-size:13px; font-weight:600; color:var(--t1); }
-    .type-row-actions { display:flex; gap:4px; }
 
     /* ── Type filter tabs ────────────────────────────────────── */
-    .type-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
-    .type-tab { display:flex; align-items:center; gap:6px; padding:7px 14px; border:1px solid var(--border); border-radius:99px; background:var(--surface); cursor:pointer; font-size:12px; font-weight:600; color:var(--t3); transition:all .15s; }
-    .type-tab .material-icons-round { font-size:15px; }
+    .type-tabs { display:flex; gap:6px; flex-wrap:wrap; }
+    .type-tab { display:flex; align-items:center; gap:5px; padding:4px 11px; border:1px solid var(--border); border-radius:99px; background:var(--surface); cursor:pointer; font-size:12px; font-weight:600; color:var(--t3); transition:all .15s; }
+    .type-tab .material-icons-round { font-size:14px; }
     .type-tab:hover { border-color:var(--tc,var(--accent)); color:var(--tc,var(--accent)); background:var(--tb,var(--surface)); }
     .type-tab.active { background:var(--tc,var(--accent)); border-color:var(--tc,var(--accent)); color:#fff; }
     .tab-count { background:rgba(255,255,255,.25); padding:1px 6px; border-radius:99px; font-size:10px; }
     .type-tab:not(.active) .tab-count { background:var(--surface-2,#f1f5f9); color:var(--t4); }
 
     /* ── Empty state ─────────────────────────────────────────── */
-    .empty-state { display:flex; flex-direction:column; align-items:center; padding:64px 24px; text-align:center; }
-    .empty-icon { font-size:48px; color:var(--border); margin-bottom:12px; }
-    .empty-title { font-size:16px; font-weight:700; color:var(--t2); }
-    .empty-sub { font-size:13px; color:var(--t4); margin-top:6px; max-width:340px; }
+    .empty-state { display:flex; flex-direction:column; align-items:center; padding:28px 16px; text-align:center; }
+    .empty-icon { font-size:32px; color:var(--border); margin-bottom:6px; }
+    .empty-title { font-size:14px; font-weight:700; color:var(--t2); }
+    .empty-sub { font-size:12px; color:var(--t4); margin-top:4px; max-width:340px; }
 
     /* ── Month groups ────────────────────────────────────────── */
-    .month-group { margin-bottom:20px; }
-    .month-header { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:800; color:var(--t3); text-transform:uppercase; letter-spacing:.6px; margin-bottom:8px; padding:0 4px; }
-    .month-icon { font-size:15px; color:var(--accent); }
-    .month-count { font-size:10px; font-weight:600; color:var(--t4); background:var(--surface-2,#f1f5f9); padding:2px 8px; border-radius:99px; }
+    .month-group + .month-group { border-top:1px solid var(--border); }
+    .month-header { display:flex; align-items:center; gap:7px; font-size:11px; font-weight:800; color:var(--t3); text-transform:uppercase; letter-spacing:.6px; padding:6px 14px; background:var(--surface-2,#f8fafc); border-bottom:1px solid var(--border); }
+    .month-icon { font-size:14px; color:var(--accent); }
+    .month-count { font-size:10px; font-weight:600; color:var(--t4); background:var(--surface); padding:1px 7px; border-radius:99px; }
 
     /* ── Event rows ──────────────────────────────────────────── */
-    .events-list { padding:0; overflow:hidden; }
-    .event-row { display:flex; align-items:center; gap:14px; padding:14px 18px; border-bottom:1px solid var(--border); transition:background .12s; }
+    .events-list { padding:0; }
+    .event-row { display:flex; align-items:center; gap:10px; padding:6px 14px; border-bottom:1px solid var(--border); transition:background .12s; }
     .event-row.last { border-bottom:none; }
     .event-row:hover { background:var(--surface-2,#f8fafc); }
-    .event-type-badge { width:38px; height:38px; border-radius:10px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
-    .event-type-badge .material-icons-round { font-size:20px; font-variation-settings:'FILL' 1; }
+    .event-type-badge { width:30px; height:30px; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+    .event-type-badge .material-icons-round { font-size:17px; font-variation-settings:'FILL' 1; }
     .event-main { flex:1; min-width:0; }
-    .event-title { font-size:14px; font-weight:700; color:var(--t1); }
-    .event-meta { display:flex; align-items:center; gap:6px; margin-top:3px; flex-wrap:wrap; }
+    .event-title { font-size:13px; font-weight:700; color:var(--t1); }
+    .event-meta { display:flex; align-items:center; gap:6px; margin-top:1px; flex-wrap:wrap; }
     .event-type-label { font-size:11px; font-weight:700; }
     .event-desc-dot { color:var(--border); }
     .event-desc { font-size:11px; color:var(--t4); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:200px; }
     .event-dates { display:flex; align-items:center; gap:5px; flex-shrink:0; font-size:12px; font-weight:600; color:var(--t2); white-space:nowrap; }
     .event-date-arrow { color:var(--t4); }
-    .event-actions { display:flex; gap:4px; flex-shrink:0; }
 
-    /* ── Shared button/icon styles ───────────────────────────── */
-    .btn-icon { background:none; border:none; cursor:pointer; padding:5px; border-radius:6px; color:var(--t4); display:inline-flex; align-items:center; transition:background .15s,color .15s; }
-    .btn-icon:hover { background:var(--surface-2,#f1f5f9); color:var(--accent); }
-    .btn-icon.danger:hover { background:#fee2e2; color:#dc2626; }
-    .btn-icon .material-icons-round { font-size:18px; }
-    .btn-outline { display:flex; align-items:center; gap:6px; padding:8px 16px; border:1px solid var(--border); border-radius:8px; background:var(--surface); font-size:13px; font-weight:600; color:var(--t2); cursor:pointer; transition:all .15s; }
-    .btn-outline:hover { border-color:var(--accent); color:var(--accent); }
-
-    /* ── Event modal ─────────────────────────────────────────── */
-    .modal-header { display:flex; align-items:center; gap:10px; margin-bottom:18px; }
+    /* ── Dialog shared ───────────────────────────────────────── */
+    .lbl { font-size:12px; font-weight:700; color:var(--t2); }
+    .dlg-title { margin:0; font-size:16px; font-weight:800; color:var(--t1); }
     .modal-hd-icon { font-size:24px; font-variation-settings:'FILL' 1; }
-    .modal-header h3 { margin:0; font-size:16px; font-weight:800; color:var(--t1); }
+    .error-msg { color:#ef4444; font-size:12.5px; margin:8px 0 0; }
+    .optional { font-size:10px; color:var(--t4); font-weight:400; }
+    .hint-msg { font-size:13px; color:var(--t4); margin:0; display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+
+    /* ── Event dialog ────────────────────────────────────────── */
     .type-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
     @media(max-width:520px){ .type-grid { grid-template-columns:repeat(2,1fr); } }
     .type-option { display:flex; flex-direction:column; align-items:center; gap:5px; padding:10px 6px; border:2px solid var(--border); border-radius:10px; cursor:pointer; font-size:11px; font-weight:700; color:var(--t3); text-align:center; transition:all .15s; }
     .type-option .material-icons-round { font-size:20px; font-variation-settings:'FILL' 1; }
     .type-option:hover { border-color:var(--tc); background:var(--tb); }
     .type-option.selected { border-color:var(--tc); background:var(--tb); color:var(--t1); }
-    .field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    @media(max-width:480px){ .field-row { grid-template-columns:1fr; } }
-    .optional { font-size:10px; color:var(--t4); font-weight:400; }
-    textarea { resize:vertical; min-height:60px; }
-    .hint-msg { font-size:13px; color:var(--t4); margin:0; }
-    .link-btn { background:none; border:none; color:var(--accent); font-weight:700; cursor:pointer; font-size:13px; padding:0; }
 
-    /* ── Event Type modal ────────────────────────────────────── */
-    .color-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    /* ── Event Type dialog ───────────────────────────────────── */
     .color-swatch { width:28px; height:28px; border-radius:50%; cursor:pointer; transition:transform .15s; border:3px solid transparent; }
     .color-swatch:hover { transform:scale(1.15); }
     .color-swatch.selected { border-color:var(--t1); transform:scale(1.15); }
@@ -358,20 +419,19 @@ const ICON_OPTIONS = [
     .type-preview-badge .material-icons-round { font-size:20px; font-variation-settings:'FILL' 1; }
     .type-preview-name { font-size:14px; font-weight:700; color:var(--t1); }
 
-    /* Confirm modal */
-    .confirm-modal { text-align:center; max-width:360px; }
+    /* ── Delete confirm ──────────────────────────────────────── */
     .confirm-icon { font-size:48px; color:#dc2626; margin-bottom:10px; font-variation-settings:'FILL' 1; }
-    .confirm-modal h3 { font-size:18px; font-weight:800; color:var(--t1); margin:0 0 8px; }
-    .confirm-modal p { font-size:13px; color:var(--t3); margin-bottom:20px; }
-    .btn-danger { background:#dc2626; color:#fff; border:none; padding:9px 20px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; }
-    .btn-danger:hover { background:#b91c1c; }
-    .btn-danger:disabled { opacity:.6; cursor:not-allowed; }
+    .confirm-text { font-size:13px; color:var(--t3); margin:0; }
   `]
 })
 export class AcademicCalendarComponent implements OnInit {
   private route = inject(ActivatedRoute);
   readonly router = inject(Router);
   private svc = inject(AcademicService);
+  private auth = inject(AuthService);
+
+  /** Admin/principal/superadmin can edit; teachers/parents get read-only calendar. */
+  canManage = () => this.auth.hasRole('superadmin', 'admin', 'principal');
 
   readonly iconOptions = ICON_OPTIONS;
   readonly colorPalette = [
@@ -404,9 +464,10 @@ export class AcademicCalendarComponent implements OnInit {
 
   private yearId = 0;
 
-  selectedType = computed(() =>
-    this.eventTypes().find(t => t.calendarEventTypeId === this.form.calendarEventTypeId) ?? null
-  );
+  // Plain method (not computed): `form` is a non-signal object, so a computed would cache a stale type.
+  selectedType() {
+    return this.eventTypes().find(t => t.calendarEventTypeId === this.form.calendarEventTypeId) ?? null;
+  }
 
   filtered = computed(() => {
     const id = this.filterTypeId();
@@ -426,10 +487,17 @@ export class AcademicCalendarComponent implements OnInit {
   countByType(id: number) { return this.events().filter(e => e.calendarEventTypeId === id).length; }
 
   ngOnInit() {
-    this.yearId = Number(this.route.snapshot.paramMap.get('yearId'));
-    this.svc.getYears().subscribe(years => this.year.set(years.find(y => y.academicYearId === this.yearId) ?? null));
+    const routeYear = Number(this.route.snapshot.paramMap.get('yearId'));
+    this.svc.getYears().subscribe(years => {
+      const selected = routeYear
+        ? years.find(y => y.academicYearId === routeYear)
+        : (years.find(y => y.isActive) ?? years[0]);
+      this.year.set(selected ?? null);
+      this.yearId = selected?.academicYearId ?? 0;
+      if (this.yearId) this.loadEvents();
+      else this.loading.set(false);
+    });
     this.loadTypes();
-    this.loadEvents();
   }
 
   loadTypes() {

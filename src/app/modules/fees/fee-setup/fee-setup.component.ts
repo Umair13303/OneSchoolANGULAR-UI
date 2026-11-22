@@ -1,8 +1,16 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { forkJoin } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
+import { InputNumber } from 'primeng/inputnumber';
+import { Textarea } from 'primeng/textarea';
+import { Tag } from 'primeng/tag';
+import { Dialog } from 'primeng/dialog';
+import { Tooltip } from 'primeng/tooltip';
 import { FeeService } from '../../../core/services/fee.service';
 import { AcademicService } from '../../../core/services/academic.service';
 import {
@@ -17,7 +25,10 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
 @Component({
   selector: 'app-fee-setup',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, PageHeaderComponent, ConfirmDeleteComponent],
+  imports: [
+    CommonModule, ReactiveFormsModule, FormsModule, PageHeaderComponent, ConfirmDeleteComponent,
+    Button, Select, InputText, InputNumber, Textarea, Tag, Dialog, Tooltip
+  ],
   template: `
     <app-page-header title="Fee Setup" subtitle="Manage fee types, class fee structures and discount policies" />
 
@@ -31,9 +42,7 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
             <p>Define the categories of fees your school charges.</p>
           </div>
         </div>
-        <button class="btn-primary" (click)="openTypeModal()">
-          <span class="material-icons-round">add</span> Add Fee Type
-        </button>
+        <p-button label="Add Fee Type" icon="pi pi-plus" (onClick)="openTypeModal()" />
       </div>
       <table class="table">
         <thead><tr><th>Name</th><th>Category</th><th>Description</th><th>Status</th><th>Actions</th></tr></thead>
@@ -43,10 +52,12 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
               <td><strong>{{ ft.name }}</strong></td>
               <td><span [class]="'cat-badge cat-' + ft.feeCategory.toLowerCase()">{{ feeCategoryLabel(ft.feeCategory) }}</span></td>
               <td class="desc-cell">{{ ft.description || '—' }}</td>
-              <td><span [class]="'badge ' + (ft.isActive ? 'badge-green' : 'badge-gray')">{{ ft.isActive ? 'Active' : 'Inactive' }}</span></td>
-              <td class="actions">
-                <button class="icon-btn" (click)="editType(ft)" title="Edit"><span class="material-icons-round">edit</span></button>
-                <button class="icon-btn danger" (click)="deleteType(ft.feeTypeId)" title="Delete"><span class="material-icons-round">delete</span></button>
+              <td><p-tag [value]="ft.isActive ? 'Active' : 'Inactive'" [severity]="ft.isActive ? 'success' : 'secondary'" [rounded]="true" /></td>
+              <td>
+                <div class="flex items-center gap-1">
+                  <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" severity="secondary" ariaLabel="Edit" pTooltip="Edit" (onClick)="editType(ft)" />
+                  <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Delete" pTooltip="Delete" (onClick)="deleteType(ft.feeTypeId)" />
+                </div>
               </td>
             </tr>
           }
@@ -68,23 +79,31 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
           </div>
         </div>
         <div class="section-head-right">
-          <div class="filters">
-            <select [(ngModel)]="filterYearId" (change)="loadStructures()" [ngModelOptions]="{standalone: true}">
-              <option [ngValue]="null">All Years</option>
-              @for (y of years(); track y.academicYearId) {
-                <option [ngValue]="y.academicYearId">{{ y.yearLabel }}</option>
-              }
-            </select>
-            <select [(ngModel)]="filterClassId" (change)="loadStructures()" [ngModelOptions]="{standalone: true}">
-              <option [ngValue]="null">All Classes</option>
-              @for (c of classes(); track c.classId) {
-                <option [ngValue]="c.classId">{{ c.className }}</option>
-              }
-            </select>
+          <div class="filters flex flex-wrap items-center gap-2">
+            <p-select
+              class="min-w-[150px]"
+              [options]="years()"
+              optionLabel="yearLabel"
+              optionValue="academicYearId"
+              placeholder="All Years"
+              [showClear]="true"
+              appendTo="body"
+              [(ngModel)]="filterYearId"
+              [ngModelOptions]="{standalone: true}"
+              (onChange)="loadStructures()" />
+            <p-select
+              class="min-w-[150px]"
+              [options]="classes()"
+              optionLabel="className"
+              optionValue="classId"
+              placeholder="All Classes"
+              [showClear]="true"
+              appendTo="body"
+              [(ngModel)]="filterClassId"
+              [ngModelOptions]="{standalone: true}"
+              (onChange)="loadStructures()" />
           </div>
-          <button class="btn-primary" (click)="openStructureModal()">
-            <span class="material-icons-round">add</span> Add Structure
-          </button>
+          <p-button label="Add Structure" icon="pi pi-plus" (onClick)="openStructureModal()" />
         </div>
       </div>
 
@@ -122,10 +141,12 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
                   <td><strong>{{ fs.feeTypeName }}</strong></td>
                   <td><span [class]="'cat-badge cat-' + (fs.feeCategory || 'recurring').toLowerCase()">{{ feeCategoryLabel(fs.feeCategory || 'Recurring') }}</span></td>
                   <td style="text-align:right; font-family:monospace">{{ fs.amount | number:'1.0-0' }}</td>
-                  <td><span [class]="'badge ' + (fs.isActive ? 'badge-green' : 'badge-gray')">{{ fs.isActive ? 'Active' : 'Inactive' }}</span></td>
-                  <td class="actions">
-                    <button class="icon-btn" (click)="editStructure(fs)" title="Edit"><span class="material-icons-round">edit</span></button>
-                    <button class="icon-btn danger" (click)="deleteStructure(fs.feeStructureId)" title="Delete"><span class="material-icons-round">delete</span></button>
+                  <td><p-tag [value]="fs.isActive ? 'Active' : 'Inactive'" [severity]="fs.isActive ? 'success' : 'secondary'" [rounded]="true" /></td>
+                  <td>
+                    <div class="flex items-center gap-1">
+                      <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" severity="secondary" ariaLabel="Edit" pTooltip="Edit" (onClick)="editStructure(fs)" />
+                      <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Delete" pTooltip="Delete" (onClick)="deleteStructure(fs.feeStructureId)" />
+                    </div>
                   </td>
                 </tr>
               }
@@ -152,9 +173,7 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
             <p>Reusable discount rules — sibling, merit, need-based, full waiver, etc.</p>
           </div>
         </div>
-        <button class="btn-primary" (click)="openDiscountModal()">
-          <span class="material-icons-round">add</span> Add Policy
-        </button>
+        <p-button label="Add Policy" icon="pi pi-plus" (onClick)="openDiscountModal()" />
       </div>
 
       @if (!discountPolicies().length) {
@@ -177,10 +196,12 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
                 </td>
                 <td class="desc-cell">{{ dp.description || '—' }}</td>
                 <td>{{ dp.maxSiblingOrder ? dp.maxSiblingOrder + (dp.maxSiblingOrder === 1 ? 'st' : dp.maxSiblingOrder === 2 ? 'nd' : dp.maxSiblingOrder === 3 ? 'rd' : 'th') + ' child' : '—' }}</td>
-                <td><span [class]="'badge ' + (dp.isActive ? 'badge-green' : 'badge-gray')">{{ dp.isActive ? 'Active' : 'Inactive' }}</span></td>
-                <td class="actions">
-                  <button class="icon-btn" (click)="editDiscount(dp)" title="Edit"><span class="material-icons-round">edit</span></button>
-                  <button class="icon-btn danger" (click)="deleteDiscount(dp.discountPolicyId)" title="Delete"><span class="material-icons-round">delete</span></button>
+                <td><p-tag [value]="dp.isActive ? 'Active' : 'Inactive'" [severity]="dp.isActive ? 'success' : 'secondary'" [rounded]="true" /></td>
+                <td>
+                  <div class="flex items-center gap-1">
+                    <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" severity="secondary" ariaLabel="Edit" pTooltip="Edit" (onClick)="editDiscount(dp)" />
+                    <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Delete" pTooltip="Delete" (onClick)="deleteDiscount(dp.discountPolicyId)" />
+                  </div>
                 </td>
               </tr>
             }
@@ -189,313 +210,379 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
       }
     </div>
 
-    <!-- ── FEE TYPE MODAL ── -->
-    @if (showTypeModal()) {
-      <div class="fs-overlay" (click)="closeModals()">
-        <div class="fs-modal fs-modal-sm" (click)="$event.stopPropagation()">
-          <div class="fs-header">
-            <div class="fs-header-icon"><span class="material-icons-round">sell</span></div>
-            <div class="fs-header-text">
-              <h3>{{ editingTypeId() ? 'Edit' : 'Add' }} Fee Type</h3>
-              <p>{{ editingTypeId() ? 'Update this fee type.' : 'Define a new fee category.' }}</p>
-            </div>
-            <button class="fs-close" (click)="closeModals()"><span class="material-icons-round">close</span></button>
-          </div>
-          <form [formGroup]="typeForm" (ngSubmit)="saveType()" class="fs-body">
-            <div class="field" [class.invalid]="typeForm.get('name')?.invalid && typeForm.get('name')?.touched">
-              <label>Name *</label>
-              <input formControlName="name" placeholder="e.g. Tuition Fee" />
-              @if (typeForm.get('name')?.invalid && typeForm.get('name')?.touched) {
-                <span class="err">Name is required.</span>
-              }
-            </div>
-            <div class="field" [class.invalid]="typeForm.get('feeCategory')?.invalid && typeForm.get('feeCategory')?.touched">
-              <label>Fee Category *</label>
-              <select formControlName="feeCategory" (change)="onFeeCategoryChange()">
-                @for (cat of feeCategories; track cat.value) {
-                  <option [value]="cat.value">{{ cat.label }}</option>
-                }
-              </select>
-              @if (selectedCategoryDesc()) {
-                <span class="field-hint">{{ selectedCategoryDesc() }}</span>
-              }
-            </div>
-            <div class="field">
-              <label>Description</label>
-              <textarea formControlName="description" placeholder="Optional description" rows="3"></textarea>
-            </div>
-            @if (editingTypeId()) {
-              <div class="field">
-                <label>Status</label>
-                <select formControlName="isActive">
-                  <option [ngValue]="true">Active</option>
-                  <option [ngValue]="false">Inactive</option>
-                </select>
-              </div>
-            }
-            @if (modalError()) { <div class="alert error">{{ modalError() }}</div> }
-            <div class="fs-footer">
-              <button type="button" class="btn-secondary" (click)="closeModals()">Cancel</button>
-              <button type="submit" class="btn-primary" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
-            </div>
-          </form>
+        <!-- ── FEE TYPE MODAL ── -->
+    <p-dialog
+      [header]="(editingTypeId() ? 'Edit' : 'Add') + ' Fee Type'"
+      [visible]="showTypeModal()"
+      (visibleChange)="$event ? null : closeModals()"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '28rem' }"
+      [breakpoints]="{ '640px': '96vw' }">
+      <form [formGroup]="typeForm" (ngSubmit)="saveType()">
+        <p class="sub mb-3">{{ editingTypeId() ? 'Update this fee type.' : 'Define a new fee category.' }}</p>
+        <div class="field">
+          <label for="ft-name">Name *</label>
+          <input pInputText id="ft-name" class="w-full" formControlName="name" placeholder="e.g. Tuition Fee" />
+          @if (typeForm.get('name')?.invalid && typeForm.get('name')?.touched) {
+            <span class="err">Name is required.</span>
+          }
         </div>
-      </div>
-    }
+        <div class="field">
+          <label>Fee Category *</label>
+          <p-select
+            class="w-full"
+            [options]="feeCategories"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+            [overlayOptions]="{ baseZIndex: 10050 }"
+            formControlName="feeCategory"
+            (onChange)="onFeeCategoryChange()" />
+          @if (selectedCategoryDesc()) {
+            <span class="field-hint">{{ selectedCategoryDesc() }}</span>
+          }
+        </div>
+        <div class="field">
+          <label for="ft-desc">Description</label>
+          <textarea pTextarea id="ft-desc" class="w-full" formControlName="description" placeholder="Optional description" rows="3"></textarea>
+        </div>
+        @if (editingTypeId()) {
+          <div class="field">
+            <label>Status</label>
+            <p-select
+              class="w-full"
+              [options]="statusOptions"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              [overlayOptions]="{ baseZIndex: 10050 }"
+              formControlName="isActive" />
+          </div>
+        }
+        @if (modalError()) { <div class="alert error">{{ modalError() }}</div> }
+      </form>
+      <ng-template #footer>
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="closeModals()" />
+          <p-button [label]="saving() ? 'Saving…' : 'Save'" icon="pi pi-check" [loading]="saving()" [disabled]="saving()" (onClick)="saveType()" />
+        </div>
+      </ng-template>
+    </p-dialog>
 
     <!-- ── FEE STRUCTURE MODAL ── -->
-    @if (showStructureModal()) {
-      <div class="fs-overlay" (click)="closeModals()">
-        <div class="fs-modal" (click)="$event.stopPropagation()">
+    <p-dialog
+      [header]="editingStructureId() ? 'Edit Fee Structure' : 'Create Fee Structure'"
+      [visible]="showStructureModal()"
+      (visibleChange)="$event ? null : closeModals()"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '40rem' }"
+      [breakpoints]="{ '768px': '96vw' }">
+      @if (showStructureModal()) {
+        <div>
+          <p class="sub mb-3">{{ editingStructureId() ? 'Update amount or status for this fee line.' : 'Set up fee types and amounts for a class.' }}</p>
 
-          <!-- Header -->
-          <div class="fs-header">
-            <div class="fs-header-icon">
-              <span class="material-icons-round">{{ editingStructureId() ? 'edit_note' : 'receipt_long' }}</span>
-            </div>
-            <div class="fs-header-text">
-              <h3>{{ editingStructureId() ? 'Edit Fee Structure' : 'Create Fee Structure' }}</h3>
-              <p>{{ editingStructureId() ? 'Update amount or status for this fee line.' : 'Set up fee types and amounts for a class.' }}</p>
-            </div>
-            <button class="fs-close" (click)="closeModals()" title="Close">
-              <span class="material-icons-round">close</span>
-            </button>
-          </div>
+          @if (!editingStructureId()) {
 
-          <div class="fs-body">
-            @if (!editingStructureId()) {
-
-              <!-- Section: Class & Year -->
-              <div class="fs-section-label">Class & Academic Year</div>
-              <div class="form-row">
-                <div class="field flex-1">
-                  <label>Academic Year *</label>
-                  <select [(ngModel)]="structureYearId" (change)="onStructureYearChange()" [ngModelOptions]="{standalone:true}">
-                    <option [ngValue]="null">Select year</option>
-                    @for (y of years(); track y.academicYearId) {
-                      <option [ngValue]="y.academicYearId">{{ y.yearLabel }}</option>
-                    }
-                  </select>
-                </div>
-                <div class="field flex-1">
-                  <label>Class *</label>
-                  <select [(ngModel)]="structureClassId" (change)="onStructureClassChange()" [ngModelOptions]="{standalone:true}">
-                    <option [ngValue]="null">Select class</option>
-                    @for (c of modalClasses(); track c.classId) {
-                      <option [ngValue]="c.classId">{{ c.className }} {{ c.section }}</option>
-                    }
-                  </select>
-                </div>
+            <!-- Section: Class & Year -->
+            <div class="fs-section-label">Class & Academic Year</div>
+            <div class="form-row">
+              <div class="field flex-1">
+                <label>Academic Year *</label>
+                <p-select
+                  class="w-full"
+                  [options]="years()"
+                  optionLabel="yearLabel"
+                  optionValue="academicYearId"
+                  placeholder="Select year"
+                  appendTo="body"
+                  [overlayOptions]="{ baseZIndex: 10050 }"
+                  [(ngModel)]="structureYearId"
+                  [ngModelOptions]="{standalone:true}"
+                  (onChange)="onStructureYearChange()" />
               </div>
+              <div class="field flex-1">
+                <label>Class *</label>
+                <p-select
+                  class="w-full"
+                  [options]="modalClassOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Select class"
+                  appendTo="body"
+                  [overlayOptions]="{ baseZIndex: 10050 }"
+                  [(ngModel)]="structureClassId"
+                  [ngModelOptions]="{standalone:true}"
+                  (onChange)="onStructureClassChange()" />
+              </div>
+            </div>
 
-              <!-- Structure Title -->
+            <!-- Structure Title -->
+            <div class="field">
+              <label>Structure Title *</label>
+              <input pInputText class="w-full" [(ngModel)]="structureTitle" [ngModelOptions]="{standalone:true}"
+                placeholder="e.g. Grade 1 — 2024-25" [class.row-invalid]="structureTitleError" />
+              <span class="field-hint"><span class="material-icons-round" style="font-size:12px;vertical-align:-2px">info</span> Shown when selecting this structure for challan generation.</span>
+              @if (structureTitleError) { <span class="err">Title is required.</span> }
+            </div>
+
+            <!-- Divider -->
+            <div class="fs-divider">
+              <span>Fee Lines</span>
+            </div>
+
+            <!-- Fee rows -->
+            <div class="fee-rows-header">
+              <span>Fee Type</span>
+              <span>Amount (PKR)</span>
+              <span></span>
+            </div>
+            @for (row of feeRows; track $index; let i = $index) {
+              <div class="fee-row fee-row-3">
+                <div class="fee-row-type">
+                  <p-select
+                    class="w-full"
+                    [options]="feeTypes()"
+                    optionLabel="name"
+                    optionValue="feeTypeId"
+                    placeholder="Select fee type"
+                    appendTo="body"
+                    [overlayOptions]="{ baseZIndex: 10050 }"
+                    [invalid]="!!rowErrors[i]?.feeTypeId"
+                    [(ngModel)]="row.feeTypeId"
+                    [ngModelOptions]="{standalone:true}"
+                    (onChange)="onRowFeeTypeChange(i)" />
+                  @if (rowCategory(i)) {
+                    <span [class]="'cat-badge cat-' + rowCategory(i).toLowerCase()">{{ feeCategoryLabel(rowCategory(i)) }}</span>
+                  }
+                </div>
+                <p-inputnumber
+                  [(ngModel)]="row.amount"
+                  [ngModelOptions]="{standalone:true}"
+                  placeholder="e.g. 5000"
+                  [min]="1"
+                  [useGrouping]="false"
+                  [invalid]="!!rowErrors[i]?.amount"
+                  styleClass="w-full"
+                  inputStyleClass="w-full" />
+                <p-button
+                  icon="pi pi-times"
+                  severity="danger"
+                  [outlined]="true"
+                  size="small"
+                  ariaLabel="Remove"
+                  pTooltip="Remove"
+                  [disabled]="feeRows.length === 1"
+                  (onClick)="removeFeeRow(i)" />
+              </div>
+            }
+            <p-button
+              class="mt-1 block"
+              styleClass="w-full"
+              label="Add Fee Type"
+              icon="pi pi-plus"
+              severity="secondary"
+              [outlined]="true"
+              (onClick)="addFeeRow()" />
+
+            <!-- Live Summary -->
+            @if (structureRowsTotal() > 0) {
+              <div class="fs-summary">
+                <div class="fs-summary-head">
+                  <span class="material-icons-round">summarize</span>
+                  <strong>{{ structureTitle || 'Summary' }}</strong>
+                  <span class="fs-summary-total">PKR {{ structureRowsTotal() | number:'1.0-0' }}</span>
+                </div>
+                <div class="fs-summary-lines">
+                  @for (row of feeRows; track $index) {
+                    @if (row.feeTypeId && row.amount) {
+                      <div class="fs-summary-line">
+                        <span>{{ feeTypeName(row.feeTypeId) }}</span>
+                        <span>PKR {{ row.amount | number:'1.0-0' }}</span>
+                      </div>
+                    }
+                  }
+                </div>
+                @if (admissionRowsTotal() > 0) {
+                  <div class="fs-summary-sub">
+                    <span>Payable on Admission</span>
+                    <span>PKR {{ admissionRowsTotal() | number:'1.0-0' }}</span>
+                  </div>
+                  <div class="fs-summary-sub">
+                    <span>Monthly / Recurring</span>
+                    <span>PKR {{ structureRowsTotal() - admissionRowsTotal() | number:'1.0-0' }}</span>
+                  </div>
+                }
+              </div>
+            }
+          }
+
+          @if (editingStructureId()) {
+            <form [formGroup]="structureForm">
               <div class="field">
-                <label>Structure Title *</label>
-                <input [(ngModel)]="structureTitle" [ngModelOptions]="{standalone:true}"
-                  placeholder="e.g. Grade 1 — 2024-25" [class.row-invalid]="structureTitleError" />
-                <span class="field-hint"><span class="material-icons-round" style="font-size:12px;vertical-align:-2px">info</span> Shown when selecting this structure for challan generation.</span>
-                @if (structureTitleError) { <span class="err">Title is required.</span> }
+                <label>Amount (PKR) *</label>
+                <p-inputnumber
+                  formControlName="amount"
+                  placeholder="e.g. 5000"
+                  [min]="1"
+                  [useGrouping]="false"
+                  [invalid]="!!(sf('amount')?.invalid && sf('amount')?.touched)"
+                  styleClass="w-full"
+                  inputStyleClass="w-full" />
+                @if (sf('amount')?.invalid && sf('amount')?.touched) {
+                  <span class="err">Valid amount required.</span>
+                }
               </div>
-
-              <!-- Divider -->
-              <div class="fs-divider">
-                <span>Fee Lines</span>
-              </div>
-
-              <!-- Fee rows -->
-              <div class="fee-rows-header">
-                <span>Fee Type</span>
-                <span>Amount (PKR)</span>
-                <span></span>
-              </div>
-              @for (row of feeRows; track $index; let i = $index) {
-                <div class="fee-row fee-row-3">
-                  <div class="fee-row-type">
-                    <select [(ngModel)]="row.feeTypeId" (change)="onRowFeeTypeChange(i)" [ngModelOptions]="{standalone:true}" [class.row-invalid]="rowErrors[i]?.feeTypeId">
-                      <option [ngValue]="null">Select fee type</option>
-                      @for (ft of feeTypes(); track ft.feeTypeId) {
-                        <option [ngValue]="ft.feeTypeId">{{ ft.name }}</option>
-                      }
-                    </select>
-                    @if (rowCategory(i)) {
-                      <span [class]="'cat-badge cat-' + rowCategory(i).toLowerCase()">{{ feeCategoryLabel(rowCategory(i)) }}</span>
-                    }
-                  </div>
-                  <input type="number" [(ngModel)]="row.amount" [ngModelOptions]="{standalone:true}"
-                    placeholder="e.g. 5000" min="1" [class.row-invalid]="rowErrors[i]?.amount" />
-                  <button class="btn-remove-row" (click)="removeFeeRow(i)" [disabled]="feeRows.length === 1" title="Remove">
-                    <span class="material-icons-round">close</span>
-                  </button>
-                </div>
-              }
-              <button class="btn-add-row" type="button" (click)="addFeeRow()">
-                <span class="material-icons-round">add</span> Add Fee Type
-              </button>
-
-              <!-- Live Summary -->
-              @if (structureRowsTotal() > 0) {
-                <div class="fs-summary">
-                  <div class="fs-summary-head">
-                    <span class="material-icons-round">summarize</span>
-                    <strong>{{ structureTitle || 'Summary' }}</strong>
-                    <span class="fs-summary-total">PKR {{ structureRowsTotal() | number:'1.0-0' }}</span>
-                  </div>
-                  <div class="fs-summary-lines">
-                    @for (row of feeRows; track $index) {
-                      @if (row.feeTypeId && row.amount) {
-                        <div class="fs-summary-line">
-                          <span>{{ feeTypeName(row.feeTypeId) }}</span>
-                          <span>PKR {{ row.amount | number:'1.0-0' }}</span>
-                        </div>
-                      }
-                    }
-                  </div>
-                  @if (admissionRowsTotal() > 0) {
-                    <div class="fs-summary-sub">
-                      <span>Payable on Admission</span>
-                      <span>PKR {{ admissionRowsTotal() | number:'1.0-0' }}</span>
-                    </div>
-                    <div class="fs-summary-sub">
-                      <span>Monthly / Recurring</span>
-                      <span>PKR {{ structureRowsTotal() - admissionRowsTotal() | number:'1.0-0' }}</span>
-                    </div>
-                  }
-                </div>
-              }
-            }
-
-            @if (editingStructureId()) {
-              <form [formGroup]="structureForm">
-                <div class="field" [class.invalid]="sf('amount')?.invalid && sf('amount')?.touched">
-                  <label>Amount (PKR) *</label>
-                  <input type="number" formControlName="amount" placeholder="e.g. 5000" min="1" />
-                  @if (sf('amount')?.invalid && sf('amount')?.touched) {
-                    <span class="err">Valid amount required.</span>
-                  }
-                </div>
-                <div class="field">
-                  <label>Status</label>
-                  <select formControlName="isActive">
-                    <option [ngValue]="true">Active</option>
-                    <option [ngValue]="false">Inactive</option>
-                  </select>
-                </div>
-              </form>
-            }
-
-            @if (modalError()) { <div class="alert error">{{ modalError() }}</div> }
-          </div>
-
-          <!-- Footer -->
-          <div class="fs-footer">
-            <button type="button" class="btn-secondary" (click)="closeModals()">Cancel</button>
-            <button type="button" class="btn-primary" [disabled]="saving()" (click)="saveStructure()">
-              @if (saving()) {
-                <span class="material-icons-round spin-sm">autorenew</span> Saving…
-              } @else {
-                <span class="material-icons-round">{{ editingStructureId() ? 'save' : 'add_circle' }}</span>
-                {{ editingStructureId() ? 'Save Changes' : 'Create Structure' }}
-              }
-            </button>
-          </div>
-
-        </div>
-      </div>
-    }
-
-    <!-- ── DISCOUNT POLICY MODAL ── -->
-    @if (showDiscountModal()) {
-      <div class="fs-overlay" (click)="closeModals()">
-        <div class="fs-modal" (click)="$event.stopPropagation()">
-          <div class="fs-header">
-            <div class="fs-header-icon"><span class="material-icons-round">local_offer</span></div>
-            <div class="fs-header-text">
-              <h3>{{ editingDiscountId() ? 'Edit' : 'Add' }} Discount Policy</h3>
-              <p>{{ editingDiscountId() ? 'Update this discount rule.' : 'Create a reusable discount rule.' }}</p>
-            </div>
-            <button class="fs-close" (click)="closeModals()"><span class="material-icons-round">close</span></button>
-          </div>
-          <form [formGroup]="discountForm" (ngSubmit)="saveDiscount()" class="fs-body">
-            <div class="form-row">
-              <div class="field flex-2" [class.invalid]="df('name')?.invalid && df('name')?.touched">
-                <label>Policy Name *</label>
-                <input formControlName="name" placeholder="e.g. Sibling Discount – 2nd Child" />
-                @if (df('name')?.invalid && df('name')?.touched) { <span class="err">Name is required.</span> }
-              </div>
-              <div class="field flex-1" [class.invalid]="df('discountType')?.invalid && df('discountType')?.touched">
-                <label>Discount Type *</label>
-                <select formControlName="discountType" (change)="onDiscountTypeChange()">
-                  <option value="">Select type</option>
-                  @for (dt of discountTypes; track dt.value) {
-                    <option [value]="dt.value">{{ dt.label }}</option>
-                  }
-                </select>
-                @if (df('discountType')?.invalid && df('discountType')?.touched) { <span class="err">Type is required.</span> }
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="field flex-1" [class.invalid]="df('valueType')?.invalid && df('valueType')?.touched">
-                <label>Value Type *</label>
-                <select formControlName="valueType">
-                  @for (vt of valueTypes; track vt.value) {
-                    <option [value]="vt.value">{{ vt.label }}</option>
-                  }
-                </select>
-              </div>
-              <div class="field flex-1" [class.invalid]="df('value')?.invalid && df('value')?.touched">
-                <label>Value * {{ discountForm.value.valueType === 'Percentage' ? '(%)' : '(PKR)' }}</label>
-                <input type="number" formControlName="value" min="0"
-                  [max]="discountForm.value.valueType === 'Percentage' ? 100 : 9999999"
-                  placeholder="{{ discountForm.value.valueType === 'Percentage' ? 'e.g. 25' : 'e.g. 1500' }}" />
-                @if (df('value')?.invalid && df('value')?.touched) { <span class="err">Valid value required.</span> }
-              </div>
-              @if (showSiblingOrder) {
-                <div class="field flex-1">
-                  <label>Applies to (Child #)</label>
-                  <select formControlName="maxSiblingOrder">
-                    <option [ngValue]="null">Any sibling</option>
-                    <option [ngValue]="2">2nd child</option>
-                    <option [ngValue]="3">3rd child</option>
-                    <option [ngValue]="4">4th child</option>
-                    <option [ngValue]="5">5th child+</option>
-                  </select>
-                </div>
-              }
-            </div>
-
-            <div class="field" [class.invalid]="df('description')?.invalid && df('description')?.touched">
-              <label>Description</label>
-              <input formControlName="description" placeholder="Brief description of this discount policy" />
-            </div>
-
-            @if (editingDiscountId()) {
               <div class="field">
                 <label>Status</label>
-                <select formControlName="isActive">
-                  <option [ngValue]="true">Active</option>
-                  <option [ngValue]="false">Inactive</option>
-                </select>
+                <p-select
+                  class="w-full"
+                  [options]="statusOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  appendTo="body"
+                  [overlayOptions]="{ baseZIndex: 10050 }"
+                  formControlName="isActive" />
               </div>
-            }
+            </form>
+          }
 
-            <!-- FullWaiver hint -->
-            @if (discountForm.value.discountType === 'FullWaiver') {
-              <div class="info-box">
-                <strong>Full Waiver</strong> — set Value to 100% (Percentage) to waive the entire fee.
-                Students assigned this policy will have their entire fee discounted automatically.
-              </div>
-            }
-
-            @if (modalError()) { <div class="alert error">{{ modalError() }}</div> }
-            <div class="fs-footer">
-              <button type="button" class="btn-secondary" (click)="closeModals()">Cancel</button>
-              <button type="submit" class="btn-primary" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
-            </div>
-          </form>
+          @if (modalError()) { <div class="alert error">{{ modalError() }}</div> }
         </div>
-      </div>
-    }
+      }
+      <ng-template #footer>
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="closeModals()" />
+          <p-button
+            [label]="saving() ? 'Saving…' : (editingStructureId() ? 'Save Changes' : 'Create Structure')"
+            [icon]="editingStructureId() ? 'pi pi-save' : 'pi pi-plus-circle'"
+            [loading]="saving()"
+            [disabled]="saving()"
+            (onClick)="saveStructure()" />
+        </div>
+      </ng-template>
+    </p-dialog>
+
+    <!-- ── DISCOUNT POLICY MODAL ── -->
+    <p-dialog
+      [header]="(editingDiscountId() ? 'Edit' : 'Add') + ' Discount Policy'"
+      [visible]="showDiscountModal()"
+      (visibleChange)="$event ? null : closeModals()"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '40rem' }"
+      [breakpoints]="{ '768px': '96vw' }">
+      <form [formGroup]="discountForm" (ngSubmit)="saveDiscount()">
+        <p class="sub mb-3">{{ editingDiscountId() ? 'Update this discount rule.' : 'Create a reusable discount rule.' }}</p>
+        <div class="form-row">
+          <div class="field flex-2">
+            <label for="dp-name">Policy Name *</label>
+            <input pInputText id="dp-name" class="w-full" formControlName="name" placeholder="e.g. Sibling Discount – 2nd Child" />
+            @if (df('name')?.invalid && df('name')?.touched) { <span class="err">Name is required.</span> }
+          </div>
+          <div class="field flex-1">
+            <label>Discount Type *</label>
+            <p-select
+              class="w-full"
+              [options]="discountTypes"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Select type"
+              appendTo="body"
+              [overlayOptions]="{ baseZIndex: 10050 }"
+              [invalid]="!!(df('discountType')?.invalid && df('discountType')?.touched)"
+              formControlName="discountType"
+              (onChange)="onDiscountTypeChange()" />
+            @if (df('discountType')?.invalid && df('discountType')?.touched) { <span class="err">Type is required.</span> }
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field flex-1">
+            <label>Value Type *</label>
+            <p-select
+              class="w-full"
+              [options]="valueTypes"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              [overlayOptions]="{ baseZIndex: 10050 }"
+              formControlName="valueType" />
+          </div>
+          <div class="field flex-1">
+            <label>Value * {{ discountForm.value.valueType === 'Percentage' ? '(%)' : '(PKR)' }}</label>
+            <p-inputnumber
+              formControlName="value"
+              [min]="0"
+              [max]="discountForm.value.valueType === 'Percentage' ? 100 : 9999999"
+              [useGrouping]="false"
+              [maxFractionDigits]="2"
+              [placeholder]="discountForm.value.valueType === 'Percentage' ? 'e.g. 25' : 'e.g. 1500'"
+              [invalid]="!!(df('value')?.invalid && df('value')?.touched)"
+              styleClass="w-full"
+              inputStyleClass="w-full" />
+            @if (df('value')?.invalid && df('value')?.touched) { <span class="err">Valid value required.</span> }
+          </div>
+          @if (showSiblingOrder) {
+            <div class="field flex-1">
+              <label>Applies to (Child #)</label>
+              <p-select
+                class="w-full"
+                [options]="siblingOrderOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Any sibling"
+                [showClear]="true"
+                appendTo="body"
+                [overlayOptions]="{ baseZIndex: 10050 }"
+                formControlName="maxSiblingOrder" />
+            </div>
+          }
+        </div>
+
+        <div class="field">
+          <label for="dp-desc">Description</label>
+          <input pInputText id="dp-desc" class="w-full" formControlName="description" placeholder="Brief description of this discount policy" />
+        </div>
+
+        @if (editingDiscountId()) {
+          <div class="field">
+            <label>Status</label>
+            <p-select
+              class="w-full"
+              [options]="statusOptions"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              [overlayOptions]="{ baseZIndex: 10050 }"
+              formControlName="isActive" />
+          </div>
+        }
+
+        <!-- FullWaiver hint -->
+        @if (discountForm.value.discountType === 'FullWaiver') {
+          <div class="info-box">
+            <strong>Full Waiver</strong> — set Value to 100% (Percentage) to waive the entire fee.
+            Students assigned this policy will have their entire fee discounted automatically.
+          </div>
+        }
+
+        @if (modalError()) { <div class="alert error">{{ modalError() }}</div> }
+      </form>
+      <ng-template #footer>
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="closeModals()" />
+          <p-button [label]="saving() ? 'Saving…' : 'Save'" icon="pi pi-check" [loading]="saving()" [disabled]="saving()" (onClick)="saveDiscount()" />
+        </div>
+      </ng-template>
+    </p-dialog>
 
     <app-confirm-delete />
   `,
@@ -793,6 +880,15 @@ export class FeeSetupComponent implements OnInit {
   discountTypes  = DISCOUNT_TYPES;
   valueTypes     = VALUE_TYPES;
   feeCategories  = FEE_CATEGORIES;
+  statusOptions  = [{ label: 'Active', value: true }, { label: 'Inactive', value: false }];
+  siblingOrderOptions = [
+    { label: '2nd child',  value: 2 },
+    { label: '3rd child',  value: 3 },
+    { label: '4th child',  value: 4 },
+    { label: '5th child+', value: 5 }
+  ];
+  modalClassOptions = computed(() =>
+    this.modalClasses().map(c => ({ label: `${c.className} ${c.section ?? ''}`.trim(), value: c.classId })));
 
   typeForm = this.fb.group({
     name:        ['', Validators.required],

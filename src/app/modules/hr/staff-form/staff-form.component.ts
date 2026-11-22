@@ -2,6 +2,9 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
+import { Button } from 'primeng/button';
+import { InputText } from 'primeng/inputtext';
+import { Select } from 'primeng/select';
 import { StaffService } from '../../../core/services/staff.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { FileUploadService } from '../../../core/services/file-upload.service';
@@ -13,7 +16,7 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
 @Component({
   selector: 'app-staff-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, DatePickerComponent, PhotoUploadComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, DatePickerComponent, PhotoUploadComponent, Button, InputText, Select],
   template: `
     @if (success()) {
       <div class="success-screen">
@@ -24,13 +27,9 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
           <h2>{{ isEdit ? 'Profile Updated!' : 'Staff Added!' }}</h2>
           <p class="success-sub">{{ isEdit ? 'Staff member profile has been updated successfully.' : 'Staff member has been registered in the system.' }}</p>
           <div class="success-actions">
-            <button class="btn-secondary" (click)="router.navigate(['/hr/staff'])">
-              <span class="material-icons-round">list</span> View All Staff
-            </button>
+            <p-button label="View All Staff" icon="pi pi-list" severity="secondary" [outlined]="true" (onClick)="router.navigate(['/hr/staff'])" />
             @if (!isEdit) {
-              <button class="btn-primary" (click)="resetForm()">
-                <span class="material-icons-round">person_add</span> Add Another
-              </button>
+              <p-button label="Add Another" icon="pi pi-user-plus" (onClick)="resetForm()" />
             }
           </div>
         </div>
@@ -61,9 +60,7 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
         </div>
         <div class="adm-header-right">
           <span class="adm-step-badge">Step {{ activeTab() + 1 }}/3</span>
-          <button class="adm-back-btn" (click)="router.navigate(['/hr/staff'])">
-            <span class="material-icons-round">close</span>
-          </button>
+          <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="secondary" ariaLabel="Close" (onClick)="router.navigate(['/hr/staff'])" />
         </div>
       </div>
 
@@ -111,7 +108,7 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
                   <label>Full Name <span class="req">*</span></label>
                   <div class="input-wrap">
                     <span class="material-icons-round field-icon">badge</span>
-                    <input formControlName="fullName" placeholder="e.g. Muhammad Ahmed Khan" />
+                    <input pInputText formControlName="fullName" placeholder="e.g. Muhammad Ahmed Khan" />
                   </div>
                   @if (f['fullName'].invalid && f['fullName'].touched) {
                     <span class="ferr">Full name is required</span>
@@ -119,15 +116,7 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
                 </div>
                 <div class="form-field">
                   <label>Gender</label>
-                  <div class="input-wrap select-wrap">
-                    <span class="material-icons-round field-icon">wc</span>
-                    <select formControlName="gender">
-                      <option value="">Select gender</option>
-                      <option>Male</option>
-                      <option>Female</option>
-                      <option>Other</option>
-                    </select>
-                  </div>
+                  <p-select class="w-full" formControlName="gender" [options]="genders" placeholder="Select gender" [showClear]="true" appendTo="body" />
                 </div>
               </div>
 
@@ -142,7 +131,7 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
                   <label>Phone Number</label>
                   <div class="input-wrap">
                     <span class="material-icons-round field-icon">call</span>
-                    <input formControlName="phone" placeholder="0300-1234567" />
+                    <input pInputText formControlName="phone" placeholder="0300-1234567" />
                   </div>
                 </div>
               </div>
@@ -152,23 +141,21 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
                   <label>CNIC</label>
                   <div class="input-wrap">
                     <span class="material-icons-round field-icon">credit_card</span>
-                    <input formControlName="cnic" placeholder="12345-1234567-1" />
+                    <input pInputText formControlName="cnic" placeholder="12345-1234567-1" />
                   </div>
                 </div>
                 <div class="form-field">
                   <label>Home Address</label>
                   <div class="input-wrap">
                     <span class="material-icons-round field-icon">home</span>
-                    <input formControlName="address" placeholder="Street, City, Province" />
+                    <input pInputText formControlName="address" placeholder="Street, City, Province" />
                   </div>
                 </div>
               </div>
 
               <div class="tab-nav">
                 <span></span>
-                <button type="button" class="btn-primary" (click)="next()">
-                  Next <span class="material-icons-round">arrow_forward</span>
-                </button>
+                <p-button label="Next" icon="pi pi-arrow-right" iconPos="right" (onClick)="next()" />
               </div>
             </div>
           }
@@ -186,14 +173,14 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
                   <label>Contact Name</label>
                   <div class="input-wrap">
                     <span class="material-icons-round field-icon">person_add</span>
-                    <input formControlName="emergencyContactName" placeholder="Relative or friend name" />
+                    <input pInputText formControlName="emergencyContactName" placeholder="Relative or friend name" />
                   </div>
                 </div>
                 <div class="form-field">
                   <label>Contact Phone</label>
                   <div class="input-wrap">
                     <span class="material-icons-round field-icon">phone_in_talk</span>
-                    <input formControlName="emergencyContactPhone" placeholder="0300-1234567" />
+                    <input pInputText formControlName="emergencyContactPhone" placeholder="0300-1234567" />
                   </div>
                 </div>
               </div>
@@ -217,12 +204,8 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
               </div>
 
               <div class="tab-nav">
-                <button type="button" class="btn-secondary" (click)="activeTab.set(0)">
-                  <span class="material-icons-round">arrow_back</span> Back
-                </button>
-                <button type="button" class="btn-primary" (click)="next()">
-                  Next <span class="material-icons-round">arrow_forward</span>
-                </button>
+                <p-button label="Back" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="activeTab.set(0)" />
+                <p-button label="Next" icon="pi pi-arrow-right" iconPos="right" (onClick)="next()" />
               </div>
             </div>
           }
@@ -240,7 +223,7 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
                   <label>Designation <span class="req">*</span></label>
                   <div class="input-wrap">
                     <span class="material-icons-round field-icon">military_tech</span>
-                    <input formControlName="designation" placeholder="e.g. Lab Attendant, Peon, Driver" />
+                    <input pInputText formControlName="designation" placeholder="e.g. Lab Attendant, Peon, Driver" />
                   </div>
                   @if (f['designation'].invalid && f['designation'].touched) {
                     <span class="ferr">Designation is required</span>
@@ -248,13 +231,7 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
                 </div>
                 <div class="form-field">
                   <label>Department</label>
-                  <div class="input-wrap select-wrap">
-                    <span class="material-icons-round field-icon">corporate_fare</span>
-                    <select formControlName="department">
-                      <option value="">Select department</option>
-                      @for (d of departments; track d) { <option [value]="d">{{ d }}</option> }
-                    </select>
-                  </div>
+                  <p-select class="w-full" formControlName="department" [options]="departments" placeholder="Select department" [showClear]="true" appendTo="body" />
                 </div>
               </div>
 
@@ -267,24 +244,14 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
                 </div>
                 <div class="form-field">
                   <label>Employment Type</label>
-                  <div class="input-wrap select-wrap">
-                    <span class="material-icons-round field-icon">contract</span>
-                    <select formControlName="employmentType">
-                      @for (e of employmentTypes; track e) { <option [value]="e">{{ e }}</option> }
-                    </select>
-                  </div>
+                  <p-select class="w-full" formControlName="employmentType" [options]="employmentTypes" appendTo="body" />
                 </div>
               </div>
 
               <div class="form-grid-2">
                 <div class="form-field">
                   <label>Status</label>
-                  <div class="input-wrap select-wrap">
-                    <span class="material-icons-round field-icon">toggle_on</span>
-                    <select formControlName="status">
-                      @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }
-                    </select>
-                  </div>
+                  <p-select class="w-full" formControlName="status" [options]="statuses" appendTo="body" />
                 </div>
               </div>
 
@@ -298,16 +265,14 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
                         <div class="doc-row">
                           <span class="material-icons-round doc-icon">description</span>
                           <a [href]="d.fileUrl" target="_blank" class="doc-label">{{ d.label }}</a>
-                          <button type="button" class="doc-remove" (click)="removeDocument(d)" title="Remove">
-                            <span class="material-icons-round">close</span>
-                          </button>
+                          <p-button type="button" icon="pi pi-times" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Remove" (onClick)="removeDocument(d)" />
                         </div>
                       }
                     </div>
                   }
 
                   <div class="doc-add">
-                    <input [(ngModel)]="newDocLabel" [ngModelOptions]="{standalone: true}"
+                    <input pInputText [(ngModel)]="newDocLabel" [ngModelOptions]="{standalone: true}"
                            placeholder="Label e.g. Degree Certificate" />
                     <label class="doc-upload-btn" [class.disabled]="!newDocLabel.trim() || addingDoc()">
                       @if (addingDoc()) { <span class="material-icons-round spin">refresh</span> }
@@ -327,13 +292,8 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
               }
 
               <div class="tab-nav">
-                <button type="button" class="btn-secondary" (click)="activeTab.set(1)">
-                  <span class="material-icons-round">arrow_back</span> Back
-                </button>
-                <button type="submit" class="btn-primary" [disabled]="saving()">
-                  @if (saving()) { <span class="material-icons-round spin">refresh</span> Saving… }
-                  @else { <span class="material-icons-round">{{ isEdit ? 'save' : 'person_add' }}</span> {{ isEdit ? 'Save Changes' : 'Add Staff' }} }
-                </button>
+                <p-button label="Back" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="activeTab.set(1)" />
+                <p-button type="submit" [label]="saving() ? 'Saving…' : (isEdit ? 'Save Changes' : 'Add Staff')" [icon]="isEdit ? 'pi pi-save' : 'pi pi-user-plus'" [loading]="saving()" [disabled]="saving()" />
               </div>
             </div>
           }
@@ -376,16 +336,6 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
       font-size: 12px; font-weight: 700; white-space: nowrap;
       box-shadow: 0 2px 8px var(--accent-g);
     }
-    .adm-back-btn {
-      width: 34px; height: 34px; border-radius: var(--r-md, 8px);
-      border: 1px solid var(--border-2); background: var(--surface);
-      color: var(--t3); cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: all 0.15s ease;
-      .material-icons-round { font-size: 18px; }
-    }
-    .adm-back-btn:hover { background: var(--red-s); border-color: var(--red); color: var(--red); }
-
     .progress-bar { height: 3px; background: var(--border); width: 100%; }
     .progress-fill { height: 100%; background: var(--accent); transition: width 0.35s cubic-bezier(.22,1,.36,1); }
 
@@ -490,15 +440,6 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
       box-sizing: border-box;
       transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
-    select {
-      cursor: pointer;
-      appearance: none;
-      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-      background-repeat: no-repeat;
-      background-position: right 12px center;
-      background-size: 14px;
-      padding-right: 34px;
-    }
     .date-wrap app-date-picker {
       width: 100%;
     }
@@ -545,17 +486,6 @@ import { EMPLOYMENT_TYPES, STAFF_STATUSES, DEPARTMENTS, StaffDocumentDto } from 
       padding-top: 16px; margin-top: 8px;
       border-top: 1px solid var(--border);
     }
-    .tab-nav .btn-primary, .tab-nav .btn-secondary {
-      height: var(--btn-h, 42px);
-      padding: 0 20px;
-      border-radius: var(--r-md, 8px);
-      font-size: 13.5px;
-      font-weight: 600;
-      display: inline-flex; align-items: center; gap: 6px;
-      cursor: pointer;
-      .material-icons-round { font-size: 16px; }
-    }
-
     .tm-alert {
       display: flex; align-items: center; gap: 8px;
       padding: 12px 16px; border-radius: var(--r-md, 8px);
@@ -611,6 +541,7 @@ export class StaffFormComponent implements OnInit {
   readonly employmentTypes = EMPLOYMENT_TYPES;
   readonly statuses        = STAFF_STATUSES;
   readonly departments     = DEPARTMENTS;
+  readonly genders         = ['Male', 'Female', 'Other'];
   readonly COLORS = ['#7c3aed','#059669','#0891b2','#d97706','#db2777','#ea580c','#0284c7','#16a34a'];
 
   isEdit    = false;

@@ -15,54 +15,75 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
 import { StudentLeavingComponent } from '../student-leaving/student-leaving.component';
 import { StudentTransferDialogComponent } from '../student-transfer-dialog/student-transfer-dialog.component';
 import { StudentPromoteBulkDialogComponent } from '../student-promote-bulk-dialog/student-promote-bulk-dialog.component';
-import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
+import { OsSelectOption } from '../../../shared/components/os-select/os-select.component';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
+import { Tag } from 'primeng/tag';
+import { Tooltip } from 'primeng/tooltip';
 
 @Component({
   selector: 'app-student-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, StudentLeavingComponent, StudentTransferDialogComponent, StudentPromoteBulkDialogComponent, OsSelectComponent],
+  imports: [CommonModule, RouterModule, FormsModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, StudentLeavingComponent, StudentTransferDialogComponent, StudentPromoteBulkDialogComponent, Button, Select, InputText, Tag, Tooltip],
   template: `
     <div class="os-page compact">
     <app-page-header [dense]="true" title="Student List" routeUrl="/students/list">
-      <button type="button" class="btn-secondary" (click)="exportList()" [disabled]="exporting()">
-        <span class="material-icons-round">download</span>
-        Export
-      </button>
-      <button type="button" class="btn-secondary" (click)="showPromoteBulk.set(true)"
-              [disabled]="!selectedClass || !selectedYear">
-        <span class="material-icons-round">trending_up</span>
-        Promote Class
-      </button>
-      <a routerLink="/students/new" class="btn-primary">
-        <span class="material-icons-round">person_add</span>
-        New Admission
-      </a>
+      <div class="flex flex-wrap items-center gap-2">
+        <p-button
+          label="Export"
+          icon="pi pi-download"
+          severity="secondary"
+          [outlined]="true"
+          size="small"
+          [loading]="exporting()"
+          [disabled]="exporting()"
+          (onClick)="exportList()" />
+        <p-button
+          label="Promote Class"
+          icon="pi pi-arrow-up-right"
+          severity="secondary"
+          [outlined]="true"
+          size="small"
+          [disabled]="!selectedClass || !selectedYear"
+          (onClick)="showPromoteBulk.set(true)" />
+        <p-button
+          label="New Admission"
+          icon="pi pi-user-plus"
+          size="small"
+          tabindex="-1"
+          routerLink="/students/new" />
+      </div>
     </app-page-header>
 
     <div class="os-stage">
       <div class="os-stage-bar">
-        <div class="os-toolbar-group">
+        <div class="os-toolbar-group flex flex-wrap items-center gap-2">
           <div class="os-field grow">
             <div class="search-wrap">
               <span class="material-icons-round search-icon">search</span>
-              <input class="search-input" placeholder="Search name or admission no..." [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
+              <input pInputText class="search-input w-full" placeholder="Search name or admission no..." [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
             </div>
           </div>
-          <app-os-select
+          <p-select
+            class="min-w-[150px]"
             [options]="yearOptions()"
-            [value]="selectedYear"
-            (valueChange)="selectedYear = $event; onYearChange()"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="selectedYear"
+            (ngModelChange)="selectedYear = $event; onYearChange()"
             placeholder="All Years"
-            icon="event"
             ariaLabel="Academic year" />
-          <app-os-select
+          <p-select
+            class="min-w-[150px]"
             [options]="classOptions()"
-            [value]="selectedClass"
-            (valueChange)="selectedClass = $event; onFilterChange()"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="selectedClass"
+            (ngModelChange)="selectedClass = $event; onFilterChange()"
             placeholder="All Classes"
-            icon="class"
             ariaLabel="Class"
-            [searchable]="classOptions().length > 6" />
+            [filter]="classOptions().length > 6" />
           <div class="os-seg square" role="tablist" aria-label="Status filter">
             <button type="button" class="os-seg-btn" [class.active]="statusFilter() === 'active'" (click)="setStatusFilter('active')">Active</button>
             <button type="button" class="os-seg-btn" [class.active]="statusFilter() === 'inactive'" (click)="setStatusFilter('inactive')">Inactive</button>
@@ -128,42 +149,39 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
                   <td>{{ s.gender ?? '—' }}</td>
                   <td>{{ s.phone ?? '—' }}</td>
                   <td>
-                    <span class="badge" [class.active]="s.isActive && !s.isDeleted" [class.inactive]="!s.isActive || s.isDeleted">
-                      {{ s.isDeleted ? 'Deleted' : (s.isActive ? 'Active' : 'Inactive') }}
-                    </span>
+                    <p-tag [value]="statusLabel(s)" [severity]="statusSeverity(s)" />
                   </td>
                   <td>
-                    <div class="actions">
+                    <div class="actions flex flex-wrap items-center gap-1">
                       @if (s.isDeleted) {
-                        <button class="icon-btn act-card" title="Restore student" (click)="restoreStudent(s)">
-                          <span class="material-icons-round">restore_from_trash</span>
-                        </button>
+                        <p-button icon="pi pi-replay" [text]="true" [rounded]="true" size="small" severity="secondary"
+                                  pTooltip="Restore student" ariaLabel="Restore student" (onClick)="restoreStudent(s)" />
                       } @else {
-                        <a [routerLink]="['/students/view', s.studentId]" class="icon-btn" title="Student profile">
-                          <span class="material-icons-round">person</span>
-                        </a>
-                        <a [routerLink]="['/students/edit', s.studentId]" class="icon-btn" title="Edit student">
-                          <span class="material-icons-round">edit</span>
-                        </a>
-                        <a class="icon-btn act-card" title="Print Student Card"
+                        <p-button icon="pi pi-user" [text]="true" [rounded]="true" size="small" severity="secondary"
+                                  pTooltip="Student profile" ariaLabel="Student profile" tabindex="-1"
+                                  [routerLink]="['/students/view', s.studentId]" />
+                        <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" severity="secondary"
+                                  pTooltip="Edit student" ariaLabel="Edit student" tabindex="-1"
+                                  [routerLink]="['/students/edit', s.studentId]" />
+                        <!-- Kept as <a>: needs target="_blank" for the printable card -->
+                        <a class="p-button p-component p-button-icon-only p-button-text p-button-rounded p-button-secondary p-button-sm"
+                           pTooltip="Print Student Card" aria-label="Print Student Card"
                            [routerLink]="['/students', s.studentId, 'card']" target="_blank">
-                          <span class="material-icons-round">badge</span>
+                          <span class="p-button-icon pi pi-id-card"></span>
                         </a>
                         @if (s.isActive) {
-                          <button class="icon-btn act-card" title="Transfer / Promote" (click)="openTransfer(s, 'Transfer')">
-                            <span class="material-icons-round">swap_horiz</span>
-                          </button>
-                          <button class="icon-btn act-leave" title="Mark as Leaving" (click)="openLeave(s)">
-                            <span class="material-icons-round">exit_to_app</span>
-                          </button>
+                          <p-button icon="pi pi-arrow-right-arrow-left" [text]="true" [rounded]="true" size="small" severity="secondary"
+                                    pTooltip="Transfer / Promote" ariaLabel="Transfer or promote" (onClick)="openTransfer(s, 'Transfer')" />
+                          <p-button icon="pi pi-sign-out" [text]="true" [rounded]="true" size="small" severity="warn"
+                                    pTooltip="Mark as Leaving" ariaLabel="Mark as leaving" (onClick)="openLeave(s)" />
                         }
                         @if (!s.isActive) {
-                          <button class="icon-btn act-card" title="Re-admit" (click)="openTransfer(s, 'Readmit')">
-                            <span class="material-icons-round">person_add</span>
-                          </button>
-                          <button class="icon-btn act-cert" title="Print Leaving Certificate" (click)="printCertificate(s.studentId)" [disabled]="printingId() === s.studentId">
-                            <span class="material-icons-round">{{ printingId() === s.studentId ? 'refresh' : 'print' }}</span>
-                          </button>
+                          <p-button icon="pi pi-user-plus" [text]="true" [rounded]="true" size="small" severity="secondary"
+                                    pTooltip="Re-admit" ariaLabel="Re-admit" (onClick)="openTransfer(s, 'Readmit')" />
+                          <p-button icon="pi pi-print" [text]="true" [rounded]="true" size="small" severity="success"
+                                    pTooltip="Print Leaving Certificate" ariaLabel="Print leaving certificate"
+                                    [loading]="printingId() === s.studentId" [disabled]="printingId() === s.studentId"
+                                    (onClick)="printCertificate(s.studentId)" />
                         }
                       }
                     </div>
@@ -185,9 +203,7 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
                   } @else {
                     <div class="stu-card-fallback">{{ s.fullName[0] }}</div>
                   }
-                  <span class="stu-card-status badge" [class.active]="s.isActive && !s.isDeleted" [class.inactive]="!s.isActive || !!s.isDeleted">
-                    {{ s.isDeleted ? 'Deleted' : (s.isActive ? 'Active' : 'Inactive') }}
-                  </span>
+                  <p-tag class="stu-card-status" [value]="statusLabel(s)" [severity]="statusSeverity(s)" />
                 </div>
                 <div class="stu-card-body">
                   <a class="stu-card-name" [routerLink]="['/students/view', s.studentId]">{{ s.fullName }}</a>
@@ -197,37 +213,35 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
                     <span><span class="material-icons-round">wc</span>{{ s.gender ?? '—' }}</span>
                     <span><span class="material-icons-round">call</span>{{ s.phone ?? '—' }}</span>
                   </div>
-                  <div class="stu-card-actions actions">
+                  <div class="stu-card-actions actions flex flex-wrap items-center gap-1">
                     @if (s.isDeleted) {
-                      <button class="icon-btn act-card" title="Restore student" (click)="restoreStudent(s)">
-                        <span class="material-icons-round">restore_from_trash</span>
-                      </button>
+                      <p-button icon="pi pi-replay" [text]="true" [rounded]="true" size="small" severity="secondary"
+                                pTooltip="Restore student" ariaLabel="Restore student" (onClick)="restoreStudent(s)" />
                     } @else {
-                      <a [routerLink]="['/students/view', s.studentId]" class="icon-btn" title="Student profile">
-                        <span class="material-icons-round">person</span>
-                      </a>
-                      <a [routerLink]="['/students/edit', s.studentId]" class="icon-btn" title="Edit student">
-                        <span class="material-icons-round">edit</span>
-                      </a>
-                      <a class="icon-btn act-card" title="Print Student Card"
+                      <p-button icon="pi pi-user" [text]="true" [rounded]="true" size="small" severity="secondary"
+                                pTooltip="Student profile" ariaLabel="Student profile" tabindex="-1"
+                                [routerLink]="['/students/view', s.studentId]" />
+                      <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" severity="secondary"
+                                pTooltip="Edit student" ariaLabel="Edit student" tabindex="-1"
+                                [routerLink]="['/students/edit', s.studentId]" />
+                      <a class="p-button p-component p-button-icon-only p-button-text p-button-rounded p-button-secondary p-button-sm"
+                         pTooltip="Print Student Card" aria-label="Print Student Card"
                          [routerLink]="['/students', s.studentId, 'card']" target="_blank">
-                        <span class="material-icons-round">badge</span>
+                        <span class="p-button-icon pi pi-id-card"></span>
                       </a>
                       @if (s.isActive) {
-                        <button class="icon-btn act-card" title="Transfer / Promote" (click)="openTransfer(s, 'Transfer')">
-                          <span class="material-icons-round">swap_horiz</span>
-                        </button>
-                        <button class="icon-btn act-leave" title="Mark as Leaving" (click)="openLeave(s)">
-                          <span class="material-icons-round">exit_to_app</span>
-                        </button>
+                        <p-button icon="pi pi-arrow-right-arrow-left" [text]="true" [rounded]="true" size="small" severity="secondary"
+                                  pTooltip="Transfer / Promote" ariaLabel="Transfer or promote" (onClick)="openTransfer(s, 'Transfer')" />
+                        <p-button icon="pi pi-sign-out" [text]="true" [rounded]="true" size="small" severity="warn"
+                                  pTooltip="Mark as Leaving" ariaLabel="Mark as leaving" (onClick)="openLeave(s)" />
                       }
                       @if (!s.isActive) {
-                        <button class="icon-btn act-card" title="Re-admit" (click)="openTransfer(s, 'Readmit')">
-                          <span class="material-icons-round">person_add</span>
-                        </button>
-                        <button class="icon-btn act-cert" title="Print Leaving Certificate" (click)="printCertificate(s.studentId)" [disabled]="printingId() === s.studentId">
-                          <span class="material-icons-round">{{ printingId() === s.studentId ? 'refresh' : 'print' }}</span>
-                        </button>
+                        <p-button icon="pi pi-user-plus" [text]="true" [rounded]="true" size="small" severity="secondary"
+                                  pTooltip="Re-admit" ariaLabel="Re-admit" (onClick)="openTransfer(s, 'Readmit')" />
+                        <p-button icon="pi pi-print" [text]="true" [rounded]="true" size="small" severity="success"
+                                  pTooltip="Print Leaving Certificate" ariaLabel="Print leaving certificate"
+                                  [loading]="printingId() === s.studentId" [disabled]="printingId() === s.studentId"
+                                  (onClick)="printCertificate(s.studentId)" />
                       }
                     }
                   </div>
@@ -240,14 +254,12 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
 
       <div class="os-stage-foot">
         <span class="tbl-count">{{ totalCount() }} students</span>
-        <div class="pager-btns">
+        <div class="pager-btns flex items-center gap-1.5">
           <span class="pager-info">Page {{ page() }} of {{ totalPages() }}</span>
-          <button class="pager-btn" (click)="goToPage(page() - 1)" [disabled]="page() <= 1">
-            <span class="material-icons-round">chevron_left</span>
-          </button>
-          <button class="pager-btn" (click)="goToPage(page() + 1)" [disabled]="page() >= totalPages()">
-            <span class="material-icons-round">chevron_right</span>
-          </button>
+          <p-button icon="pi pi-chevron-left" severity="secondary" [outlined]="true" size="small"
+                    ariaLabel="Previous page" (onClick)="goToPage(page() - 1)" [disabled]="page() <= 1" />
+          <p-button icon="pi pi-chevron-right" severity="secondary" [outlined]="true" size="small"
+                    ariaLabel="Next page" (onClick)="goToPage(page() + 1)" [disabled]="page() >= totalPages()" />
         </div>
       </div>
     }
@@ -282,16 +294,6 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
        and its top divider. The count/pager contents keep their own styles. */
     .tbl-count { font-size: 11px; font-weight: 600; color: var(--t4); text-transform: uppercase; letter-spacing: 0.6px; }
     .pager-info { font-size: 12px; color: var(--t4); }
-    .pager-btns { display: flex; align-items: center; gap: 6px; }
-    .pager-btn {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 32px; height: 32px; border-radius: 8px;
-      background: var(--surface-2); border: 1px solid var(--border);
-      color: var(--t2); cursor: pointer; transition: all .15s;
-    }
-    .pager-btn:hover:not(:disabled) { background: var(--accent-s); color: var(--accent); border-color: var(--accent-g); }
-    .pager-btn:disabled { opacity: .4; cursor: not-allowed; }
-    .pager-btn .material-icons-round { font-size: 18px; }
     .s-cell { display: flex; align-items: center; gap: 12px; }
     .s-av {
       width: 44px; height: 44px; border-radius: 12px;
@@ -472,6 +474,14 @@ export class StudentListComponent implements OnInit {
     }))
   ]);
   private searchDebounce: ReturnType<typeof setTimeout> | null = null;
+
+  statusLabel(s: StudentListDto): string {
+    return s.isDeleted ? 'Deleted' : (s.isActive ? 'Active' : 'Inactive');
+  }
+
+  statusSeverity(s: StudentListDto): 'success' | 'secondary' | 'danger' {
+    return s.isDeleted ? 'danger' : (s.isActive ? 'success' : 'secondary');
+  }
 
   openLeave(s: StudentListDto) { this.leavingStudent.set(s); }
 

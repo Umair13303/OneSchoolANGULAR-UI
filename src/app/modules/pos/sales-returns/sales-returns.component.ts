@@ -1,6 +1,14 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Button } from 'primeng/button';
+import { InputText } from 'primeng/inputtext';
+import { InputNumber } from 'primeng/inputnumber';
+import { Checkbox } from 'primeng/checkbox';
+import { Tag } from 'primeng/tag';
+import { TableModule } from 'primeng/table';
+import { IconField } from 'primeng/iconfield';
+import { InputIcon } from 'primeng/inputicon';
 import { PosService } from '../../../core/services/pos.service';
 import { SalesDto, SalesReturnDto } from '../../../core/models/inventory.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -8,13 +16,16 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
 @Component({
   selector: 'app-sales-returns',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent],
+  imports: [CommonModule, FormsModule, PageHeaderComponent, Button, InputText, InputNumber, Checkbox, Tag, TableModule, IconField, InputIcon],
   template: `
     <app-page-header title="Sales Returns" subtitle="Return items from a completed invoice — stock is restored automatically" />
 
     <div class="layout">
       <div class="pane">
-        <input class="search" placeholder="Search invoice number…" [(ngModel)]="search" (ngModelChange)="filterSales()" />
+        <p-iconfield class="mb-3 block">
+          <p-inputicon class="pi pi-search" />
+          <input pInputText class="w-full" placeholder="Search invoice number…" [(ngModel)]="search" (ngModelChange)="filterSales()" />
+        </p-iconfield>
         <div class="sale-list">
           @for (s of filteredSales(); track s.salesId) {
             <div class="sale-row" [class.active]="selected()?.salesId === s.salesId" (click)="select(s)">
@@ -30,23 +41,27 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
         @if (selected()) {
           <h3>Invoice {{ selected()!.invoiceNo }}</h3>
           <p class="sub">{{ selected()!.customerName || selected()!.studentName || 'Walk-in' }} · Cashier: {{ selected()!.cashierName }}</p>
-          <table class="table">
-            <thead><tr><th></th><th>Item</th><th>Sold Qty</th><th>Already Returned</th><th>Return Qty</th></tr></thead>
-            <tbody>
-              @for (d of selected()!.details; track d.salesDetailId) {
-                <tr>
-                  <td><input type="checkbox" [checked]="isChecked(d.salesDetailId)" (change)="toggle(d.salesDetailId, d.quantity)" /></td>
-                  <td>{{ d.itemName }}</td>
-                  <td>{{ d.quantity }}</td>
-                  <td>{{ returnedQty(d) }}</td>
-                  <td><input type="number" step="0.01" [min]="0" [max]="d.quantity - returnedQty(d)" [(ngModel)]="lineQty[d.salesDetailId]" class="cell-num" [disabled]="!isChecked(d.salesDetailId)" /></td>
-                </tr>
-              }
-            </tbody>
-          </table>
-          <div class="field"><label>Remarks</label><input [(ngModel)]="remarks" /></div>
+          <p-table [value]="selected()!.details" dataKey="salesDetailId" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '32rem' }" [scrollable]="true">
+            <ng-template #header>
+              <tr><th style="width:3rem"></th><th>Item</th><th>Sold Qty</th><th>Already Returned</th><th>Return Qty</th></tr>
+            </ng-template>
+            <ng-template #body let-d>
+              <tr>
+                <td><p-checkbox [binary]="true" [ngModel]="isChecked(d.salesDetailId)" (ngModelChange)="toggle(d.salesDetailId, d.quantity)" [ariaLabel]="'Return ' + d.itemName" /></td>
+                <td>{{ d.itemName }}</td>
+                <td>{{ d.quantity }}</td>
+                <td>{{ returnedQty(d) }}</td>
+                <td>
+                  <p-inputnumber [min]="0" [max]="d.quantity - returnedQty(d)" [minFractionDigits]="0" [maxFractionDigits]="2"
+                                 styleClass="w-28" inputStyleClass="w-28"
+                                 [(ngModel)]="lineQty[d.salesDetailId]" [disabled]="!isChecked(d.salesDetailId)" />
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+          <div class="field"><label for="sr-remarks">Remarks</label><input pInputText id="sr-remarks" class="w-full" [(ngModel)]="remarks" /></div>
           @if (error()) { <div class="alert-err">{{ error() }}</div> }
-          <button class="btn-primary" [disabled]="busy()" (click)="submitReturn()"><span class="material-icons-round">keyboard_return</span> {{ busy() ? 'Processing…' : 'Process Return' }}</button>
+          <p-button label="Process Return" icon="pi pi-replay" [loading]="busy()" [disabled]="busy()" (onClick)="submitReturn()" />
         } @else {
           <p class="empty">Select an invoice on the left to process a return.</p>
         }
@@ -55,21 +70,23 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
 
     <h3 class="history-title">Recent Returns</h3>
     <div class="card">
-      <table class="table">
-        <thead><tr><th>Return No</th><th>Date</th><th>Invoice</th><th>Net Amount</th><th>Status</th></tr></thead>
-        <tbody>
-          @for (r of returnHistory(); track r.salesReturnId) {
-            <tr><td>{{ r.returnNo }}</td><td>{{ r.returnDate | date:'short' }}</td><td>{{ r.invoiceNo }}</td><td>{{ r.netAmount | number:'1.2-2' }}</td><td><span class="badge badge-green">{{ r.status }}</span></td></tr>
-          }
-          @if (!returnHistory().length) { <tr><td colspan="5" class="empty">No returns recorded yet.</td></tr> }
-        </tbody>
-      </table>
+      <p-table [value]="returnHistory()" dataKey="salesReturnId" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '36rem' }" [scrollable]="true">
+        <ng-template #header><tr><th>Return No</th><th>Date</th><th>Invoice</th><th>Net Amount</th><th>Status</th></tr></ng-template>
+        <ng-template #body let-r>
+          <tr>
+            <td>{{ r.returnNo }}</td><td>{{ r.returnDate | date:'short' }}</td><td>{{ r.invoiceNo }}</td>
+            <td>{{ r.netAmount | number:'1.2-2' }}</td>
+            <td><p-tag [value]="r.status" severity="success" [rounded]="true" /></td>
+          </tr>
+        </ng-template>
+        <ng-template #emptymessage><tr><td colspan="5" class="empty">No returns recorded yet.</td></tr></ng-template>
+      </p-table>
     </div>
   `,
   styles: [`
     .layout { display:grid; grid-template-columns:340px 1fr; gap:16px; margin-bottom:24px; }
-    .pane { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; }
-    .search { width:100%; padding:9px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; margin-bottom:12px; background:var(--surface); color:var(--t1); }
+    @media (max-width: 900px) { .layout { grid-template-columns:1fr; } }
+    .pane { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; min-width:0; }
     .sale-list { display:flex; flex-direction:column; gap:6px; max-height:60vh; overflow-y:auto; }
     .sale-row { display:flex; justify-content:space-between; align-items:center; padding:10px; border:1px solid var(--border); border-radius:8px; cursor:pointer; }
     .sale-row:hover { background:var(--surface-2); }
@@ -77,16 +94,12 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
     .sale-row .sub { font-size:11px; color:var(--t4); }
     .detail-pane h3 { margin:0 0 4px; font-size:15px; }
     .detail-pane .sub { font-size:12px; color:var(--t4); margin-bottom:14px; }
-    .cell-num { width:80px; padding:6px 8px; border:1.5px solid var(--border); border-radius:6px; font-size:13px; background:var(--surface); color:var(--t1); }
     .field { display:flex; flex-direction:column; gap:5px; margin:14px 0; }
-    label { font-size:11px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.5px; }
-    input:not(.cell-num) { padding:9px 11px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; background:var(--surface); color:var(--t1); width:100%; }
+    .field > label { font-size:11px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.5px; }
     .empty { text-align:center; color:var(--t4); padding:24px 0; font-size:13px; }
     .alert-err { background:#fee2e2; color:#dc2626; border:1px solid #dc2626; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:10px; }
     .history-title { font-size:15px; font-weight:700; margin:0 0 12px; }
     .card { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
-    .badge { padding:3px 9px; border-radius:12px; font-size:11.5px; font-weight:600; }
-    .badge-green { background:var(--green-s); color:var(--green); }
   `]
 })
 export class SalesReturnsComponent implements OnInit {

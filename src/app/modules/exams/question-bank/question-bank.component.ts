@@ -2,6 +2,17 @@ import { Component, OnInit, computed, inject, signal, viewChild } from '@angular
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
+import { Textarea } from 'primeng/textarea';
+import { Tag } from 'primeng/tag';
+import { Checkbox } from 'primeng/checkbox';
+import { Drawer } from 'primeng/drawer';
+import { Message } from 'primeng/message';
+import { IconField } from 'primeng/iconfield';
+import { InputIcon } from 'primeng/inputicon';
+import { Tooltip } from 'primeng/tooltip';
 import { forkJoin, of, firstValueFrom } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { AssessmentService } from '../../../core/services/assessment.service';
@@ -37,16 +48,19 @@ interface BankForm {
 @Component({
   selector: 'app-question-bank',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PageHeaderComponent, EmptyStateComponent, AiGeneratePanelComponent, AiReviewPanelComponent],
+  imports: [
+    CommonModule, FormsModule, RouterModule, PageHeaderComponent, EmptyStateComponent,
+    AiGeneratePanelComponent, AiReviewPanelComponent,
+    Button, Select, InputText, Textarea, Tag, Checkbox, Drawer, Message, IconField, InputIcon, Tooltip
+  ],
   template: `
     <div class="os-page compact qb-page">
       <app-page-header [dense]="true" [title]="pageTitle()" routeUrl="/exams/question-bank" subtitle="Reusable questions linked to course topics">
-        <button type="button" class="btn-ghost" (click)="openAiGenerate()" [disabled]="aiMode() === 'review'">
-          <span class="material-icons-round">auto_awesome</span> AI Generate
-        </button>
-        <button type="button" class="btn-primary" (click)="openCreate()">
-          <span class="material-icons-round">add</span> New Question
-        </button>
+        <div class="flex flex-wrap items-center gap-2">
+          <p-button label="AI Generate" icon="pi pi-sparkles" severity="secondary" [outlined]="true"
+            (onClick)="openAiGenerate()" [disabled]="aiMode() === 'review'" />
+          <p-button label="New Question" icon="pi pi-plus" (onClick)="openCreate()" />
+        </div>
       </app-page-header>
 
       @if (aiMode() === 'generate') {
@@ -63,51 +77,42 @@ interface BankForm {
 
       <div class="os-stage">
         <div class="os-stage-bar">
-          <div class="os-toolbar-group qb-filters">
-            <div class="os-field inline grow">
+          <div class="flex w-full flex-wrap items-end gap-3">
+            <div class="flex min-w-[180px] flex-1 flex-col gap-1">
               <label class="os-field-label">Search</label>
-              <input class="os-input" type="search" [(ngModel)]="search" (keyup.enter)="load()" placeholder="Question text…" />
+              <p-iconfield class="block w-full">
+                <p-inputicon class="pi pi-search" />
+                <input pInputText class="w-full" type="search" [(ngModel)]="search" (keyup.enter)="load()" placeholder="Question text…" />
+              </p-iconfield>
             </div>
-            <div class="os-field inline grow">
+            <div class="flex min-w-[180px] flex-1 flex-col gap-1">
               <label class="os-field-label">Course Topic</label>
-              <select class="os-input" [(ngModel)]="filterTopicId" (ngModelChange)="load()">
-                <option [ngValue]="null">All topics</option>
-                @for (t of topics(); track t.id) {
-                  <option [ngValue]="t.id">{{ t.label }}</option>
-                }
-              </select>
+              <p-select class="w-full" placeholder="All topics" [options]="topics()" optionLabel="label" optionValue="id"
+                [showClear]="true" [filter]="topics().length > 8" filterBy="label"
+                [(ngModel)]="filterTopicId" (ngModelChange)="load()" />
             </div>
-            <div class="os-field inline">
+            <div class="flex min-w-[140px] flex-col gap-1">
               <label class="os-field-label">Type</label>
-              <select class="os-input" [(ngModel)]="filterType" (ngModelChange)="applyClientFilters()">
-                <option value="">All types</option>
-                @for (qt of questionTypes; track qt.value) {
-                  <option [value]="qt.value">{{ qt.label }}</option>
-                }
-              </select>
+              <p-select class="w-full" placeholder="All types" [options]="questionTypes" optionLabel="label" optionValue="value"
+                [showClear]="true" [ngModel]="filterType || null"
+                (ngModelChange)="filterType = $event ?? ''; applyClientFilters()" />
             </div>
-            <div class="os-field inline">
+            <div class="flex min-w-[140px] flex-col gap-1">
               <label class="os-field-label">Status</label>
-              <select class="os-input" [(ngModel)]="filterActive" (ngModelChange)="load()">
-                <option value="active">Active</option>
-                <option value="all">All</option>
-                <option value="archived">Archived</option>
-              </select>
+              <p-select class="w-full" [options]="statusOptions" optionLabel="label" optionValue="value"
+                [(ngModel)]="filterActive" (ngModelChange)="load()" />
             </div>
-          </div>
-          <div class="os-toolbar-group end">
-            <button type="button" class="btn-secondary" (click)="load()" [disabled]="loading()">
-              <span class="material-icons-round">search</span> Search
-            </button>
+            <p-button label="Search" icon="pi pi-search" severity="secondary" [outlined]="true"
+              (onClick)="load()" [disabled]="loading()" />
           </div>
         </div>
 
         <div class="os-stage-body">
           @if (error()) {
-            <div class="banner error">{{ error() }}</div>
+            <p-message severity="error" styleClass="w-full" [text]="error()" />
           }
           @if (aiSaveOk()) {
-            <div class="banner ok">{{ aiSaveOk() }}</div>
+            <p-message severity="success" styleClass="w-full" [text]="aiSaveOk()" />
           }
 
           @if (loading()) {
@@ -137,14 +142,14 @@ interface BankForm {
                       <td class="col-type">{{ typeLabel(q.questionTypeId) }}</td>
                       <td class="col-marks">{{ q.marks }}</td>
                       <td class="col-status">
-                        <span class="chip" [class.on]="q.isActive" [class.off]="!q.isActive">
-                          {{ q.isActive ? 'Active' : 'Archived' }}
-                        </span>
+                        <p-tag [value]="q.isActive ? 'Active' : 'Archived'" [severity]="q.isActive ? 'success' : 'secondary'" [rounded]="true" />
                       </td>
                       <td class="col-act">
                         <div class="qb-actions">
-                          <button type="button" class="act-btn" (click)="openEdit(q)">Edit</button>
-                          <button type="button" class="act-btn" (click)="openCopy(q)">Add to paper</button>
+                          <p-button label="Edit" icon="pi pi-pencil" size="small" severity="secondary" [outlined]="true"
+                            (onClick)="openEdit(q)" />
+                          <p-button label="Add to paper" icon="pi pi-copy" size="small" [outlined]="true"
+                            (onClick)="openCopy(q)" />
                         </div>
                       </td>
                     </tr>
@@ -156,129 +161,119 @@ interface BankForm {
         </div>
       </div>
 
-      @if (showForm()) {
-        <div class="sheet-backdrop" (click)="closeForm()"></div>
-        <div class="sheet" role="dialog">
-          <div class="sheet-head">
-            <h3>{{ editingId() ? 'Edit Question' : 'New Question' }}</h3>
-            <button type="button" class="icon-btn" (click)="closeForm()">
-              <span class="material-icons-round">close</span>
-            </button>
+      <p-drawer
+        [visible]="showForm()"
+        (visibleChange)="$event ? null : closeForm()"
+        position="right"
+        [modal]="true"
+        [header]="editingId() ? 'Edit Question' : 'New Question'"
+        [style]="{ width: '28rem', maxWidth: '100vw' }">
+        <div class="sheet-body">
+          @if (formError()) { <p-message severity="error" styleClass="mb-3 w-full" [text]="formError()" /> }
+
+          @if (!editingId()) {
+            <div class="fi">
+              <label>Course Topic *</label>
+              <p-select class="w-full" placeholder="— Select topic —" [options]="topics()" optionLabel="label" optionValue="id"
+                [filter]="topics().length > 8" filterBy="label" appendTo="body" [overlayOptions]="overlayOpts"
+                [(ngModel)]="form.courseTopicId" />
+            </div>
+          } @else {
+            <div class="fi muted-line">Topic: <strong>{{ editTopicTitle() }}</strong></div>
+          }
+
+          <div class="fi">
+            <label>Question Type *</label>
+            <p-select class="w-full" [options]="questionTypes" optionLabel="label" optionValue="value"
+              appendTo="body" [overlayOptions]="overlayOpts"
+              [(ngModel)]="form.questionType" [disabled]="!!editingId()" (ngModelChange)="onTypeChange()" />
           </div>
-          <div class="sheet-body">
-            @if (formError()) { <div class="banner error">{{ formError() }}</div> }
 
-            @if (!editingId()) {
-              <div class="fi">
-                <label>Course Topic *</label>
-                <select [(ngModel)]="form.courseTopicId">
-                  <option [ngValue]="null">— Select topic —</option>
-                  @for (t of topics(); track t.id) {
-                    <option [ngValue]="t.id">{{ t.label }}</option>
-                  }
-                </select>
-              </div>
-            } @else {
-              <div class="fi muted-line">Topic: <strong>{{ editTopicTitle() }}</strong></div>
+          <div class="fi">
+            <label>Question Text *</label>
+            <textarea pTextarea class="w-full" rows="3" [(ngModel)]="form.questionText" placeholder="Enter question…"></textarea>
+          </div>
+
+          <div class="fi row">
+            <div>
+              <label>Marks *</label>
+              <input pInputText class="w-full" type="number" min="1" [(ngModel)]="form.marks" />
+            </div>
+            @if (editingId()) {
+              <p-checkbox [binary]="true" label="Active" [(ngModel)]="form.isActive" />
             }
+          </div>
 
-            <div class="fi">
-              <label>Question Type *</label>
-              <select [(ngModel)]="form.questionType" [disabled]="!!editingId()" (ngModelChange)="onTypeChange()">
-                @for (qt of questionTypes; track qt.value) {
-                  <option [ngValue]="qt.value">{{ qt.label }}</option>
-                }
-              </select>
-            </div>
-
-            <div class="fi">
-              <label>Question Text *</label>
-              <textarea rows="3" [(ngModel)]="form.questionText" placeholder="Enter question…"></textarea>
-            </div>
-
-            <div class="fi row">
-              <div>
-                <label>Marks *</label>
-                <input type="number" min="1" [(ngModel)]="form.marks" />
-              </div>
-              @if (editingId()) {
-                <label class="check">
-                  <input type="checkbox" [(ngModel)]="form.isActive" /> Active
-                </label>
+          @if (form.questionType === 1) {
+            <div class="mcq">
+              @for (opt of form.options; track $index; let i = $index) {
+                <div class="mcq-row">
+                  <span class="letter">{{ opt.optionLabel }}</span>
+                  <input pInputText type="text" class="flex-1" [(ngModel)]="opt.optionText" [placeholder]="'Option ' + opt.optionLabel" />
+                  <p-button icon="pi pi-check" size="small" [rounded]="true"
+                    [severity]="opt.isCorrect ? 'success' : 'secondary'" [outlined]="!opt.isCorrect"
+                    pTooltip="Mark correct" ariaLabel="Mark correct" (onClick)="setCorrect(i)" />
+                </div>
               }
             </div>
+          }
 
-            @if (form.questionType === 1) {
-              <div class="mcq">
-                @for (opt of form.options; track $index; let i = $index) {
-                  <div class="mcq-row">
-                    <span class="letter">{{ opt.optionLabel }}</span>
-                    <input type="text" [(ngModel)]="opt.optionText" [placeholder]="'Option ' + opt.optionLabel" />
-                    <button type="button" class="correct" [class.on]="opt.isCorrect" (click)="setCorrect(i)" title="Mark correct">✓</button>
-                  </div>
-                }
-              </div>
-            }
-
-            @if (form.questionType === 2) {
-              <div class="tf">
-                <button type="button" [class.on]="form.isTrue === true" (click)="form.isTrue = true">True</button>
-                <button type="button" [class.on]="form.isTrue === false" (click)="form.isTrue = false">False</button>
-              </div>
-            }
-
-            @if (form.questionType === 3 || form.questionType === 4 || form.questionType === 5) {
-              <div class="fi">
-                <label>{{ form.questionType === 3 ? 'Expected Answer' : 'Model Answer / Explanation' }}</label>
-                <input type="text" [(ngModel)]="form.correctAnswer" placeholder="Optional" />
-              </div>
-            }
-
-            <div class="fi">
-              <label>Note</label>
-              <input type="text" [(ngModel)]="form.questionNote" placeholder="Optional internal note" />
+          @if (form.questionType === 2) {
+            <div class="tf">
+              <p-button label="True" [severity]="form.isTrue === true ? 'success' : 'secondary'"
+                [outlined]="form.isTrue !== true" (onClick)="form.isTrue = true" />
+              <p-button label="False" [severity]="form.isTrue === false ? 'danger' : 'secondary'"
+                [outlined]="form.isTrue !== false" (onClick)="form.isTrue = false" />
             </div>
-          </div>
-          <div class="sheet-foot">
-            <button type="button" class="btn-secondary" (click)="closeForm()">Cancel</button>
-            <button type="button" class="btn-primary" [disabled]="busy()" (click)="saveForm()">
-              {{ busy() ? 'Saving…' : 'Save' }}
-            </button>
+          }
+
+          @if (form.questionType === 3 || form.questionType === 4 || form.questionType === 5) {
+            <div class="fi">
+              <label>{{ form.questionType === 3 ? 'Expected Answer' : 'Model Answer / Explanation' }}</label>
+              <input pInputText class="w-full" type="text" [(ngModel)]="form.correctAnswer" placeholder="Optional" />
+            </div>
+          }
+
+          <div class="fi">
+            <label>Note</label>
+            <input pInputText class="w-full" type="text" [(ngModel)]="form.questionNote" placeholder="Optional internal note" />
           </div>
         </div>
-      }
+        <ng-template #footer>
+          <div class="flex w-full justify-end gap-2">
+            <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="closeForm()" />
+            <p-button [label]="busy() ? 'Saving…' : 'Save'" icon="pi pi-save" [loading]="busy()"
+              [disabled]="busy()" (onClick)="saveForm()" />
+          </div>
+        </ng-template>
+      </p-drawer>
 
-      @if (copyItem()) {
-        <div class="sheet-backdrop" (click)="closeCopy()"></div>
-        <div class="sheet" role="dialog">
-          <div class="sheet-head">
-            <h3>Add to Exam Paper</h3>
-            <button type="button" class="icon-btn" (click)="closeCopy()">
-              <span class="material-icons-round">close</span>
-            </button>
-          </div>
-          <div class="sheet-body">
-            <p class="hint">Copies an independent ExamQuestion. Later bank edits will not change the paper.</p>
-            @if (copyError()) { <div class="banner error">{{ copyError() }}</div> }
-            @if (copyOk()) { <div class="banner ok">{{ copyOk() }}</div> }
-            <div class="fi">
-              <label>Exam Paper *</label>
-              <select [ngModel]="copyPaperId" (ngModelChange)="onCopyPaperChange($event)">
-                <option [ngValue]="null">— Select paper —</option>
-                @for (p of papers(); track p.examPaperId) {
-                  <option [ngValue]="p.examPaperId">{{ p.title }} · {{ p.className }} · {{ p.subjectName }}</option>
-                }
-              </select>
-            </div>
-          </div>
-          <div class="sheet-foot">
-            <button type="button" class="btn-secondary" (click)="closeCopy()">Close</button>
-            <button type="button" class="btn-primary" [disabled]="busy() || !copyPaperId" (click)="confirmCopy()">
-              {{ busy() ? 'Copying…' : 'Copy to Paper' }}
-            </button>
+      <p-drawer
+        [visible]="!!copyItem()"
+        (visibleChange)="$event ? null : closeCopy()"
+        position="right"
+        [modal]="true"
+        header="Add to Exam Paper"
+        [style]="{ width: '28rem', maxWidth: '100vw' }">
+        <div class="sheet-body">
+          <p class="hint">Copies an independent ExamQuestion. Later bank edits will not change the paper.</p>
+          @if (copyError()) { <p-message severity="error" styleClass="mb-3 w-full" [text]="copyError()" /> }
+          @if (copyOk()) { <p-message severity="success" styleClass="mb-3 w-full" [text]="copyOk()" /> }
+          <div class="fi">
+            <label>Exam Paper *</label>
+            <p-select class="w-full" placeholder="— Select paper —" [options]="paperOptions()" optionLabel="label" optionValue="value"
+              [filter]="paperOptions().length > 8" filterBy="label" appendTo="body" [overlayOptions]="overlayOpts"
+              [ngModel]="copyPaperId" (ngModelChange)="onCopyPaperChange($event)" />
           </div>
         </div>
-      }
+        <ng-template #footer>
+          <div class="flex w-full justify-end gap-2">
+            <p-button label="Close" severity="secondary" [outlined]="true" (onClick)="closeCopy()" />
+            <p-button [label]="busy() ? 'Copying…' : 'Copy to Paper'" icon="pi pi-copy" [loading]="busy()"
+              [disabled]="busy() || !copyPaperId" (onClick)="confirmCopy()" />
+          </div>
+        </ng-template>
+      </p-drawer>
     </div>
   `,
   styles: [`
@@ -288,27 +283,7 @@ interface BankForm {
     .qb-filters .os-field.inline { min-width: 120px; }
     .qb-filters .os-field.grow { flex: 1 1 160px; min-width: 160px; }
     .os-stage-body { padding: 0; }
-    .os-input, .fi select, .fi input, .fi textarea {
-      width: 100%; height: 34px; padding: 0 10px;
-      border: 1px solid var(--border); border-radius: 0;
-      font-size: 13px; font-family: inherit;
-      background: var(--surface); color: var(--t1); box-sizing: border-box;
-    }
-    .fi textarea { height: auto; padding: 8px 10px; resize: vertical; min-height: 72px; }
-    .btn-primary, .btn-secondary {
-      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-      height: 34px; padding: 0 14px; border-radius: 0;
-      font-size: 13px; font-weight: 600; cursor: pointer; border: none;
-    }
-    .btn-primary { background: var(--accent); color: #fff; }
-    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
-    .btn-secondary {
-      background: var(--surface); color: var(--t2);
-      border: 1px solid var(--border);
-    }
     .banner { padding: 10px 12px; margin: 0; font-size: 13px; border-bottom: 1px solid var(--border); }
-    .banner.error { background: #fef2f2; color: #991b1b; }
-    .banner.ok { background: #ecfdf5; color: #065f46; }
     .banner.muted { color: var(--t4); }
 
     .table-wrap { width: 100%; overflow-x: auto; }
@@ -347,40 +322,11 @@ interface BankForm {
     .col-topic, .col-type {
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    .chip {
-      display: inline-flex; align-items: center;
-      height: 22px; padding: 0 8px; border-radius: 999px;
-      font-size: 11px; font-weight: 700;
-    }
-    .chip.on { background: #d1fae5; color: #065f46; }
-    .chip.off { background: var(--surface-2); color: var(--t4); }
-
     /* Do NOT use global .actions — it breaks <td> layout */
     .qb-actions {
       display: inline-flex; align-items: center; justify-content: flex-end;
       gap: 6px; flex-wrap: wrap;
     }
-    .act-btn {
-      height: 28px; padding: 0 10px;
-      border: 1px solid var(--border); border-radius: 0;
-      background: var(--surface); color: var(--accent);
-      font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
-      white-space: nowrap;
-    }
-    .act-btn:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--surface)); }
-    .sheet-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,.35); z-index: 40; }
-    .sheet {
-      position: fixed; top: 0; right: 0; width: min(440px, 100%); height: 100%; background: #fff;
-      z-index: 50; display: flex; flex-direction: column; box-shadow: -8px 0 24px rgba(15,23,42,.12);
-    }
-    .sheet-head, .sheet-foot {
-      display: flex; align-items: center; justify-content: space-between; gap: .75rem;
-      padding: .9rem 1rem; border-bottom: 1px solid #e2e8f0;
-    }
-    .sheet-foot { border-bottom: none; border-top: 1px solid #e2e8f0; justify-content: flex-end; }
-    .sheet-head h3 { margin: 0; font-size: 1rem; }
-    .sheet-body { padding: 1rem; overflow: auto; flex: 1; }
-    .icon-btn { border: none; background: transparent; cursor: pointer; color: #94a3b8; }
     .fi { margin-bottom: .85rem; }
     .fi label { display: block; font-size: .75rem; font-weight: 600; color: #64748b; margin-bottom: .3rem; }
     .fi.row { display: flex; align-items: end; gap: 1rem; }
@@ -392,12 +338,6 @@ interface BankForm {
     .mcq-row { display: flex; align-items: center; gap: .45rem; }
     .letter { width: 24px; height: 24px; border-radius: 6px; background: #ede9fe; color: #6366f1;
       display: flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 700; flex-shrink: 0; }
-    .mcq-row input { flex: 1; }
-    .correct { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid #d1d5db; background: #fff; cursor: pointer; color: transparent; }
-    .correct.on { background: #10b981; border-color: #10b981; color: #fff; }
-    .tf { display: flex; gap: .5rem; margin-bottom: .85rem; }
-    .tf button { padding: .4rem 1rem; border-radius: 8px; border: 1.5px solid #e2e8f0; background: #fff; cursor: pointer; font-weight: 600; }
-    .tf button.on { background: #d1fae5; border-color: #10b981; color: #065f46; }
     @media (max-width: 900px) {
       .col-type, .col-marks { display: none; }
       .col-q { width: 40%; }
@@ -407,15 +347,11 @@ interface BankForm {
     }
     @media (max-width: 640px) {
       .os-stage-bar { flex-direction: column; align-items: stretch; }
-      .os-toolbar-group.end { margin-left: 0; width: 100%; }
-      .os-toolbar-group.end .btn-secondary { width: 100%; }
       .col-status { display: none; }
       .col-q { width: 48%; }
       .col-topic { width: 24%; }
       .col-act { width: 28%; }
       .qb-actions { flex-direction: column; align-items: stretch; }
-      .act-btn { width: 100%; }
-      .sheet { width: 100%; }
     }
   `]
 })
@@ -427,6 +363,20 @@ export class QuestionBankComponent implements OnInit {
   private aiReview = viewChild(AiReviewPanelComponent);
 
   readonly questionTypes = QUESTION_TYPES;
+  readonly statusOptions = [
+    { label: 'Active', value: 'active' },
+    { label: 'All', value: 'all' },
+    { label: 'Archived', value: 'archived' }
+  ];
+  /** Selects inside drawers: overlay must stack above p-drawer (appendTo body). */
+  readonly overlayOpts = { baseZIndex: 1200 };
+
+  paperOptions = computed(() =>
+    this.papers().map(p => ({
+      value: p.examPaperId as number,
+      label: `${p.title} · ${p.className} · ${p.subjectName}`
+    }))
+  );
 
   items = signal<QuestionBankItemDto[]>([]);
   topics = signal<TopicOption[]>([]);
@@ -450,7 +400,7 @@ export class QuestionBankComponent implements OnInit {
 
   search = '';
   filterTopicId: number | null = null;
-  filterType = '';
+  filterType: number | string = '';
   filterActive: 'active' | 'all' | 'archived' = 'active';
 
   form: BankForm = this.blankForm();

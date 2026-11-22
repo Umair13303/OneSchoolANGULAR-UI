@@ -1,8 +1,13 @@
 import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular/core';
 import { Subject, takeUntil } from 'rxjs';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
+import { Textarea } from 'primeng/textarea';
+import { Message } from 'primeng/message';
 import { HomeworkService } from '../../../core/services/homework.service';
 import { AcademicService } from '../../../core/services/academic.service';
 import { SettingsService } from '../../../core/services/settings.service';
@@ -11,22 +16,27 @@ import { MenuService } from '../../../core/services/menu.service';
 import { ClassDto, SubjectDto, ClassSubjectDto } from '../../../core/models/academic.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { DatePickerComponent } from '../../../shared/components/date-picker/date-picker.component';
-import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
 import {
   classroomReturnQueryFromParamMap,
   isFromClassroom
 } from '../../classroom/classroom-context.util';
 
+interface SelectOpt<T> { value: T; label: string; }
+
 @Component({
   selector: 'app-assign-homework',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, PageHeaderComponent, DatePickerComponent, OsSelectComponent],
+  imports: [
+    CommonModule, ReactiveFormsModule, FormsModule, RouterModule, PageHeaderComponent, DatePickerComponent,
+    Button, Select, InputText, Textarea, Message
+  ],
   template: `
     <div class="os-page compact hw-assign-page">
       <div class="form-shell">
         <app-page-header [dense]="true" [title]="pageTitle()" routeUrl="/homework/assign">
           @if (fromClassroom()) {
-            <a class="btn-secondary" [routerLink]="['/classroom/today']" [queryParams]="classroomReturnQp()">Back to class</a>
+            <p-button label="Back to class" icon="pi pi-arrow-left" severity="secondary" [outlined]="true"
+              [routerLink]="['/classroom/today']" [queryParams]="classroomReturnQp()" />
           }
         </app-page-header>
 
@@ -35,43 +45,52 @@ import {
             <span class="material-icons-round">check_circle</span>
             <span class="alert-text">Homework assigned successfully.</span>
             @if (fromClassroom()) {
-              <a class="link-btn" [routerLink]="['/classroom/today']" [queryParams]="classroomReturnQp()">Back to class</a>
+              <p-button label="Back to class" size="small" severity="secondary" [outlined]="true"
+                [routerLink]="['/classroom/today']" [queryParams]="classroomReturnQp()" />
             }
-            <button type="button" class="link-btn" (click)="assignAnother()">Assign another</button>
-            <button type="button" class="link-btn" (click)="router.navigate(['/homework/list'])">View diary</button>
+            <p-button label="Assign another" icon="pi pi-plus" size="small" severity="secondary" [outlined]="true"
+              (onClick)="assignAnother()" />
+            <p-button label="View diary" icon="pi pi-book" size="small" severity="secondary" [outlined]="true"
+              (onClick)="router.navigate(['/homework/list'])" />
           </div>
         }
         @if (errorMsg()) {
-          <div class="alert error">
-            <span class="material-icons-round">error</span>
-            <span class="alert-text">{{ errorMsg() }}</span>
-          </div>
+          <p-message severity="error" icon="pi pi-exclamation-circle" [text]="errorMsg()" styleClass="w-full" />
         }
 
         @if (!success()) {
           <form [formGroup]="form" (ngSubmit)="submit()" class="assign-form">
             <div class="os-toolbar">
-              <div class="os-toolbar-group fill">
-                <div class="os-field stacked grow" [class.has-err]="touched('classId')">
+              <div class="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+                <div class="flex min-w-0 flex-col gap-1">
                   <label class="os-field-label">Class</label>
-                  <app-os-select
-                    icon="school"
+                  <p-select
+                    class="w-full"
                     placeholder="Select class…"
                     ariaLabel="Select class"
-                    [searchable]="classOptions().length > 6"
                     [options]="classOptions()"
-                    [value]="form.value.classId ?? null"
-                    (valueChange)="onClassSelect($event)" />
+                    optionLabel="label"
+                    optionValue="value"
+                    [filter]="classOptions().length > 6"
+                    filterBy="label"
+                    [invalid]="touched('classId')"
+                    [ngModel]="form.value.classId ?? null"
+                    [ngModelOptions]="{ standalone: true }"
+                    (ngModelChange)="onClassSelect($event ?? null)" />
                 </div>
-                <div class="os-field stacked grow" [class.has-err]="touched('subjectId')">
+                <div class="flex min-w-0 flex-col gap-1">
                   <label class="os-field-label">Subject</label>
-                  <app-os-select
-                    icon="menu_book"
+                  <p-select
+                    class="w-full"
                     placeholder="Select subject…"
                     ariaLabel="Select subject"
                     [options]="subjectOptions()"
-                    [value]="form.value.subjectId ?? null"
-                    (valueChange)="form.patchValue({ subjectId: $event }); form.controls.subjectId.markAsTouched()" />
+                    optionLabel="label"
+                    optionValue="value"
+                    [invalid]="touched('subjectId')"
+                    [ngModel]="form.value.subjectId ?? null"
+                    [ngModelOptions]="{ standalone: true }"
+                    (ngModelChange)="form.patchValue({ subjectId: $event ?? null }); form.controls.subjectId.markAsTouched()" />
                 </div>
               </div>
             </div>
@@ -80,7 +99,7 @@ import {
               <div class="details-body">
                 <div class="field" [class.invalid]="touched('title')">
                   <label class="field-label">Title</label>
-                  <input formControlName="title" placeholder="e.g. Chapter 3 Exercise 1–10" />
+                  <input pInputText class="w-full" formControlName="title" placeholder="e.g. Chapter 3 Exercise 1–10" />
                   @if (touched('title')) { <span class="err">Title is required.</span> }
                 </div>
 
@@ -89,7 +108,7 @@ import {
                     Instructions
                     <span class="optional">optional</span>
                   </label>
-                  <textarea formControlName="description" rows="3"
+                  <textarea pTextarea class="w-full" formControlName="description" rows="3"
                     placeholder="Page numbers, notes, or instructions for students…"></textarea>
                 </div>
 
@@ -116,21 +135,14 @@ import {
 
               <div class="form-footer">
                 @if (fromClassroom()) {
-                  <a class="btn-secondary btn-sm"
-                     [routerLink]="['/classroom/today']"
-                     [queryParams]="classroomReturnQp()">Cancel</a>
+                  <p-button label="Cancel" severity="secondary" [outlined]="true"
+                    [routerLink]="['/classroom/today']" [queryParams]="classroomReturnQp()" />
                 } @else {
-                  <button type="button" class="btn-secondary btn-sm"
-                          (click)="router.navigate(['/homework/list'])">Cancel</button>
+                  <p-button label="Cancel" severity="secondary" [outlined]="true"
+                    (onClick)="router.navigate(['/homework/list'])" />
                 }
-                <button type="submit" class="btn-primary btn-sm" [disabled]="saving()">
-                  @if (saving()) {
-                    <span class="spinner-sm"></span> Saving…
-                  } @else {
-                    <span class="material-icons-round act-ico">send</span>
-                    Assign Homework
-                  }
-                </button>
+                <p-button type="submit" [label]="saving() ? 'Saving…' : 'Assign Homework'"
+                  icon="pi pi-send" [loading]="saving()" [disabled]="saving()" />
               </div>
             </div>
           </form>
@@ -153,13 +165,6 @@ import {
       gap: 8px;
     }
 
-    .act-ico {
-      font-size: 16px;
-      width: 16px;
-      height: 16px;
-      overflow: hidden;
-    }
-
     .assign-form {
       display: flex;
       flex-direction: column;
@@ -170,34 +175,6 @@ import {
     .os-toolbar {
       width: 100%;
     }
-    .os-toolbar-group.fill {
-      width: 100%;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    .os-field.stacked {
-      display: flex;
-      flex-direction: column;
-      align-items: stretch;
-      gap: 4px;
-      min-width: 0;
-    }
-    .os-field.stacked .os-field-label {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--t3);
-      text-transform: uppercase;
-      letter-spacing: 0.02em;
-    }
-    .os-toolbar app-os-select {
-      width: 100%;
-      min-width: 0;
-    }
-    .os-field.has-err app-os-select ::ng-deep .os-dd-trigger {
-      border-color: var(--red);
-    }
-
     .details-panel {
       width: 100%;
       overflow: visible !important;
@@ -242,33 +219,7 @@ import {
       color: var(--t4);
     }
 
-    input, textarea {
-      width: 100%;
-      box-sizing: border-box;
-      padding: 8px 12px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      font: inherit;
-      font-size: 13px;
-      font-weight: 500;
-      background: var(--surface);
-      color: var(--t1);
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    input { height: 34px; }
-    textarea {
-      resize: vertical;
-      min-height: 72px;
-      line-height: 1.45;
-    }
-    input:hover, textarea:hover {
-      border-color: var(--border-2, var(--border));
-    }
-    input:focus, textarea:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-g);
-    }
+    textarea { resize: vertical; min-height: 72px; }
     .field.invalid input,
     .field.invalid textarea { border-color: var(--red); }
 
@@ -286,11 +237,6 @@ import {
       z-index: 1;
       border-radius: 0 0 var(--r-lg, 12px) var(--r-lg, 12px);
     }
-    .form-footer .btn-primary,
-    .form-footer .btn-secondary {
-      min-height: 36px;
-    }
-
     .hw-assign-page {
       padding-bottom: var(--fab-page-pad);
     }
@@ -330,42 +276,14 @@ import {
       color: var(--red);
       border: 1px solid var(--red);
     }
-    .link-btn {
-      padding: 4px 10px;
-      border: 1px solid currentColor;
-      border-radius: 6px;
-      background: none;
-      color: inherit;
-      cursor: pointer;
-      font: inherit;
-      font-size: 12px;
-      font-weight: 600;
-    }
-
-    .spinner-sm {
-      width: 14px;
-      height: 14px;
-      border: 2px solid rgba(255, 255, 255, 0.4);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      display: inline-block;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
     @media (max-width: 640px) {
-      .os-toolbar-group.fill,
       .dates-row { grid-template-columns: 1fr; }
       .dates-row { max-width: none; }
       .form-footer {
         flex-direction: column-reverse;
         align-items: stretch;
       }
-      .form-footer .btn-primary,
-      .form-footer .btn-secondary {
-        width: 100%;
-        justify-content: center;
-      }
+      .form-footer p-button { width: 100%; }
     }
   `]
 })
@@ -392,14 +310,14 @@ export class AssignHomeworkComponent implements OnInit, OnDestroy {
     this.menuSvc.titleForRoute('/homework/assign', 'Assign Homework')
   );
 
-  classOptions = computed<OsSelectOption<number>[]>(() =>
+  classOptions = computed<SelectOpt<number>[]>(() =>
     this.classes().map(c => ({
       value: c.classId,
       label: `${c.className}${c.section ? ' ' + c.section : ''}`.trim()
     }))
   );
 
-  subjectOptions = computed<OsSelectOption<number>[]>(() =>
+  subjectOptions = computed<SelectOpt<number>[]>(() =>
     this.subjects().map(s => ({ value: s.subjectId, label: s.subjectName }))
   );
 

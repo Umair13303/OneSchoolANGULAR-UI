@@ -108,6 +108,18 @@
   &.is-invalid { border-color: var(--red); }
 }
 
+/* PrimeNG login controls — match legacy .f-input look */
+:host ::ng-deep {
+  .p-password { width: 100%; display: flex; }
+  .p-password-input { flex: 1; }
+  .p-password-toggle-mask-icon,
+  .p-password .p-iconfield .p-inputicon {
+    color: var(--t4);
+  }
+  p-button { display: block; width: 100%; margin-top: 6px; }
+  .p-button { width: 100%; justify-content: center; }
+}
+
 .pw-wrap { position: relative; }
 .pw-wrap .f-input { padding-right: 46px; }
 .pw-toggle {

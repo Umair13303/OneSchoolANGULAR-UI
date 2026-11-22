@@ -7,6 +7,11 @@ import { MenuService } from '../../../core/services/menu.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { CoursePlanDetailDto, CourseChapterDto, CourseTopicDto } from '../../../core/models/curriculum.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
+import Swal from 'sweetalert2';
+import { Button } from 'primeng/button';
+import { InputText } from 'primeng/inputtext';
+import { Tag } from 'primeng/tag';
+import { Dialog } from 'primeng/dialog';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { courseHeading } from '../curriculum-ui.util';
 import { isEmptyRichHtml } from '../../../shared/rich-content/rich-content.util';
@@ -14,21 +19,23 @@ import { isEmptyRichHtml } from '../../../shared/rich-content/rich-content.util'
 @Component({
   selector: 'app-course-plan-builder',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PageHeaderComponent, LoadingComponent],
+  imports: [CommonModule, FormsModule, RouterModule, PageHeaderComponent, LoadingComponent, Button, InputText, Tag, Dialog],
   template: `
     <div class="os-page compact">
       <app-page-header [dense]="true" [title]="headerTitle()">
-        <a class="btn-secondary" [routerLink]="coursesBackLink()">{{ coursesBackLabel() }}</a>
-        @if (plan(); as p) {
-          @if (p.status !== 'Archived') {
-            <button type="button" class="btn-secondary" (click)="openAddChapter()">Add Chapter</button>
-            @if (p.status !== 'Published') {
-              <button type="button" class="btn-primary" (click)="publish()" [disabled]="busy()">Publish</button>
-            } @else if (!isTeacher()) {
-              <button type="button" class="btn-secondary" (click)="archive()" [disabled]="busy()">Archive</button>
+        <div class="flex flex-wrap items-center gap-2">
+          <p-button [label]="coursesBackLabel()" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" size="small" [routerLink]="coursesBackLink()" />
+          @if (plan(); as p) {
+            @if (p.status !== 'Archived') {
+              <p-button label="Add Chapter" icon="pi pi-plus" severity="secondary" [outlined]="true" size="small" (onClick)="openAddChapter()" />
+              @if (p.status !== 'Published') {
+                <p-button label="Publish" icon="pi pi-check" size="small" (onClick)="publish()" [disabled]="busy()" [loading]="busy()" />
+              } @else if (!isTeacher()) {
+                <p-button label="Archive" icon="pi pi-inbox" severity="secondary" [outlined]="true" size="small" (onClick)="archive()" [disabled]="busy()" />
+              }
             }
           }
-        }
+        </div>
       </app-page-header>
 
       @if (loading()) { <app-loading /> }
@@ -39,9 +46,7 @@ import { isEmptyRichHtml } from '../../../shared/rich-content/rich-content.util'
             <div class="hero-meta">
               <span>{{ p.yearLabel }}</span>
               <span class="dot">·</span>
-              <span class="status" [attr.data-status]="p.status">
-                {{ p.status === 'Draft' ? 'Not published' : p.status }}
-              </span>
+              <p-tag [value]="p.status === 'Draft' ? 'Not published' : p.status" [severity]="statusSeverity(p.status)" [rounded]="true" />
               <span class="dot">·</span>
               <span>{{ p.chapterCount }} Chapters · {{ p.topicCount }} Topics</span>
             </div>
@@ -76,8 +81,8 @@ import { isEmptyRichHtml } from '../../../shared/rich-content/rich-content.util'
                 </button>
                 @if (p.status !== 'Archived') {
                   <div class="menu-wrap">
-                    <button type="button" class="menu-btn" (click)="toggleMenu('ch-' + ch.courseChapterId, $event)"
-                            aria-label="Chapter actions">⋯</button>
+                    <p-button icon="pi pi-ellipsis-v" [text]="true" [rounded]="true" severity="secondary" size="small"
+                              ariaLabel="Chapter actions" (onClick)="toggleMenu('ch-' + ch.courseChapterId, $event)" />
                     @if (openMenu() === 'ch-' + ch.courseChapterId) {
                       <div class="menu" role="menu">
                         <button type="button" role="menuitem" (click)="startRenameChapter(ch)">Rename</button>
@@ -117,8 +122,8 @@ import { isEmptyRichHtml } from '../../../shared/rich-content/rich-content.util'
                       </a>
                       @if (p.status !== 'Archived') {
                         <div class="menu-wrap">
-                          <button type="button" class="menu-btn" (click)="toggleMenu('t-' + t.courseTopicId, $event)"
-                                  aria-label="Topic actions">⋯</button>
+                          <p-button icon="pi pi-ellipsis-v" [text]="true" [rounded]="true" severity="secondary" size="small"
+                                    ariaLabel="Topic actions" (onClick)="toggleMenu('t-' + t.courseTopicId, $event)" />
                           @if (openMenu() === 't-' + t.courseTopicId) {
                             <div class="menu" role="menu">
                               <a role="menuitem"
@@ -146,7 +151,7 @@ import { isEmptyRichHtml } from '../../../shared/rich-content/rich-content.util'
               <strong>Start with a chapter</strong>
               <p>Example: “Numbers”, “Fractions”, or “Unit 1”. Then add topics under it.</p>
               @if (p.status !== 'Archived') {
-                <button type="button" class="btn-primary" (click)="openAddChapter()">Add first chapter</button>
+                <p-button label="Add first chapter" icon="pi pi-plus" (onClick)="openAddChapter()" />
               }
             </div>
           }
@@ -154,48 +159,57 @@ import { isEmptyRichHtml } from '../../../shared/rich-content/rich-content.util'
       }
     </div>
 
-    @if (chapterSheet()) {
-      <div class="sheet-backdrop" (click)="chapterSheet.set(false)">
-        <div class="sheet" (click)="$event.stopPropagation()">
-          <h3>{{ renamingChapterId() ? 'Rename chapter' : 'New chapter' }}</h3>
-          <p class="sheet-hint">A chapter groups related topics (like a unit in the textbook).</p>
-          <div class="os-field">
-            <label class="os-field-label">Chapter name *</label>
-            <input #chapterInput class="os-input" [(ngModel)]="chapterTitle"
-                   placeholder="e.g. Numbers" (keydown.enter)="saveChapterSheet()" />
-          </div>
-          @if (sheetError()) { <div class="os-error">{{ sheetError() }}</div> }
-          <div class="sheet-actions">
-            <button type="button" class="btn-secondary" (click)="chapterSheet.set(false)">Cancel</button>
-            <button type="button" class="btn-primary" (click)="saveChapterSheet()" [disabled]="busy()">
-              {{ renamingChapterId() ? 'Save' : 'Add chapter' }}
-            </button>
-          </div>
-        </div>
+    <p-dialog
+      [header]="renamingChapterId() ? 'Rename chapter' : 'New chapter'"
+      [visible]="chapterSheet()"
+      (visibleChange)="chapterSheet.set($event)"
+      (onShow)="focusSheetInput('chapter')"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '28rem' }"
+      [breakpoints]="{ '640px': '96vw' }">
+      <p class="mb-3 mt-0 text-[13px] text-[var(--t3)]">A chapter groups related topics (like a unit in the textbook).</p>
+      <div class="flex flex-col gap-1">
+        <label for="chapter-title" class="text-xs font-semibold">Chapter name *</label>
+        <input pInputText id="chapter-title" #chapterInput class="w-full" [(ngModel)]="chapterTitle"
+               placeholder="e.g. Numbers" (keydown.enter)="saveChapterSheet()" />
       </div>
-    }
+      @if (sheetError()) { <div class="mt-2 text-sm text-red-700">{{ sheetError() }}</div> }
+      <ng-template #footer>
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="chapterSheet.set(false)" />
+          <p-button [label]="renamingChapterId() ? 'Save' : 'Add chapter'" icon="pi pi-check" [loading]="busy()" [disabled]="busy()" (onClick)="saveChapterSheet()" />
+        </div>
+      </ng-template>
+    </p-dialog>
 
-    @if (topicSheet()) {
-      <div class="sheet-backdrop" (click)="topicSheet.set(false)">
-        <div class="sheet" (click)="$event.stopPropagation()">
-          <h3>New topic</h3>
-          <p class="sheet-hint">After you add it, you can write the lesson content right away.</p>
-          <div class="os-field">
-            <label class="os-field-label">Topic name *</label>
-            <input #topicInput class="os-input" [(ngModel)]="topicTitle"
-                   placeholder="e.g. Addition up to 10" (keydown.enter)="saveTopicSheet()" />
-          </div>
-          @if (sheetError()) { <div class="os-error">{{ sheetError() }}</div> }
-          <div class="sheet-actions">
-            <button type="button" class="btn-secondary" (click)="topicSheet.set(false)">Cancel</button>
-            <button type="button" class="btn-primary" (click)="saveTopicSheet()" [disabled]="busy()">
-              Add &amp; write lesson
-            </button>
-          </div>
-        </div>
+    <p-dialog
+      header="New topic"
+      [visible]="topicSheet()"
+      (visibleChange)="topicSheet.set($event)"
+      (onShow)="focusSheetInput('topic')"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '28rem' }"
+      [breakpoints]="{ '640px': '96vw' }">
+      <p class="mb-3 mt-0 text-[13px] text-[var(--t3)]">After you add it, you can write the lesson content right away.</p>
+      <div class="flex flex-col gap-1">
+        <label for="topic-title" class="text-xs font-semibold">Topic name *</label>
+        <input pInputText id="topic-title" #topicInput class="w-full" [(ngModel)]="topicTitle"
+               placeholder="e.g. Addition up to 10" (keydown.enter)="saveTopicSheet()" />
       </div>
-    }
-  `,
+      @if (sheetError()) { <div class="mt-2 text-sm text-red-700">{{ sheetError() }}</div> }
+      <ng-template #footer>
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="topicSheet.set(false)" />
+          <p-button label="Add & write lesson" icon="pi pi-check" [loading]="busy()" [disabled]="busy()" (onClick)="saveTopicSheet()" />
+        </div>
+      </ng-template>
+    </p-dialog>  `,
   styles: [`
     .hero { margin: 0 0 1rem; }
     .hero h1 { margin: 0; font-size: 1.35rem; font-weight: 800; letter-spacing: -.01em; }
@@ -221,13 +235,6 @@ import { isEmptyRichHtml } from '../../../shared/rich-content/rich-content.util'
     .guide-step.active span { background: #2563eb; color: #fff; }
     .guide-step.done { background: #dcfce7; color: #166534; }
     .guide-step.done span { background: #16a34a; color: #fff; }
-    .status {
-      font-size: .7rem; font-weight: 700; padding: .15rem .45rem; border-radius: 999px;
-      background: #f3f4f6; color: #4b5563;
-    }
-    .status[data-status="Published"] { background: #dcfce7; color: #166534; }
-    .status[data-status="Draft"] { background: #fef3c7; color: #92400e; }
-    .status[data-status="Archived"] { background: #e5e7eb; color: #4b5563; }
     .os-error { color: #b91c1c; margin: .5rem 0; font-size: .85rem; }
 
     .outline { display: grid; gap: .5rem; }
@@ -280,11 +287,6 @@ import { isEmptyRichHtml } from '../../../shared/rich-content/rich-content.util'
     .add-inline:hover { background: #f8fafc; }
 
     .menu-wrap { position: relative; flex-shrink: 0; display: flex; align-items: center; padding-right: .35rem; }
-    .menu-btn {
-      background: none; border: none; width: 32px; height: 32px; border-radius: 8px;
-      cursor: pointer; color: #64748b; font-size: 1.1rem; line-height: 1;
-    }
-    .menu-btn:hover { background: #e2e8f0; }
     .menu {
       position: absolute; right: 0; top: 100%; z-index: 20; min-width: 150px;
       background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
@@ -306,25 +308,6 @@ import { isEmptyRichHtml } from '../../../shared/rich-content/rich-content.util'
     .empty-outline strong { display: block; color: #0f172a; margin-bottom: .25rem; }
     .empty-outline p { margin: 0 0 .85rem; font-size: .9rem; }
 
-    .sheet-backdrop {
-      position: fixed; inset: 0; background: rgba(15,23,42,.4);
-      display: grid; place-items: end center; z-index: 60;
-    }
-    .sheet {
-      background: #fff; width: min(440px, 100vw); max-height: 90vh; overflow: auto;
-      border-radius: 16px 16px 0 0; padding: 1.15rem; display: grid; gap: .7rem;
-    }
-    .sheet h3 { margin: 0; font-size: 1.05rem; }
-    .sheet-hint { margin: 0; font-size: .82rem; color: #64748b; line-height: 1.4; }
-    .sheet .os-input {
-      box-sizing: border-box; width: 100%; height: 36px; padding: 0 10px;
-      border: 1px solid #e5e7eb; border-radius: 10px; font: inherit; font-size: 13px; font-weight: 600;
-    }
-    .sheet-actions { display: flex; gap: .5rem; justify-content: flex-end; }
-    @media (min-width: 720px) {
-      .sheet-backdrop { place-items: center; padding: 1rem; }
-      .sheet { border-radius: 12px; }
-    }
     @media (max-width: 560px) {
       .t-meta { display: none; }
       .ch-count { display: none; }
@@ -380,11 +363,17 @@ export class CoursePlanBuilderComponent implements OnInit {
     this.reload(id);
   }
 
+  statusSeverity(s: string): 'success' | 'warn' | 'secondary' {
+    if (s === 'Published') return 'success';
+    if (s === 'Draft') return 'warn';
+    return 'secondary';
+  }
+
   isBlankHtml(html?: string | null) {
     return isEmptyRichHtml(html);
   }
 
-  private focusSheetInput(kind: 'chapter' | 'topic') {
+  focusSheetInput(kind: 'chapter' | 'topic') {
     setTimeout(() => {
       const el = kind === 'chapter' ? this.chapterInput?.nativeElement : this.topicInput?.nativeElement;
       el?.focus();
@@ -440,7 +429,6 @@ export class CoursePlanBuilderComponent implements OnInit {
     this.sheetError.set('');
     this.openMenu.set(null);
     this.chapterSheet.set(true);
-    this.focusSheetInput('chapter');
   }
 
   startRenameChapter(ch: CourseChapterDto) {
@@ -449,7 +437,6 @@ export class CoursePlanBuilderComponent implements OnInit {
     this.sheetError.set('');
     this.openMenu.set(null);
     this.chapterSheet.set(true);
-    this.focusSheetInput('chapter');
   }
 
   saveChapterSheet() {
@@ -493,7 +480,6 @@ export class CoursePlanBuilderComponent implements OnInit {
     this.openMenu.set(null);
     this.expanded.update(s => new Set([...s, ch.courseChapterId]));
     this.topicSheet.set(true);
-    this.focusSheetInput('topic');
   }
 
   saveTopicSheet() {
@@ -517,15 +503,23 @@ export class CoursePlanBuilderComponent implements OnInit {
     });
   }
 
-  deleteChapter(ch: CourseChapterDto) {
+  private async confirmAction(title: string, text: string, confirmText: string): Promise<boolean> {
+    const r = await Swal.fire({
+      icon: 'warning', title, text,
+      showCancelButton: true, confirmButtonText: confirmText, confirmButtonColor: '#dc2626'
+    });
+    return r.isConfirmed;
+  }
+
+  async deleteChapter(ch: CourseChapterDto) {
     this.openMenu.set(null);
-    if (!confirm(`Delete chapter "${ch.title}" and its topics?`)) return;
+    if (!await this.confirmAction('Delete chapter?', `Delete chapter "${ch.title}" and its topics?`, 'Delete')) return;
     this.curriculum.deleteChapter(ch.courseChapterId).subscribe({ next: () => this.reload() });
   }
 
-  deleteTopic(t: CourseTopicDto) {
+  async deleteTopic(t: CourseTopicDto) {
     this.openMenu.set(null);
-    if (!confirm(`Delete topic "${t.title}"?`)) return;
+    if (!await this.confirmAction('Delete topic?', `Delete topic "${t.title}"?`, 'Delete')) return;
     this.curriculum.deleteTopic(t.courseTopicId).subscribe({ next: () => this.reload() });
   }
 
@@ -563,9 +557,9 @@ export class CoursePlanBuilderComponent implements OnInit {
     });
   }
 
-  archive() {
+  async archive() {
     const p = this.plan();
-    if (!p || !confirm('Archive this course? Teachers will no longer see it.')) return;
+    if (!p || !await this.confirmAction('Archive course?', 'Teachers will no longer see it.', 'Archive')) return;
     this.curriculum.archivePlan(p.coursePlanId).subscribe({ next: () => this.reload() });
   }
 }

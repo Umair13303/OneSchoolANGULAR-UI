@@ -3,6 +3,12 @@ import { concatMap, from, tap, last } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
+import { InputNumber } from 'primeng/inputnumber';
+import { Tag } from 'primeng/tag';
+import { Dialog } from 'primeng/dialog';
 import { FeeService } from '../../../core/services/fee.service';
 import { AcademicService } from '../../../core/services/academic.service';
 import { InstituteService } from '../../../core/services/institute.service';
@@ -24,85 +30,115 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
 @Component({
   selector: 'app-student-fees',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, PageHeaderComponent, DatePickerComponent],
+  imports: [
+    CommonModule, ReactiveFormsModule, FormsModule, PageHeaderComponent, DatePickerComponent,
+    Button, Select, InputText, InputNumber, Tag, Dialog
+  ],
   template: `
     <app-page-header title="Student Fees" subtitle="Manage fee payments and student concessions" />
 
     <!-- Filters -->
-    <div class="filter-bar card">
+    <div class="filter-bar card flex flex-wrap items-end gap-3">
       @if (isParentFeeView) {
         <div class="field">
           <label>Child</label>
-          <select [(ngModel)]="parentStudentId" (change)="loadFees()">
-            @for (c of myChildren(); track c.studentId) {
-              <option [ngValue]="c.studentId">{{ c.fullName }} ({{ c.admissionNo }})</option>
-            }
-          </select>
+          <p-select
+            class="min-w-[220px]"
+            [options]="myChildrenOptions()"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+            [(ngModel)]="parentStudentId"
+            (onChange)="loadFees()" />
         </div>
       }
       @if (!isParentFeeView && isSuperAdmin) {
         <div class="field">
           <label>Institute</label>
-          <select [(ngModel)]="filterInstituteId" (change)="onInstituteChange()">
-            <option [ngValue]="null">All Institutes</option>
-            @for (i of institutes(); track i.instituteId) {
-              <option [ngValue]="i.instituteId">{{ i.name }}</option>
-            }
-          </select>
+          <p-select
+            class="min-w-[180px]"
+            [options]="institutes()"
+            optionLabel="name"
+            optionValue="instituteId"
+            placeholder="All Institutes"
+            [showClear]="true"
+            appendTo="body"
+            [(ngModel)]="filterInstituteId"
+            (onChange)="onInstituteChange()" />
         </div>
         <div class="field">
           <label>Campus</label>
-          <select [(ngModel)]="filterCampusId" (change)="loadFees()" [disabled]="!filterInstituteId">
-            <option [ngValue]="null">All Campuses</option>
-            @for (c of campuses(); track c.campusId) {
-              <option [ngValue]="c.campusId">{{ c.name }}</option>
-            }
-          </select>
+          <p-select
+            class="min-w-[180px]"
+            [options]="campuses()"
+            optionLabel="name"
+            optionValue="campusId"
+            placeholder="All Campuses"
+            [showClear]="true"
+            appendTo="body"
+            [disabled]="!filterInstituteId"
+            [(ngModel)]="filterCampusId"
+            (onChange)="loadFees()" />
         </div>
       }
       @if (!isParentFeeView && isInstituteAdmin) {
         <div class="field">
           <label>Campus</label>
-          <select [(ngModel)]="filterCampusId" (change)="loadFees()">
-            <option [ngValue]="null">All Campuses</option>
-            @for (c of campuses(); track c.campusId) {
-              <option [ngValue]="c.campusId">{{ c.name }}</option>
-            }
-          </select>
+          <p-select
+            class="min-w-[180px]"
+            [options]="campuses()"
+            optionLabel="name"
+            optionValue="campusId"
+            placeholder="All Campuses"
+            [showClear]="true"
+            appendTo="body"
+            [(ngModel)]="filterCampusId"
+            (onChange)="loadFees()" />
         </div>
       }
       @if (!isParentFeeView) {
         <div class="field">
           <label>Academic Year</label>
-          <select [(ngModel)]="filterYearId" (change)="onYearChange()">
-            <option [ngValue]="null">All Years</option>
-            @for (y of years(); track y.academicYearId) {
-              <option [ngValue]="y.academicYearId">{{ y.yearLabel }}</option>
-            }
-          </select>
+          <p-select
+            class="min-w-[160px]"
+            [options]="years()"
+            optionLabel="yearLabel"
+            optionValue="academicYearId"
+            placeholder="All Years"
+            [showClear]="true"
+            appendTo="body"
+            [(ngModel)]="filterYearId"
+            (onChange)="onYearChange()" />
         </div>
         <div class="field">
           <label>Class</label>
-          <select [(ngModel)]="filterClassId" (change)="loadFees()">
-            <option [ngValue]="null">All Classes</option>
-            @for (c of filterClasses(); track c.classId) {
-              <option [ngValue]="c.classId">{{ c.className }} {{ c.section }}</option>
-            }
-          </select>
+          <p-select
+            class="min-w-[160px]"
+            [options]="filterClassOptions()"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="All Classes"
+            [showClear]="true"
+            appendTo="body"
+            [(ngModel)]="filterClassId"
+            (onChange)="loadFees()" />
         </div>
         <div class="field">
           <label>Status</label>
-          <select [(ngModel)]="filterStatus" (change)="loadFees()">
-            <option value="">All Status</option>
-            <option value="Unpaid">Unpaid</option>
-            <option value="Partial">Partial</option>
-            <option value="Paid">Paid</option>
-            <option value="Waived">Waived</option>
-          </select>
+          <p-select
+            class="min-w-[140px]"
+            [options]="statusOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="All Status"
+            [showClear]="true"
+            appendTo="body"
+            [(ngModel)]="filterStatus"
+            (onChange)="loadFees()" />
         </div>
-        <div style="display:flex; gap:8px; margin-top:auto">
-          <button class="btn-primary" (click)="openBulkModal()">⚡ Bulk Assign</button>
-          <button class="btn-secondary" (click)="openConcessionPanel()">🎟 Concessions</button>
+        <div class="flex flex-wrap items-center gap-2 mt-auto">
+          <p-button label="Bulk Assign" icon="pi pi-bolt" (onClick)="openBulkModal()" />
+          <p-button label="Concessions" icon="pi pi-ticket" severity="secondary" [outlined]="true" (onClick)="openConcessionPanel()" />
         </div>
       }
     </div>
@@ -159,13 +195,13 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
               <td style="text-align:right" [class.balance-due]="s.totalBalance > 0">
                 <strong>{{ s.totalBalance | number:'1.0-0' }}</strong>
               </td>
-              <td><span [class]="overallStatusClass(s)">{{ overallStatus(s) }}</span></td>
+              <td><p-tag [value]="overallStatus(s)" [severity]="statusSeverity(overallStatus(s))" [rounded]="true" /></td>
               <td class="actions" (click)="$event.stopPropagation()">
                 @if (s.totalBalance > 0) {
-                  <button class="btn-sm-primary" (click)="openGroupPaymentModal(s)">💳 Pay</button>
+                  <p-button label="Pay" icon="pi pi-credit-card" size="small" (onClick)="openGroupPaymentModal(s)" />
                 }
                 @if (s.totalBalance === 0 && s.totalPaid > 0) {
-                  <button class="btn-sm-receipt" (click)="printGroupReceipt(s)">🖨️ Receipt</button>
+                  <p-button label="Receipt" icon="pi pi-print" size="small" severity="success" [outlined]="true" (onClick)="printGroupReceipt(s)" />
                 }
               </td>
             </tr>
@@ -188,15 +224,15 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
                   <td style="text-align:right" [class.balance-due]="fee.balance > 0">
                     {{ fee.balance | number:'1.0-0' }}
                   </td>
-                  <td><span [class]="statusClass(fee.status)">{{ fee.status }}</span></td>
+                  <td><p-tag [value]="fee.status" [severity]="statusSeverity(fee.status)" [rounded]="true" /></td>
                   <td class="actions">
                     @if (fee.status !== 'Paid' && fee.status !== 'Waived') {
-                      <button class="btn-sm-primary" (click)="openPaymentModal(fee)">💳 Pay</button>
+                      <p-button label="Pay" icon="pi pi-credit-card" size="small" (onClick)="openPaymentModal(fee)" />
                     }
                     @if (fee.status === 'Paid') {
-                      <button class="btn-sm-receipt" (click)="printFeeReceipt(fee)">🖨️ Receipt</button>
+                      <p-button label="Receipt" icon="pi pi-print" size="small" severity="success" [outlined]="true" (onClick)="printFeeReceipt(fee)" />
                     }
-                    <button class="btn-link" (click)="viewPayments(fee)">History</button>
+                    <p-button label="History" icon="pi pi-history" size="small" severity="secondary" [text]="true" (onClick)="viewPayments(fee)" />
                   </td>
                 </tr>
               }
@@ -219,41 +255,60 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
     </div>
 
     <!-- ── BULK ASSIGN MODAL ── -->
-    @if (showBulkModal()) {
-      <div class="modal-overlay" (click)="closeBulkModal()">
-        <div class="modal modal-xl" (click)="$event.stopPropagation()">
-          <div class="modal-header">
-            <h3>⚡ Bulk Assign Fees</h3>
-            <button class="close-btn" (click)="closeBulkModal()">✕</button>
-          </div>
-          <div class="modal-body">
+    <p-dialog
+      header="Bulk Assign Fees"
+      [visible]="showBulkModal()"
+      (visibleChange)="$event ? null : closeBulkModal()"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '56rem' }"
+      [breakpoints]="{ '960px': '96vw' }">
+      @if (showBulkModal()) {
+          <div>
             <form [formGroup]="bulkForm" class="bulk-form-grid">
-              <div class="field" [class.invalid]="bulkF('academicYearId')?.invalid && bulkF('academicYearId')?.touched">
+              <div class="field">
                 <label>Academic Year *</label>
-                <select formControlName="academicYearId" (change)="onBulkYearChange()">
-                  <option [ngValue]="null">Select year</option>
-                  @for (y of years(); track y.academicYearId) {
-                    <option [ngValue]="y.academicYearId">{{ y.yearLabel }}</option>
-                  }
-                </select>
+                <p-select
+                  class="w-full"
+                  [options]="years()"
+                  optionLabel="yearLabel"
+                  optionValue="academicYearId"
+                  placeholder="Select year"
+                  appendTo="body"
+                  [overlayOptions]="{ baseZIndex: 10050 }"
+                  [invalid]="!!(bulkF('academicYearId')?.invalid && bulkF('academicYearId')?.touched)"
+                  formControlName="academicYearId"
+                  (onChange)="onBulkYearChange()" />
               </div>
-              <div class="field" [class.invalid]="bulkF('classId')?.invalid && bulkF('classId')?.touched">
+              <div class="field">
                 <label>Class *</label>
-                <select formControlName="classId" (change)="onBulkClassChange()">
-                  <option [ngValue]="null">Select class</option>
-                  @for (c of bulkClasses(); track c.classId) {
-                    <option [ngValue]="c.classId">{{ c.className }} {{ c.section }}</option>
-                  }
-                </select>
+                <p-select
+                  class="w-full"
+                  [options]="bulkClassOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Select class"
+                  appendTo="body"
+                  [overlayOptions]="{ baseZIndex: 10050 }"
+                  [invalid]="!!(bulkF('classId')?.invalid && bulkF('classId')?.touched)"
+                  formControlName="classId"
+                  (onChange)="onBulkClassChange()" />
               </div>
-              <div class="field" [class.invalid]="bulkF('feeStructureId')?.invalid && bulkF('feeStructureId')?.touched">
+              <div class="field">
                 <label>Fee Structure *</label>
-                <select formControlName="feeStructureId" (change)="onBulkStructureChange()">
-                  <option [ngValue]="null">Select structure</option>
-                  @for (fs of bulkFeeStructures(); track fs.feeStructureId) {
-                    <option [ngValue]="fs.feeStructureId">{{ fs.feeTypeName }} — {{ fs.amount | number:'1.0-0' }}</option>
-                  }
-                </select>
+                <p-select
+                  class="w-full"
+                  [options]="bulkStructureOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Select structure"
+                  appendTo="body"
+                  [overlayOptions]="{ baseZIndex: 10050 }"
+                  [invalid]="!!(bulkF('feeStructureId')?.invalid && bulkF('feeStructureId')?.touched)"
+                  formControlName="feeStructureId"
+                  (onChange)="onBulkStructureChange()" />
               </div>
               <div class="field" [class.invalid]="bulkF('dueDate')?.invalid && bulkF('dueDate')?.touched">
                 <label>Due Date *</label>
@@ -311,9 +366,9 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
                           </td>
                           <td>
                             @if (p.alreadyAssigned) {
-                              <span class="badge-skip">Already Assigned</span>
+                              <p-tag value="Already Assigned" severity="secondary" [rounded]="true" />
                             } @else {
-                              <span class="badge-new">Will Create</span>
+                              <p-tag value="Will Create" severity="success" [rounded]="true" />
                             }
                           </td>
                         </tr>
@@ -328,33 +383,41 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
               <div class="alert success">✅ {{ bulkResult()!.assigned }} fee records created successfully.</div>
             }
             @if (bulkError()) { <div class="alert error">{{ bulkError() }}</div> }
-            <div class="modal-footer">
-              <button type="button" class="btn-secondary" (click)="closeBulkModal()">Close</button>
-              <button type="button" class="btn-secondary"
-                [disabled]="bulkForm.invalid || loadingPreview()"
-                (click)="loadBulkPreview()">
-                {{ loadingPreview() ? 'Loading...' : '🔍 Preview' }}
-              </button>
-              <button type="button" class="btn-primary"
-                [disabled]="bulkForm.invalid || saving() || !bulkPreview().length"
-                (click)="saveBulk()">
-                {{ saving() ? 'Processing...' : '⚡ Assign Fees' }}
-              </button>
-            </div>
           </div>
+      }
+      <ng-template #footer>
+        <div class="flex flex-col-reverse flex-wrap gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Close" severity="secondary" [outlined]="true" (onClick)="closeBulkModal()" />
+          <p-button
+            [label]="loadingPreview() ? 'Loading...' : 'Preview'"
+            icon="pi pi-search"
+            severity="secondary"
+            [loading]="loadingPreview()"
+            [disabled]="bulkForm.invalid || loadingPreview()"
+            (onClick)="loadBulkPreview()" />
+          <p-button
+            [label]="saving() ? 'Processing...' : 'Assign Fees'"
+            icon="pi pi-bolt"
+            [loading]="saving()"
+            [disabled]="bulkForm.invalid || saving() || !bulkPreview().length"
+            (onClick)="saveBulk()" />
         </div>
-      </div>
-    }
+      </ng-template>
+    </p-dialog>
 
     <!-- ── PAYMENT MODAL ── -->
-    @if (showPaymentModal()) {
-      <div class="modal-overlay" (click)="closePaymentModal()">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <div class="modal-header">
-            <h3>💳 Record Payment</h3>
-            <button class="close-btn" (click)="closePaymentModal()">✕</button>
-          </div>
-          <div class="modal-body">
+    <p-dialog
+      header="Record Payment"
+      [visible]="showPaymentModal()"
+      (visibleChange)="$event ? null : closePaymentModal()"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '34rem' }"
+      [breakpoints]="{ '640px': '96vw' }">
+      @if (showPaymentModal()) {
+          <div>
 
             <!-- Student + total balance summary -->
             <div class="fee-summary">
@@ -392,8 +455,13 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
               <div class="row-2">
                 <div class="field" [class.invalid]="pf('amountPaid')?.invalid && pf('amountPaid')?.touched">
                   <label>Amount (PKR) *</label>
-                  <input type="number" formControlName="amountPaid"
-                    [max]="selectedGroup()?.totalBalance ?? selectedFee()?.balance ?? null" min="1" />
+                  <p-inputnumber
+                    formControlName="amountPaid"
+                    [min]="1"
+                    [max]="selectedGroup()?.totalBalance ?? selectedFee()?.balance ?? null"
+                    [useGrouping]="false"
+                    styleClass="w-full"
+                    inputStyleClass="w-full" />
                   @if (pf('amountPaid')?.invalid && pf('amountPaid')?.touched) { <span class="err">Valid amount required.</span> }
                 </div>
                 <div class="field" [class.invalid]="pf('paymentDate')?.invalid && pf('paymentDate')?.touched">
@@ -404,34 +472,40 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
               <div class="row-2">
                 <div class="field">
                   <label>Method</label>
-                  <select formControlName="method">
-                    <option value="Cash">Cash</option>
-                    <option value="Bank">Bank Transfer</option>
-                    <option value="Online">Online / JazzCash / Easypaisa</option>
-                    <option value="Cheque">Cheque</option>
-                  </select>
+                  <p-select
+                    class="w-full"
+                    [options]="methodOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    appendTo="body"
+                    [overlayOptions]="{ baseZIndex: 10050 }"
+                    formControlName="method" />
                 </div>
                 <div class="field">
                   <label>Receipt No</label>
-                  <input formControlName="receiptNo" placeholder="Optional" />
+                  <input pInputText class="w-full" formControlName="receiptNo" placeholder="Optional" />
                 </div>
               </div>
               <div class="field">
                 <label>Remarks</label>
-                <input formControlName="remarks" placeholder="Optional" />
+                <input pInputText class="w-full" formControlName="remarks" placeholder="Optional" />
               </div>
               @if (payError()) { <div class="alert error">{{ payError() }}</div> }
-              <div class="modal-footer">
-                <button type="button" class="btn-secondary" (click)="closePaymentModal()">Cancel</button>
-                <button type="submit" class="btn-primary" [disabled]="saving()">
-                  {{ saving() ? 'Processing...' : 'Record Payment' }}
-                </button>
-              </div>
             </form>
           </div>
+      }
+      <ng-template #footer>
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="closePaymentModal()" />
+          <p-button
+            [label]="saving() ? 'Processing...' : 'Record Payment'"
+            icon="pi pi-check"
+            [loading]="saving()"
+            [disabled]="saving()"
+            (onClick)="savePayment()" />
         </div>
-      </div>
-    }
+      </ng-template>
+    </p-dialog>
 
     <!-- ── PAYMENT HISTORY PANEL ── -->
     @if (showHistoryPanel()) {
@@ -442,7 +516,7 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
               <h3>Payment History</h3>
               <p>{{ selectedFee()?.studentName }} — {{ selectedFee()?.feeTypeName }}</p>
             </div>
-            <button class="close-btn" (click)="showHistoryPanel.set(false)">✕</button>
+            <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="secondary" ariaLabel="Close" (onClick)="showHistoryPanel.set(false)" />
           </div>
           <div class="panel-body">
             <div class="fee-summary" style="margin-bottom:16px">
@@ -476,10 +550,10 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
         <div class="side-panel side-panel-wide" (click)="$event.stopPropagation()">
           <div class="panel-header">
             <div>
-              <h3>🎟 Student Concessions</h3>
+              <h3>Student Concessions</h3>
               <p>Assign discount policies to individual students</p>
             </div>
-            <button class="close-btn" (click)="showConcessionPanel.set(false)">✕</button>
+            <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="secondary" ariaLabel="Close" (onClick)="showConcessionPanel.set(false)" />
           </div>
           <div class="panel-body">
 
@@ -487,18 +561,22 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
             <div class="concession-form">
               <h4 style="font-size:13px; font-weight:700; color:var(--t2); margin:0 0 12px">Assign New Discount</h4>
               <form [formGroup]="concessionForm" (ngSubmit)="saveConcesssion()">
-                <div class="field" [class.invalid]="cf('academicYearId')?.invalid && cf('academicYearId')?.touched">
+                <div class="field">
                   <label>Academic Year *</label>
-                  <select formControlName="academicYearId">
-                    <option [ngValue]="null">Select year</option>
-                    @for (y of years(); track y.academicYearId) {
-                      <option [ngValue]="y.academicYearId">{{ y.yearLabel }}</option>
-                    }
-                  </select>
+                  <p-select
+                    class="w-full"
+                    [options]="years()"
+                    optionLabel="yearLabel"
+                    optionValue="academicYearId"
+                    placeholder="Select year"
+                    appendTo="body"
+                    [overlayOptions]="{ baseZIndex: 10050 }"
+                    [invalid]="!!(cf('academicYearId')?.invalid && cf('academicYearId')?.touched)"
+                    formControlName="academicYearId" />
                 </div>
                 <div class="field" [class.invalid]="cf('studentId')?.invalid && cf('studentId')?.touched">
                   <label>Student (Admission No or Name) *</label>
-                  <input formControlName="studentSearch" placeholder="Type to search..."
+                  <input pInputText class="w-full" formControlName="studentSearch" placeholder="Type to search..."
                     (input)="onStudentSearch($event)" list="student-list-dl" />
                   <datalist id="student-list-dl">
                     @for (f of fees(); track f.studentId) {
@@ -507,32 +585,44 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
                   </datalist>
                   <input type="hidden" formControlName="studentId" />
                 </div>
-                <div class="field" [class.invalid]="cf('discountPolicyId')?.invalid && cf('discountPolicyId')?.touched">
+                <div class="field">
                   <label>Discount Policy *</label>
-                  <select formControlName="discountPolicyId">
-                    <option [ngValue]="null">Select policy</option>
-                    @for (dp of discountPolicies(); track dp.discountPolicyId) {
-                      <option [ngValue]="dp.discountPolicyId">
-                        {{ dp.name }} ({{ dp.valueType === 'Percentage' ? dp.value + '%' : '' + dp.value }})
-                      </option>
-                    }
-                  </select>
+                  <p-select
+                    class="w-full"
+                    [options]="discountPolicyOptions()"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select policy"
+                    appendTo="body"
+                    [overlayOptions]="{ baseZIndex: 10050 }"
+                    [invalid]="!!(cf('discountPolicyId')?.invalid && cf('discountPolicyId')?.touched)"
+                    formControlName="discountPolicyId" />
                 </div>
                 <div class="row-2">
                   <div class="field">
                     <label>Override Value <span style="color:var(--t4); font-weight:400">(optional)</span></label>
-                    <input type="number" formControlName="overrideValue" placeholder="Leave blank to use policy default" min="0" />
+                    <p-inputnumber
+                      formControlName="overrideValue"
+                      placeholder="Leave blank to use policy default"
+                      [min]="0"
+                      [useGrouping]="false"
+                      [maxFractionDigits]="2"
+                      styleClass="w-full"
+                      inputStyleClass="w-full" />
                   </div>
                   <div class="field">
                     <label>Remarks</label>
-                    <input formControlName="remarks" placeholder="Optional reason" />
+                    <input pInputText class="w-full" formControlName="remarks" placeholder="Optional reason" />
                   </div>
                 </div>
                 @if (concessionError()) { <div class="alert error" style="margin-top:0">{{ concessionError() }}</div> }
-                <div style="display:flex; justify-content:flex-end; margin-top:4px">
-                  <button type="submit" class="btn-primary" [disabled]="saving()">
-                    {{ saving() ? 'Saving...' : '+ Assign Discount' }}
-                  </button>
+                <div class="mt-1 flex justify-end">
+                  <p-button
+                    type="submit"
+                    [label]="saving() ? 'Saving...' : 'Assign Discount'"
+                    icon="pi pi-plus"
+                    [loading]="saving()"
+                    [disabled]="saving()" />
                 </div>
               </form>
             </div>
@@ -541,12 +631,18 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
             <div class="concession-filter">
               <div class="field" style="min-width:0; flex:1">
                 <label>Filter by Year</label>
-                <select [(ngModel)]="concessionFilterYear" (change)="loadConcessions()" [ngModelOptions]="{standalone:true}">
-                  <option [ngValue]="null">All Years</option>
-                  @for (y of years(); track y.academicYearId) {
-                    <option [ngValue]="y.academicYearId">{{ y.yearLabel }}</option>
-                  }
-                </select>
+                <p-select
+                  class="w-full"
+                  [options]="years()"
+                  optionLabel="yearLabel"
+                  optionValue="academicYearId"
+                  placeholder="All Years"
+                  [showClear]="true"
+                  appendTo="body"
+                  [overlayOptions]="{ baseZIndex: 10050 }"
+                  [(ngModel)]="concessionFilterYear"
+                  [ngModelOptions]="{standalone:true}"
+                  (onChange)="loadConcessions()" />
               </div>
             </div>
 
@@ -559,7 +655,7 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
                     <span class="admission"> · {{ sd.admissionNo }}</span>
                   </div>
                   <div class="sd-actions">
-                    <button class="btn-link danger" (click)="deleteConcesssion(sd.studentDiscountId)">Remove</button>
+                    <p-button label="Remove" icon="pi pi-trash" size="small" severity="danger" [text]="true" (onClick)="deleteConcesssion(sd.studentDiscountId)" />
                   </div>
                 </div>
                 <div class="sd-details">
@@ -576,7 +672,7 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
                     }
                   </span>
                   <span class="sd-year">{{ sd.yearLabel }}</span>
-                  @if (!sd.isActive) { <span class="badge badge-gray">Inactive</span> }
+                  @if (!sd.isActive) { <p-tag value="Inactive" severity="secondary" [rounded]="true" /> }
                 </div>
                 @if (sd.remarks) { <div class="sd-remarks">{{ sd.remarks }}</div> }
               </div>
@@ -938,6 +1034,45 @@ export class StudentFeesComponent implements OnInit {
     if (this.filterYearId) this.acadSvc.getClasses(this.filterYearId).subscribe(c => this.filterClasses.set(c));
     else this.filterClasses.set([]);
     this.loadFees();
+  }
+
+  statusOptions = [
+    { label: 'Unpaid',  value: 'Unpaid' },
+    { label: 'Partial', value: 'Partial' },
+    { label: 'Paid',    value: 'Paid' },
+    { label: 'Waived',  value: 'Waived' }
+  ];
+  methodOptions = [
+    { label: 'Cash',                          value: 'Cash' },
+    { label: 'Bank Transfer',                 value: 'Bank' },
+    { label: 'Online / JazzCash / Easypaisa', value: 'Online' },
+    { label: 'Cheque',                        value: 'Cheque' }
+  ];
+
+  myChildrenOptions = computed(() =>
+    this.myChildren().map(c => ({ label: `${c.fullName} (${c.admissionNo})`, value: c.studentId })));
+  filterClassOptions = computed(() =>
+    this.filterClasses().map(c => ({ label: `${c.className} ${c.section ?? ''}`.trim(), value: c.classId })));
+  bulkClassOptions = computed(() =>
+    this.bulkClasses().map(c => ({ label: `${c.className} ${c.section ?? ''}`.trim(), value: c.classId })));
+  bulkStructureOptions = computed(() =>
+    this.bulkFeeStructures().map(fs => ({
+      label: `${fs.feeTypeName} — ${Math.round(fs.amount).toLocaleString('en-US', { useGrouping: true })}`,
+      value: fs.feeStructureId
+    })));
+  discountPolicyOptions = computed(() =>
+    this.discountPolicies().map(dp => ({
+      label: `${dp.name} (${dp.valueType === 'Percentage' ? dp.value + '%' : '' + dp.value})`,
+      value: dp.discountPolicyId
+    })));
+
+  statusSeverity(s: string): 'success' | 'warn' | 'danger' | 'secondary' {
+    switch (s) {
+      case 'Paid':    return 'success';
+      case 'Partial': return 'warn';
+      case 'Unpaid':  return 'danger';
+      default:        return 'secondary';
+    }
   }
 
   statusClass(s: string) { return `badge-${s.toLowerCase()}`; }

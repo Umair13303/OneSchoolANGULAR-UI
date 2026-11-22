@@ -2,6 +2,16 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Button } from 'primeng/button';
+import { InputText } from 'primeng/inputtext';
+import { Password } from 'primeng/password';
+import { Select } from 'primeng/select';
+import { Tag } from 'primeng/tag';
+import { Dialog } from 'primeng/dialog';
+import { TableModule } from 'primeng/table';
+import { IconField } from 'primeng/iconfield';
+import { InputIcon } from 'primeng/inputicon';
+import { Tooltip } from 'primeng/tooltip';
 import { StaffService } from '../../../core/services/staff.service';
 import { StaffDto, DEPARTMENTS, STAFF_STATUSES } from '../../../core/models/staff.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -12,43 +22,40 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
 @Component({
   selector: 'app-staff-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent, LoadingComponent, ConfirmDeleteComponent],
+  imports: [
+    CommonModule, FormsModule, PageHeaderComponent, LoadingComponent, ConfirmDeleteComponent,
+    Button, InputText, Password, Select, Tag, Dialog, TableModule, IconField, InputIcon, Tooltip
+  ],
   template: `
     <app-page-header title="Non-Teaching Staff" subtitle="Manage all non-teaching staff records" />
 
     <!-- Toolbar -->
-    <div class="toolbar card">
-      <div class="filters">
-        <div class="search-wrap">
-          <span class="material-icons-round search-icon">search</span>
-          <input class="search-input" [(ngModel)]="search" (ngModelChange)="onFilter()" placeholder="Search by name, CNIC or phone…" />
-        </div>
-        <select class="filter-select" [(ngModel)]="filterDept" (ngModelChange)="onFilter()">
-          <option value="">All Departments</option>
-          @for (d of departments; track d) { <option [value]="d">{{ d }}</option> }
-        </select>
-        <select class="filter-select" [(ngModel)]="filterStatus" (ngModelChange)="onFilter()">
-          <option value="">All Statuses</option>
-          @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }
-        </select>
+    <div class="card mb-4 flex flex-wrap items-center justify-between gap-3 px-4 py-3.5">
+      <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2.5">
+        <p-iconfield class="min-w-[200px] flex-1">
+          <p-inputicon class="pi pi-search" />
+          <input pInputText class="w-full" [(ngModel)]="search" (ngModelChange)="onFilter()" placeholder="Search by name, CNIC or phone…" />
+        </p-iconfield>
+        <p-select class="w-full sm:w-52" [options]="departments" placeholder="All Departments" [showClear]="true"
+          [(ngModel)]="filterDept" (onChange)="onFilter()" />
+        <p-select class="w-full sm:w-44" [options]="statuses" placeholder="All Statuses" [showClear]="true"
+          [(ngModel)]="filterStatus" (onChange)="onFilter()" />
       </div>
-      <button class="btn-primary" (click)="router.navigate(['/hr/staff/new'])">
-        <span class="material-icons-round">person_add</span> Add Staff
-      </button>
+      <p-button label="Add Staff" icon="pi pi-user-plus" (onClick)="router.navigate(['/hr/staff/new'])" />
     </div>
 
     @if (loading()) { <app-loading /> }
     @else if (staff().length === 0) {
-      <div class="empty-state card">
-        <span class="material-icons-round">groups</span>
+      <div class="card flex flex-col items-center gap-2.5 p-[60px] text-[var(--t3)]">
+        <span class="material-icons-round text-5xl">groups</span>
         <p>No staff records found.</p>
       </div>
     } @else {
-      <div class="table-card card">
-        <table class="staff-table">
-          <thead>
+      <div class="card overflow-hidden p-0">
+        <p-table [value]="staff()" dataKey="staffId" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '60rem' }" [scrollable]="true">
+          <ng-template #header>
             <tr>
-              <th>#</th>
+              <th style="width:3rem">#</th>
               <th>Name</th>
               <th>Designation</th>
               <th>Department</th>
@@ -57,139 +64,85 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
               <th>Joining Date</th>
               <th>Status</th>
               <th>Login</th>
-              <th></th>
+              <th class="text-right">Actions</th>
             </tr>
-          </thead>
-          <tbody>
-            @for (s of staff(); track s.staffId; let i = $index) {
-              <tr>
-                <td class="td-no">{{ i + 1 }}</td>
-                <td class="td-name">
-                  <div class="name-wrap">
-                    <div class="avatar">{{ s.fullName.charAt(0).toUpperCase() }}</div>
-                    <div>
-                      <div class="name">{{ s.fullName }}</div>
-                      @if (s.cnic) { <div class="cnic">{{ s.cnic }}</div> }
-                    </div>
+          </ng-template>
+          <ng-template #body let-s let-i="rowIndex">
+            <tr>
+              <td class="text-xs text-[var(--t4)]">{{ i + 1 }}</td>
+              <td>
+                <div class="flex items-center gap-2.5">
+                  <div class="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-sm font-bold text-white">
+                    {{ s.fullName.charAt(0).toUpperCase() }}
                   </div>
-                </td>
-                <td>{{ s.designation }}</td>
-                <td>{{ s.department || '—' }}</td>
-                <td>{{ s.phone || '—' }}</td>
-                <td><span class="badge badge-emp">{{ s.employmentType }}</span></td>
-                <td>{{ s.joiningDate || '—' }}</td>
-                <td>
-                  <span class="badge" [class.badge-active]="s.status==='Active'" [class.badge-leave]="s.status==='OnLeave'" [class.badge-term]="s.status==='Terminated'">
-                    {{ s.status }}
-                  </span>
-                </td>
-                <td>
-                  @if (s.userId) {
-                    <span class="login-chip has-login" title="{{ s.userEmail }}">
-                      <span class="material-icons-round">verified_user</span> Active
-                    </span>
-                  } @else {
-                    <button class="login-chip no-login" (click)="openLoginModal(s)">
-                      <span class="material-icons-round">add_circle_outline</span> Create
-                    </button>
-                  }
-                </td>
-                <td class="td-actions">
-                  <button class="icon-btn" (click)="router.navigate(['/hr/staff', s.staffId, 'edit'])" title="Edit">
-                    <span class="material-icons-round">edit</span>
-                  </button>
-                  <button class="icon-btn danger" (click)="deleteStaff(s)" title="Delete">
-                    <span class="material-icons-round">delete</span>
-                  </button>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
+                  <div>
+                    <div class="text-[13px] font-semibold text-[var(--t1)]">{{ s.fullName }}</div>
+                    @if (s.cnic) { <div class="font-mono text-[11px] text-[var(--t4)]">{{ s.cnic }}</div> }
+                  </div>
+                </div>
+              </td>
+              <td>{{ s.designation }}</td>
+              <td>{{ s.department || '—' }}</td>
+              <td>{{ s.phone || '—' }}</td>
+              <td><p-tag [value]="s.employmentType" severity="info" [rounded]="true" /></td>
+              <td>{{ s.joiningDate || '—' }}</td>
+              <td><p-tag [value]="s.status" [severity]="statusSeverity(s.status)" [rounded]="true" /></td>
+              <td>
+                @if (s.userId) {
+                  <p-tag icon="pi pi-verified" value="Active" severity="success" [rounded]="true" [pTooltip]="s.userEmail || ''" />
+                } @else {
+                  <p-button label="Create" icon="pi pi-plus-circle" size="small" severity="secondary" [outlined]="true" [rounded]="true"
+                    (onClick)="openLoginModal(s)" />
+                }
+              </td>
+              <td>
+                <div class="flex items-center justify-end gap-1 whitespace-nowrap">
+                  <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" severity="secondary"
+                    ariaLabel="Edit" pTooltip="Edit" (onClick)="router.navigate(['/hr/staff', s.staffId, 'edit'])" />
+                  <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger"
+                    ariaLabel="Delete" pTooltip="Delete" (onClick)="deleteStaff(s)" />
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
       </div>
     }
 
-    <!-- Create Login Modal -->
-    @if (loginModal()) {
-      <div class="modal-backdrop" (click)="closeLoginModal()">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <div class="modal-title">Create Login for {{ loginModal()!.fullName }}</div>
-          <div class="field">
-            <label>Email</label>
-            <input type="email" [(ngModel)]="loginEmail" placeholder="staff@school.com" />
-          </div>
-          <div class="field">
-            <label>Password</label>
-            <input type="password" [(ngModel)]="loginPassword" placeholder="Min 6 characters" />
-          </div>
-          @if (loginError()) { <p class="err">{{ loginError() }}</p> }
-          <div class="modal-actions">
-            <button class="btn-secondary" (click)="closeLoginModal()">Cancel</button>
-            <button class="btn-primary" (click)="createLogin()" [disabled]="loginSaving()">
-              {{ loginSaving() ? 'Creating…' : 'Create Login' }}
-            </button>
-          </div>
+    <!-- Create Login Dialog -->
+    <p-dialog
+      [header]="'Create Login for ' + (loginModal()?.fullName ?? '')"
+      [visible]="!!loginModal()"
+      (visibleChange)="!$event && closeLoginModal()"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '24rem' }"
+      [breakpoints]="{ '640px': '96vw' }">
+      <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-1.5">
+          <label for="login-email" class="text-[11px] font-semibold uppercase tracking-wide text-[var(--t3)]">Email</label>
+          <input pInputText id="login-email" type="email" class="w-full" [(ngModel)]="loginEmail" placeholder="staff@school.com" />
         </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="login-password" class="text-[11px] font-semibold uppercase tracking-wide text-[var(--t3)]">Password</label>
+          <p-password inputId="login-password" [(ngModel)]="loginPassword" [feedback]="false" [toggleMask]="true"
+            placeholder="Min 6 characters" styleClass="w-full" inputStyleClass="w-full" appendTo="body" />
+        </div>
+        @if (loginError()) { <p class="m-0 text-xs text-red-500">{{ loginError() }}</p> }
       </div>
-    }
+      <ng-template #footer>
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="closeLoginModal()" />
+          <p-button [label]="loginSaving() ? 'Creating…' : 'Create Login'" icon="pi pi-check" [loading]="loginSaving()"
+            [disabled]="loginSaving()" (onClick)="createLogin()" />
+        </div>
+      </ng-template>
+    </p-dialog>
 
     <app-confirm-delete />
-  `,
-  styles: [`
-    .toolbar { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding:14px 18px; margin-bottom:16px; }
-    .filters { display:flex; gap:10px; flex-wrap:wrap; align-items:center; flex:1; }
-    .search-wrap { position:relative; display:flex; align-items:center; flex:1; min-width:200px; }
-    .search-icon { position:absolute; left:10px; font-size:18px; color:var(--t4); pointer-events:none; }
-    .search-input { width:100%; padding:8px 12px 8px 36px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; background:var(--surface); color:var(--t1); outline:none; }
-    .search-input:focus { border-color:var(--accent); }
-    .filter-select { padding:8px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; background:var(--surface); color:var(--t1); cursor:pointer; outline:none; }
-    .filter-select:focus { border-color:var(--accent); }
-
-    .empty-state { display:flex; flex-direction:column; align-items:center; gap:10px; padding:60px; color:var(--t3); }
-    .empty-state .material-icons-round { font-size:48px; }
-
-    .table-card { padding:0; overflow-x:auto; }
-    .staff-table { width:100%; border-collapse:collapse; min-width:800px; }
-    th { padding:10px 14px; font-size:10.5px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.5px; text-align:left; background:var(--hover); border-bottom:1px solid var(--border); white-space:nowrap; }
-    td { padding:11px 14px; border-bottom:1px solid var(--border); font-size:13px; color:var(--t2); vertical-align:middle; }
-    tr:last-child td { border-bottom:none; }
-    tr:hover td { background:var(--hover); }
-
-    .td-no { width:40px; text-align:center; font-size:12px; color:var(--t4); }
-    .td-name { min-width:180px; }
-    .name-wrap { display:flex; align-items:center; gap:10px; }
-    .avatar { width:34px; height:34px; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; flex-shrink:0; }
-    .name { font-weight:600; color:var(--t1); font-size:13px; }
-    .cnic { font-size:11px; color:var(--t4); font-family:monospace; margin-top:1px; }
-
-    .badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
-    .badge-emp    { background:#e0e7ff; color:#3730a3; }
-    .badge-active { background:#dcfce7; color:#166534; }
-    .badge-leave  { background:#fef3c7; color:#92400e; }
-    .badge-term   { background:#fee2e2; color:#991b1b; }
-
-    .login-chip { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; border:none; cursor:pointer; }
-    .has-login { background:#dcfce7; color:#166534; cursor:default; }
-    .no-login  { background:#f1f5f9; color:var(--t3); }
-    .no-login:hover { background:#e0e7ff; color:var(--accent); }
-    .login-chip .material-icons-round { font-size:13px; }
-
-    .td-actions { width:80px; text-align:right; }
-    .icon-btn { border:none; background:transparent; cursor:pointer; padding:6px; color:var(--t3); border-radius:6px; }
-    .icon-btn:hover { color:var(--t1); background:var(--hover); }
-    .icon-btn.danger:hover { color:#ef4444; background:#fee2e2; }
-    .icon-btn .material-icons-round { font-size:18px; }
-
-    .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; z-index:1000; }
-    .modal { background:var(--surface); border-radius:12px; padding:28px; width:380px; max-width:92vw; display:flex; flex-direction:column; gap:16px; }
-    .modal-title { font-size:15px; font-weight:700; color:var(--t1); }
-    .field { display:flex; flex-direction:column; gap:5px; }
-    label { font-size:11px; font-weight:600; color:var(--t3); text-transform:uppercase; letter-spacing:.5px; }
-    input { padding:9px 12px; border:1.5px solid var(--border); border-radius:7px; font-size:13px; background:var(--surface); color:var(--t1); outline:none; }
-    input:focus { border-color:var(--accent); }
-    .modal-actions { display:flex; gap:10px; justify-content:flex-end; }
-    .err { font-size:12px; color:#ef4444; margin:0; }
-  `]
+  `
 })
 export class StaffListComponent implements OnInit {
   private staffSvc = inject(StaffService);
@@ -202,8 +155,8 @@ export class StaffListComponent implements OnInit {
   staff       = signal<StaffDto[]>([]);
   loading     = signal(false);
   search      = '';
-  filterDept  = '';
-  filterStatus = '';
+  filterDept: string | null = null;
+  filterStatus: string | null = null;
 
   loginModal    = signal<StaffDto | null>(null);
   loginEmail    = '';
@@ -222,6 +175,15 @@ export class StaffListComponent implements OnInit {
   }
 
   onFilter() { this.load(); }
+
+  statusSeverity(status: string): 'success' | 'warn' | 'danger' | 'secondary' {
+    switch (status) {
+      case 'Active': return 'success';
+      case 'OnLeave': return 'warn';
+      case 'Terminated': return 'danger';
+      default: return 'secondary';
+    }
+  }
 
   deleteStaff(s: StaffDto) {
     this.confirmDelete.open(

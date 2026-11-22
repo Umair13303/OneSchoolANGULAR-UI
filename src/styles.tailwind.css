@@ -1,0 +1,21 @@
+/*
+  Tailwind v4 + PrimeUI plugin.
+  Preflight is intentionally skipped so existing SCSS theme/layout keeps working.
+  Use utility classes gradually on new or refactored screens.
+*/
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "tailwindcss-primeui";
+
+/* Map OneSchool brand tokens into Tailwind theme (optional utilities). */
+@theme {
+  --color-os-accent: #4f6ef7;
+  --color-os-accent-hover: #3d5ce5;
+  --color-os-surface: #ffffff;
+  --color-os-bg: #e9eef5;
+  --color-os-text: #0f172a;
+  --color-os-muted: #475569;
+  --font-sans: "Plus Jakarta Sans Variable", "Plus Jakarta Sans", "Inter Variable", Inter, system-ui, sans-serif;
+}

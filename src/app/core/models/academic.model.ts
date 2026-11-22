@@ -97,4 +97,6 @@ export interface ClassSubjectDto {
 export interface AssignSubjectDto {
   subjectId: number;
   teacherId: number;
+  /** When true, replace another teacher's assignment (API returns 409 without this). */
+  replaceExisting?: boolean;
 }

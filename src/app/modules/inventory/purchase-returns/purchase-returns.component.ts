@@ -1,6 +1,13 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormArray, Validators } from '@angular/forms';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
+import { InputNumber } from 'primeng/inputnumber';
+import { Tag } from 'primeng/tag';
+import { TableModule } from 'primeng/table';
+import { Tooltip } from 'primeng/tooltip';
 import { PurchaseService } from '../../../core/services/purchase.service';
 import { InventoryService } from '../../../core/services/inventory.service';
 import { PurchaseReturnDto, ItemDto, SupplierDto } from '../../../core/models/inventory.model';
@@ -10,72 +17,71 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
 @Component({
   selector: 'app-purchase-returns',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, PageHeaderComponent, DatePickerComponent],
+  imports: [
+    CommonModule, ReactiveFormsModule, PageHeaderComponent, DatePickerComponent,
+    Button, Select, InputText, InputNumber, Tag, TableModule, Tooltip
+  ],
   template: `
     <app-page-header [title]="view() === 'list' ? 'Purchase Returns' : 'New Purchase Return'" subtitle="Return purchased items back to a supplier">
       @if (view() === 'list') {
-        <button class="btn-primary" (click)="openNew()"><span class="material-icons-round">add</span> New Return</button>
+        <p-button label="New Return" icon="pi pi-plus" (onClick)="openNew()" />
       } @else {
-        <button class="btn-secondary" (click)="view.set('list')">Back to list</button>
+        <p-button label="Back to list" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="view.set('list')" />
       }
     </app-page-header>
 
     @if (view() === 'list') {
       <div class="card">
-        <table class="table">
-          <thead><tr><th>Return No</th><th>Date</th><th>Supplier</th><th>Net Amount</th><th>Status</th></tr></thead>
-          <tbody>
-            @for (r of returns(); track r.purchaseReturnId) {
-              <tr>
-                <td>{{ r.returnNo }}</td><td>{{ r.returnDate }}</td><td>{{ r.supplierName }}</td>
-                <td>{{ r.netAmount | number:'1.2-2' }}</td>
-                <td><span class="badge badge-green">{{ r.status }}</span></td>
-              </tr>
-            }
-            @if (!returns().length) { <tr><td colspan="5" class="empty">No purchase returns recorded yet.</td></tr> }
-          </tbody>
-        </table>
+        <p-table [value]="returns()" dataKey="purchaseReturnId" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '36rem' }" [scrollable]="true">
+          <ng-template #header><tr><th>Return No</th><th>Date</th><th>Supplier</th><th>Net Amount</th><th>Status</th></tr></ng-template>
+          <ng-template #body let-r>
+            <tr>
+              <td>{{ r.returnNo }}</td><td>{{ r.returnDate }}</td><td>{{ r.supplierName }}</td>
+              <td>{{ r.netAmount | number:'1.2-2' }}</td>
+              <td><p-tag [value]="r.status" severity="success" [rounded]="true" /></td>
+            </tr>
+          </ng-template>
+          <ng-template #emptymessage><tr><td colspan="5" class="empty">No purchase returns recorded yet.</td></tr></ng-template>
+        </p-table>
       </div>
     } @else {
       <form [formGroup]="form" (ngSubmit)="save()" class="card form-card">
-        <div class="grid2">
+        <div class="grid grid-cols-1 gap-x-3.5 sm:grid-cols-2">
           <div class="field"><label>Return Date <span class="req">*</span></label><app-date-picker formControlName="returnDate"/></div>
           <div class="field"><label>Supplier <span class="req">*</span></label>
-            <select formControlName="supplierId">
-              <option [ngValue]="null">Select…</option>
-              @for (s of suppliers(); track s.supplierId) { <option [ngValue]="s.supplierId">{{ s.supplierName }}</option> }
-            </select>
+            <p-select class="w-full" [options]="suppliers()" optionLabel="supplierName" optionValue="supplierId"
+                      placeholder="Select…" [filter]="true" filterBy="supplierName" appendTo="body" formControlName="supplierId" />
           </div>
         </div>
-        <div class="field"><label>Remarks</label><input formControlName="remarks" /></div>
+        <div class="field"><label for="pr-remarks">Remarks</label><input pInputText id="pr-remarks" class="w-full" formControlName="remarks" /></div>
 
-        <table class="lines-table">
-          <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Net</th><th></th></tr></thead>
-          <tbody formArrayName="details">
-            @for (line of details.controls; track $index; let i = $index) {
-              <tr [formGroupName]="i">
-                <td>
-                  <select formControlName="itemId">
-                    <option [ngValue]="null">Select item…</option>
-                    @for (it of items(); track it.itemId) { <option [ngValue]="it.itemId">{{ it.itemName }}</option> }
-                  </select>
-                </td>
-                <td><input type="number" step="0.01" formControlName="quantity" class="num" /></td>
-                <td><input type="number" step="0.01" formControlName="price" class="num" /></td>
-                <td class="net">{{ lineNet(i) | number:'1.2-2' }}</td>
-                <td><button type="button" class="icon-btn danger" (click)="removeLine(i)"><span class="material-icons-round">close</span></button></td>
-              </tr>
-            }
-          </tbody>
-        </table>
-        <button type="button" class="btn-secondary add-line" (click)="addLine()"><span class="material-icons-round">add</span> Add Line</button>
+        <div class="w-full overflow-x-auto">
+          <table class="lines-table">
+            <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Net</th><th></th></tr></thead>
+            <tbody formArrayName="details">
+              @for (line of details.controls; track $index; let i = $index) {
+                <tr [formGroupName]="i">
+                  <td class="min-w-[13rem]">
+                    <p-select class="w-full" [options]="items()" optionLabel="itemName" optionValue="itemId"
+                              placeholder="Select item…" [filter]="true" filterBy="itemName" appendTo="body" formControlName="itemId" />
+                  </td>
+                  <td><p-inputnumber styleClass="w-24" inputStyleClass="w-24" [minFractionDigits]="0" [maxFractionDigits]="2" formControlName="quantity" /></td>
+                  <td><p-inputnumber styleClass="w-28" inputStyleClass="w-28" [minFractionDigits]="0" [maxFractionDigits]="2" formControlName="price" /></td>
+                  <td class="net">{{ lineNet(i) | number:'1.2-2' }}</td>
+                  <td><p-button type="button" icon="pi pi-times" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Remove line" pTooltip="Remove" (onClick)="removeLine(i)" /></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <p-button type="button" class="add-line" label="Add Line" icon="pi pi-plus" severity="secondary" [outlined]="true" size="small" (onClick)="addLine()" />
 
         <div class="totals"><div class="net-total"><span>Net Amount</span><strong>{{ total() | number:'1.2-2' }}</strong></div></div>
 
         @if (formError()) { <div class="alert-err">{{ formError() }}</div> }
-        <div class="form-ft">
-          <button type="button" class="btn-secondary" (click)="view.set('list')">Cancel</button>
-          <button type="submit" class="btn-primary" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save Return' }}</button>
+        <div class="form-ft flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button type="button" label="Cancel" severity="secondary" [outlined]="true" (onClick)="view.set('list')" />
+          <p-button type="submit" [label]="saving() ? 'Saving…' : 'Save Return'" icon="pi pi-check" [loading]="saving()" [disabled]="saving()" />
         </div>
       </form>
     }
@@ -83,25 +89,18 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
   styles: [`
     .card { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
     .form-card { padding:20px; }
-    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:0 14px; }
     .field { display:flex; flex-direction:column; gap:5px; margin-bottom:14px; }
-    label { font-size:11px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.5px; }
+    .field > label { font-size:11px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.5px; }
     .req { color:var(--red); }
-    input, select { padding:9px 11px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; background:var(--surface); color:var(--t1); width:100%; }
     .lines-table { width:100%; border-collapse:collapse; margin:12px 0; }
     .lines-table th { text-align:left; font-size:11px; text-transform:uppercase; color:var(--t4); padding:6px 8px; border-bottom:1px solid var(--border); }
     .lines-table td { padding:5px 8px; }
-    .num { width:100px; }
     .net { font-weight:600; color:var(--t1); white-space:nowrap; }
-    .add-line { display:inline-flex; align-items:center; gap:6px; margin-bottom:16px; }
+    .add-line { display:inline-block; margin-bottom:16px; }
     .totals { display:flex; justify-content:flex-end; padding:14px 0; border-top:1px solid var(--border); margin-top:8px; }
     .net-total { display:flex; flex-direction:column; align-items:flex-end; font-size:12px; color:var(--t4); }
     .net-total strong { color:var(--accent); font-size:16px; }
-    .form-ft { display:flex; justify-content:flex-end; gap:10px; padding-top:12px; border-top:1px solid var(--border); }
-    .icon-btn { border:none; background:transparent; cursor:pointer; padding:6px; color:var(--t3); border-radius:6px; }
-    .icon-btn.danger:hover { color:#ef4444; background:rgba(239,68,68,.08); }
-    .badge { padding:3px 9px; border-radius:12px; font-size:11.5px; font-weight:600; }
-    .badge-green { background:var(--green-s); color:var(--green); }
+    .form-ft { padding-top:12px; border-top:1px solid var(--border); }
     .empty { text-align:center; color:var(--t4); padding:32px 0; font-size:13px; }
     .alert-err { background:#fee2e2; color:#dc2626; border:1px solid #dc2626; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:10px; }
   `]

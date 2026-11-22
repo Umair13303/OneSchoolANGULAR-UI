@@ -1,43 +1,56 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+﻿import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { Tag } from 'primeng/tag';
 import { ExamService } from '../../../core/services/exam.service';
 import { AcademicService } from '../../../core/services/academic.service';
 import { MenuService } from '../../../core/services/menu.service';
 import { ExamPaperDto, ExamResultDto } from '../../../core/models/exam.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
-import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+
+interface SelectOpt { value: string; label: string; }
 
 @Component({
   selector: 'app-exam-result-cards',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent, OsSelectComponent, LoadingComponent, EmptyStateComponent],
+  imports: [CommonModule, FormsModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, Button, Select, Tag],
   template: `
     <div class="os-page compact exam-result-cards-page">
     <app-page-header [dense]="true" [title]="pageTitle()" routeUrl="/exams/results/cards" />
 
     <div class="os-toolbar">
-      <div class="os-toolbar-group">
-        <div class="os-field inline grow">
+      <div class="flex w-full flex-wrap items-end gap-3">
+        <div class="flex min-w-[200px] flex-1 flex-col gap-1">
           <label class="os-field-label">Class</label>
-          <app-os-select
-            icon="school"
+          <p-select
+            class="w-full"
             placeholder="Select class…"
-            [searchable]="classOptions().length > 6"
             [options]="classOptions()"
-            [value]="selectedClass"
-            (valueChange)="selectedClass = $event ?? ''; onClassChange()" />
+            optionLabel="label"
+            optionValue="value"
+            [filter]="classOptions().length > 6"
+            filterBy="label"
+            [showClear]="true"
+            [ngModel]="selectedClass"
+            (ngModelChange)="selectedClass = $event ?? ''; onClassChange()" />
         </div>
-        <div class="os-field inline grow">
+        <div class="flex min-w-[200px] flex-1 flex-col gap-1">
           <label class="os-field-label">Paper</label>
-          <app-os-select
+          <p-select
+            class="w-full"
             placeholder="Select paper…"
-            [searchable]="paperOptions().length > 6"
             [options]="paperOptions()"
-            [value]="selectedPaper"
-            (valueChange)="selectedPaper = $event ?? ''; loadResults()" />
+            optionLabel="label"
+            optionValue="value"
+            [filter]="paperOptions().length > 6"
+            filterBy="label"
+            [showClear]="true"
+            [ngModel]="selectedPaper"
+            (ngModelChange)="selectedPaper = $event ?? ''; loadResults()" />
         </div>
       </div>
     </div>
@@ -72,9 +85,8 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
       <div class="results-card os-panel">
         <div class="results-card-header">
           <span>Results — {{ activePaper()?.title }}</span>
-          <button class="btn-sm btn-outline" (click)="recalcRanks()">
-            <span class="material-icons-round">leaderboard</span> Recalculate Ranks
-          </button>
+          <p-button label="Recalculate Ranks" icon="pi pi-sort-amount-down" size="small"
+            severity="secondary" [outlined]="true" (onClick)="recalcRanks()" />
         </div>
         <div class="results-table-wrap">
           <table class="results-table">
@@ -101,7 +113,7 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
                   <td class="roll-cell">{{ r.rollNumber }}</td>
                   <td>{{ r.studentName }}</td>
                   <td>
-                    @if (r.isAbsent) { <span class="absent-tag">Absent</span> }
+                    @if (r.isAbsent) { <p-tag value="Absent" severity="secondary" [rounded]="true" /> }
                     @else { {{ r.obtainedMarks }} / {{ r.totalMarks }} }
                   </td>
                   <td>{{ r.isAbsent ? '—' : (r.percentage | number:'1.1-1') + '%' }}</td>
@@ -111,9 +123,9 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
                     } @else { — }
                   </td>
                   <td>
-                    @if (r.isAbsent) { <span class="status-badge absent">Absent</span> }
-                    @else if (r.isPass) { <span class="status-badge pass">Pass</span> }
-                    @else { <span class="status-badge fail">Fail</span> }
+                    @if (r.isAbsent) { <p-tag value="Absent" severity="secondary" [rounded]="true" /> }
+                    @else if (r.isPass) { <p-tag value="Pass" severity="success" [rounded]="true" /> }
+                    @else { <p-tag value="Fail" severity="danger" [rounded]="true" /> }
                   </td>
                 </tr>
               }
@@ -220,11 +232,11 @@ export class ExamResultCardsComponent implements OnInit {
     this.menuSvc.titleForRoute('/exams/results/cards', 'Result Cards')
   );
 
-  classOptions = computed<OsSelectOption<string>[]>(() =>
+  classOptions = computed<SelectOpt[]>(() =>
     this.classes().map(c => ({ value: String(c.classId), label: c.className as string }))
   );
 
-  paperOptions = computed<OsSelectOption<string>[]>(() =>
+  paperOptions = computed<SelectOpt[]>(() =>
     this.filteredPapers().map(p => ({
       value: String(p.examPaperId),
       label: `${p.title} (${p.examType})`

@@ -16,6 +16,8 @@ import { PhotoUploadComponent } from '../../../shared/components/photo-upload/ph
 import { SwalNotificationService } from '../../../core/services/swal-notification.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { StudentTransferDialogComponent } from '../student-transfer-dialog/student-transfer-dialog.component';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
 
 interface SelectedFee {
   feeStructureId: number;
@@ -31,7 +33,7 @@ interface SelectedFee {
 @Component({
   selector: 'app-student-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, PageHeaderComponent, DatePickerComponent, PhotoUploadComponent, StudentTransferDialogComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, PageHeaderComponent, DatePickerComponent, PhotoUploadComponent, StudentTransferDialogComponent, Button, Select],
   template: `
     <!-- Success screen after admission -->
     @if (success()) {
@@ -65,24 +67,17 @@ interface SelectedFee {
             </div>
           }
 
-          <div class="success-actions">
+          <div class="success-actions flex flex-wrap items-center justify-center gap-2">
             @if (!editId() && hasUnpaidFees()) {
-              <button class="btn-warning" (click)="printChallan()">
-                <span class="material-icons-round">print</span> Print Challan
-              </button>
+              <p-button label="Print Challan" icon="pi pi-print" severity="warn" (onClick)="printChallan()" />
             }
             @if (!editId() && hasPaidFees()) {
-              <button class="btn-success" (click)="printReceipt()">
-                <span class="material-icons-round">receipt_long</span> Print Receipt
-              </button>
+              <p-button label="Print Receipt" icon="pi pi-receipt" severity="success" (onClick)="printReceipt()" />
             }
-            <button class="btn-secondary" (click)="router.navigate(['/students/list'])">
-              <span class="material-icons-round">list</span> View All
-            </button>
+            <p-button label="View All" icon="pi pi-list" severity="secondary" [outlined]="true"
+                      (onClick)="router.navigate(['/students/list'])" />
             @if (!editId()) {
-              <button class="btn-primary" (click)="resetForm()">
-                <span class="material-icons-round">person_add</span> New Admission
-              </button>
+              <p-button label="New Admission" icon="pi pi-user-plus" (onClick)="resetForm()" />
             }
           </div>
         </div>
@@ -134,13 +129,11 @@ interface SelectedFee {
             </div>
           </div>
 
-          <div class="sw-footer">
-            <button class="btn-secondary" type="button" (click)="setupWarningDismissed.set(true)">
-              Remind Me Later
-            </button>
-            <button class="btn-primary" type="button" (click)="router.navigate(['/academics/years'])">
-              Start Setup <span class="material-icons-round">arrow_forward</span>
-            </button>
+          <div class="sw-footer flex flex-wrap items-center justify-end gap-2">
+            <p-button label="Remind Me Later" severity="secondary" [outlined]="true"
+                      (onClick)="setupWarningDismissed.set(true)" />
+            <p-button label="Start Setup" icon="pi pi-arrow-right" iconPos="right"
+                      (onClick)="router.navigate(['/academics/years'])" />
           </div>
         </div>
       </div>
@@ -171,11 +164,10 @@ interface SelectedFee {
               <p class="adm-sub">{{ editId() ? 'Update student profile information' : 'Complete student registration and fee configuration' }}</p>
             </div>
           </div>
-          <div class="adm-header-right">
+          <div class="adm-header-right flex items-center gap-2">
             <span class="adm-step-badge">Step {{ activeTab() + 1 }} of {{ editId() ? 4 : 5 }}</span>
-            <button class="adm-back-btn" (click)="router.navigate(['/students/list'])" title="Close and return to list">
-              <span class="material-icons-round">close</span>
-            </button>
+            <p-button icon="pi pi-times" severity="secondary" [outlined]="true" size="small"
+                      ariaLabel="Close and return to list" (onClick)="router.navigate(['/students/list'])" />
           </div>
         </div>
 
@@ -323,26 +315,14 @@ interface SelectedFee {
 
                   <div class="form-field">
                     <label>Gender</label>
-                    <div class="input-wrap select-wrap">
-                      <span class="material-icons-round field-icon">wc</span>
-                      <select formControlName="gender">
-                        <option value="">Select Gender</option>
-                        <option>Male</option>
-                        <option>Female</option>
-                        <option>Other</option>
-                      </select>
-                    </div>
+                    <p-select class="w-full" formControlName="gender" [options]="genders"
+                              [showClear]="true" placeholder="Select Gender" ariaLabel="Gender" />
                   </div>
 
                   <div class="form-field">
                     <label>Blood Group</label>
-                    <div class="input-wrap select-wrap">
-                      <span class="material-icons-round field-icon">bloodtype</span>
-                      <select formControlName="bloodGroup">
-                        <option value="">Select Blood Group</option>
-                        @for (bg of bloodGroups; track bg) { <option>{{ bg }}</option> }
-                      </select>
-                    </div>
+                    <p-select class="w-full" formControlName="bloodGroup" [options]="bloodGroups"
+                              [showClear]="true" placeholder="Select Blood Group" ariaLabel="Blood group" />
                   </div>
                 </div>
 
@@ -364,11 +344,8 @@ interface SelectedFee {
                   </div>
                 </div>
 
-                <div class="tab-nav">
-                  <span></span>
-                  <button type="button" class="btn-primary btn-next" (click)="next()">
-                    Next Step <span class="material-icons-round">arrow_forward</span>
-                  </button>
+                <div class="tab-nav flex items-center justify-end gap-2">
+                  <p-button label="Next Step" icon="pi pi-arrow-right" iconPos="right" (onClick)="next()" />
                 </div>
               </div>
             }
@@ -414,13 +391,9 @@ interface SelectedFee {
                   </div>
                 </div>
 
-                <div class="tab-nav">
-                  <button type="button" class="btn-secondary" (click)="activeTab.set(0)">
-                    <span class="material-icons-round">arrow_back</span> Back
-                  </button>
-                  <button type="button" class="btn-primary btn-next" (click)="next()">
-                    Next Step <span class="material-icons-round">arrow_forward</span>
-                  </button>
+                <div class="tab-nav flex items-center justify-between gap-2">
+                  <p-button label="Back" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="activeTab.set(0)" />
+                  <p-button label="Next Step" icon="pi pi-arrow-right" iconPos="right" (onClick)="next()" />
                 </div>
               </div>
             }
@@ -477,15 +450,11 @@ interface SelectedFee {
 
                   <div class="form-field" [class.has-error]="f['academicYearId'].invalid && f['academicYearId'].touched">
                     <label>Academic Year <span class="req">*</span></label>
-                    <div class="input-wrap select-wrap">
-                      <span class="material-icons-round field-icon">calendar_month</span>
-                      <select formControlName="academicYearId" (change)="onYearChange()">
-                        <option [ngValue]="null">Select Academic Year</option>
-                        @for (y of years(); track y.academicYearId) {
-                          <option [ngValue]="y.academicYearId">{{ y.yearLabel }}</option>
-                        }
-                      </select>
-                    </div>
+                    <p-select class="w-full" formControlName="academicYearId" [options]="years()"
+                              optionLabel="yearLabel" optionValue="academicYearId"
+                              placeholder="Select Academic Year" ariaLabel="Academic year"
+                              [invalid]="f['academicYearId'].invalid && f['academicYearId'].touched"
+                              (onChange)="onYearChange()" />
                     @if (f['academicYearId'].invalid && f['academicYearId'].touched) {
                       <span class="ferr">
                         <span class="material-icons-round">error</span> Academic year is required
@@ -495,15 +464,11 @@ interface SelectedFee {
 
                   <div class="form-field" [class.has-error]="f['classId'].invalid && f['classId'].touched">
                     <label>Assigned Class <span class="req">*</span></label>
-                    <div class="input-wrap select-wrap">
-                      <span class="material-icons-round field-icon">class</span>
-                      <select formControlName="classId" (change)="onClassChange()">
-                        <option [ngValue]="null">Select Class</option>
-                        @for (c of classes(); track c.classId) {
-                          <option [ngValue]="c.classId">{{ c.className }}{{ c.section ? ' (' + c.section + ')' : '' }}</option>
-                        }
-                      </select>
-                    </div>
+                    <p-select class="w-full" formControlName="classId" [options]="classOptions()"
+                              optionLabel="label" optionValue="value"
+                              placeholder="Select Class" ariaLabel="Class"
+                              [invalid]="f['classId'].invalid && f['classId'].touched"
+                              (onChange)="onClassChange()" />
                     @if (f['classId'].invalid && f['classId'].touched) {
                       <span class="ferr">
                         <span class="material-icons-round">error</span> Class is required
@@ -564,13 +529,9 @@ interface SelectedFee {
                   </div>
                 }
 
-                <div class="tab-nav">
-                  <button type="button" class="btn-secondary" (click)="activeTab.set(1)">
-                    <span class="material-icons-round">arrow_back</span> Back
-                  </button>
-                  <button type="button" class="btn-primary btn-next" (click)="next()">
-                    Next Step <span class="material-icons-round">arrow_forward</span>
-                  </button>
+                <div class="tab-nav flex items-center justify-between gap-2">
+                  <p-button label="Back" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="activeTab.set(1)" />
+                  <p-button label="Next Step" icon="pi pi-arrow-right" iconPos="right" (onClick)="next()" />
                 </div>
               </div>
             }
@@ -589,20 +550,14 @@ interface SelectedFee {
                     <div class="guardian-card-head">
                       <strong>Guardian {{ gi + 1 }}</strong>
                       @if (guardians.length > 1) {
-                        <button type="button" class="linkish danger" (click)="removeGuardian(gi)">Remove</button>
+                        <p-button label="Remove" icon="pi pi-trash" severity="danger" [text]="true" size="small"
+                                  (onClick)="removeGuardian(gi)" />
                       }
                     </div>
                     <div class="form-grid-2">
                       <div class="form-field">
                         <label>Relationship <span class="req">*</span></label>
-                        <div class="input-wrap select-wrap">
-                          <span class="material-icons-round field-icon">family_restroom</span>
-                          <select formControlName="relation">
-                            <option>Father</option>
-                            <option>Mother</option>
-                            <option>Guardian</option>
-                          </select>
-                        </div>
+                        <p-select class="w-full" formControlName="relation" [options]="relations" ariaLabel="Relationship" />
                       </div>
                       <div class="form-field" [class.has-error]="gCtrl.get('fullName')!.invalid && gCtrl.get('fullName')!.touched">
                         <label>Full Name <span class="req">*</span></label>
@@ -639,9 +594,10 @@ interface SelectedFee {
                 }
               </div>
 
-              <button type="button" class="btn-secondary add-guardian" (click)="addGuardian()">
-                <span class="material-icons-round">person_add</span> Add another guardian
-              </button>
+              <div class="flex flex-wrap items-center gap-2">
+                <p-button label="Add another guardian" icon="pi pi-user-plus" severity="secondary" [outlined]="true"
+                          size="small" (onClick)="addGuardian()" />
+              </div>
 
               @if (siblingCheckDone() && siblingCount() > 0) {
                 <div class="sibling-banner found">
@@ -673,17 +629,15 @@ interface SelectedFee {
               }
 
               <ng-container>
-                <div class="tab-nav">
-                  <button type="button" class="btn-secondary" (click)="activeTab.set(2)">
-                    <span class="material-icons-round">arrow_back</span> Back
-                  </button>
-                  <button type="button" class="btn-primary btn-next" (click)="next()" [disabled]="saving()">
-                    @if (editId()) {
-                      <span class="material-icons-round">save</span> {{ saving() ? 'Saving...' : 'Save Changes' }}
-                    } @else {
-                      Next Step <span class="material-icons-round">arrow_forward</span>
-                    }
-                  </button>
+                <div class="tab-nav flex items-center justify-between gap-2">
+                  <p-button label="Back" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="activeTab.set(2)" />
+                  @if (editId()) {
+                    <p-button [label]="saving() ? 'Saving...' : 'Save Changes'" icon="pi pi-save"
+                              [loading]="saving()" [disabled]="saving()" (onClick)="next()" />
+                  } @else {
+                    <p-button label="Next Step" icon="pi pi-arrow-right" iconPos="right"
+                              [disabled]="saving()" (onClick)="next()" />
+                  }
                 </div>
               </ng-container>
               </div>
@@ -813,17 +767,10 @@ interface SelectedFee {
                   </div>
                 }
 
-                <div class="tab-nav">
-                  <button type="button" class="btn-secondary" (click)="activeTab.set(3)">
-                    <span class="material-icons-round">arrow_back</span> Back
-                  </button>
-                  <button type="submit" class="btn-primary btn-submit" [disabled]="saving()">
-                    @if (saving()) {
-                      <span class="material-icons-round spin">refresh</span> Processing Admission…
-                    } @else {
-                      <span class="material-icons-round">how_to_reg</span> Complete & Submit Admission
-                    }
-                  </button>
+                <div class="tab-nav flex items-center justify-between gap-2">
+                  <p-button label="Back" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="activeTab.set(3)" />
+                  <p-button type="submit" [label]="saving() ? 'Processing Admission…' : 'Complete &amp; Submit Admission'"
+                            icon="pi pi-check" [loading]="saving()" [disabled]="saving()" />
                 </div>
               </div>
             }
@@ -1929,6 +1876,12 @@ export class StudentFormComponent implements OnInit {
   siblings         = signal<any[]>([]);
 
   readonly bloodGroups = ['A+','A-','B+','B-','O+','O-','AB+','AB-'];
+  readonly genders = ['Male', 'Female', 'Other'];
+  readonly relations = ['Father', 'Mother', 'Guardian'];
+  classOptions = () => this.classes().map(c => ({
+    value: c.classId,
+    label: `${c.className}${c.section ? ' (' + c.section + ')' : ''}`
+  }));
   readonly COLORS = ['#7c3aed','#059669','#0891b2','#d97706','#db2777','#ea580c'];
 
   form = this.fb.group({

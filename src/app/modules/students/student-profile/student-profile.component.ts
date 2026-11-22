@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -13,6 +13,10 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
 import { PhotoUploadComponent } from '../../../shared/components/photo-upload/photo-upload.component';
 import { StudentLeavingComponent } from '../student-leaving/student-leaving.component';
 import { StudentTransferDialogComponent } from '../student-transfer-dialog/student-transfer-dialog.component';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
+import { Tag } from 'primeng/tag';
 
 @Component({
   selector: 'app-student-profile',
@@ -20,15 +24,21 @@ import { StudentTransferDialogComponent } from '../student-transfer-dialog/stude
   imports: [
     CommonModule, RouterModule, FormsModule,
     PageHeaderComponent, LoadingComponent, PhotoUploadComponent,
-    StudentLeavingComponent, StudentTransferDialogComponent
+    StudentLeavingComponent, StudentTransferDialogComponent,
+    Button, Select, InputText, Tag
   ],
   template: `
     <div class="os-page compact">
       <app-page-header [dense]="true" title="Student Profile" routeUrl="/students/list">
         @if (student(); as s) {
-          <a [routerLink]="['/students/edit', s.studentId]" class="btn-secondary">
-            <span class="material-icons-round">edit</span> Edit
-          </a>
+          <div class="flex flex-wrap items-center gap-2">
+            <p-button
+              label="Edit"
+              icon="pi pi-pencil"
+              size="small"
+              tabindex="-1"
+              [routerLink]="['/students/edit', s.studentId]" />
+          </div>
         }
       </app-page-header>
 
@@ -47,46 +57,34 @@ import { StudentTransferDialogComponent } from '../student-transfer-dialog/stude
             <div class="hero-main">
               <div class="hero-top">
                 <h2>{{ fullName(s) }}</h2>
-                <span class="badge" [class.active]="s.isActive" [class.inactive]="!s.isActive">
-                  {{ s.isActive ? 'Active' : 'Inactive' }}
-                </span>
+                <p-tag [value]="s.isActive ? 'Active' : 'Inactive'" [severity]="s.isActive ? 'success' : 'secondary'" />
               </div>
               <div class="hero-meta">
                 <span class="adm-pill">{{ s.admissionNo }}</span>
                 <span>{{ classLabel(s) }}</span>
                 <span>{{ s.currentAcademicYearLabel || '—' }}</span>
               </div>
-              <div class="hero-actions">
-                <button type="button" class="btn-secondary" (click)="printCard()">
-                  <span class="material-icons-round">badge</span> ID Card
-                </button>
-                <button type="button" class="btn-secondary" (click)="downloadIdPdf()" [disabled]="pdfBusy()">
-                  <span class="material-icons-round">picture_as_pdf</span> {{ pdfBusy() ? 'PDF…' : 'ID PDF' }}
-                </button>
+              <div class="hero-actions flex flex-wrap items-center gap-2">
+                <p-button label="ID Card" icon="pi pi-id-card" severity="secondary" [outlined]="true" size="small"
+                          (onClick)="printCard()" />
+                <p-button [label]="pdfBusy() ? 'PDF…' : 'ID PDF'" icon="pi pi-file-pdf" severity="secondary" [outlined]="true" size="small"
+                          [loading]="pdfBusy()" [disabled]="pdfBusy()" (onClick)="downloadIdPdf()" />
                 @if (s.isActive) {
-                  <button type="button" class="btn-secondary" (click)="openTransfer('Transfer')">
-                    <span class="material-icons-round">swap_horiz</span> Transfer
-                  </button>
-                  <button type="button" class="btn-secondary" (click)="openTransfer('Promote')">
-                    <span class="material-icons-round">trending_up</span> Promote
-                  </button>
-                  <button type="button" class="btn-secondary danger" (click)="showLeave.set(true)">
-                    <span class="material-icons-round">exit_to_app</span> Leave
-                  </button>
+                  <p-button label="Transfer" icon="pi pi-arrow-right-arrow-left" severity="secondary" [outlined]="true" size="small"
+                            (onClick)="openTransfer('Transfer')" />
+                  <p-button label="Promote" icon="pi pi-arrow-up-right" severity="secondary" [outlined]="true" size="small"
+                            (onClick)="openTransfer('Promote')" />
+                  <p-button label="Leave" icon="pi pi-sign-out" severity="danger" [outlined]="true" size="small"
+                            (onClick)="showLeave.set(true)" />
                 } @else {
-                  <button type="button" class="btn-primary" (click)="openTransfer('Readmit')">
-                    <span class="material-icons-round">person_add</span> Re-admit
-                  </button>
+                  <p-button label="Re-admit" icon="pi pi-user-plus" size="small" (onClick)="openTransfer('Readmit')" />
                 }
-                <a class="btn-secondary" [routerLink]="['/fees/student-fees']" [queryParams]="{ studentId: s.studentId }">
-                  <span class="material-icons-round">payments</span> Fees
-                </a>
-                <a class="btn-secondary" [routerLink]="['/reports']" [queryParams]="{ studentId: s.studentId, tab: 'student' }">
-                  <span class="material-icons-round">insights</span> Reports
-                </a>
-                <button type="button" class="btn-secondary danger" (click)="confirmSoftDelete()" [disabled]="deleteBusy()">
-                  <span class="material-icons-round">delete</span> Delete
-                </button>
+                <p-button label="Fees" icon="pi pi-wallet" severity="secondary" [outlined]="true" size="small" tabindex="-1"
+                          [routerLink]="['/fees/student-fees']" [queryParams]="{ studentId: s.studentId }" />
+                <p-button label="Reports" icon="pi pi-chart-line" severity="secondary" [outlined]="true" size="small" tabindex="-1"
+                          [routerLink]="['/reports']" [queryParams]="{ studentId: s.studentId, tab: 'student' }" />
+                <p-button label="Delete" icon="pi pi-trash" severity="danger" [outlined]="true" size="small"
+                          [disabled]="deleteBusy()" [loading]="deleteBusy()" (onClick)="confirmSoftDelete()" />
               </div>
             </div>
           </div>
@@ -130,9 +128,8 @@ import { StudentTransferDialogComponent } from '../student-transfer-dialog/stude
                         <dd>
                           @if (g.userId) {
                             <span class="ok-chip">Linked (User #{{ g.userId }})</span>
-                            <button type="button" class="linkish danger" (click)="unlinkPortal(g.guardianId)" [disabled]="portalBusy()">
-                              Unlink
-                            </button>
+                            <p-button label="Unlink" severity="danger" [link]="true" size="small"
+                                      [disabled]="portalBusy()" (onClick)="unlinkPortal(g.guardianId)" />
                           } @else {
                             <span class="muted">Not linked</span>
                           }
@@ -144,29 +141,46 @@ import { StudentTransferDialogComponent } from '../student-transfer-dialog/stude
                         <label class="fld">
                           <span>New login email (optional)</span>
                           <input
+                            pInputText
+                            class="w-full"
                             [ngModel]="portalEmails[g.guardianId] || ''"
                             (ngModelChange)="portalEmails[g.guardianId] = $event"
                             [name]="'portalEmail' + g.guardianId"
                             placeholder="parent@email.com" />
                         </label>
-                        <button type="button" class="btn-primary" (click)="createPortal(g.guardianId)" [disabled]="portalBusy()">
-                          {{ portalBusy() ? 'Working…' : 'Create Parent Login' }}
-                        </button>
+                        <div class="flex flex-wrap items-center gap-2">
+                          <p-button
+                            [label]="portalBusy() ? 'Working…' : 'Create Parent Login'"
+                            icon="pi pi-user-plus"
+                            size="small"
+                            [loading]="portalBusy()"
+                            [disabled]="portalBusy()"
+                            (onClick)="createPortal(g.guardianId)" />
+                        </div>
                         <label class="fld">
                           <span>Or link existing parent user</span>
-                          <select
+                          <p-select
+                            class="w-full"
+                            [options]="parentUserOptions()"
+                            optionLabel="label"
+                            optionValue="value"
+                            [filter]="parentUserOptions().length > 6"
+                            [showClear]="true"
+                            placeholder="Select parent account"
                             [ngModel]="linkUserIds[g.guardianId] ?? null"
                             (ngModelChange)="linkUserIds[g.guardianId] = $event"
-                            [name]="'linkUser' + g.guardianId">
-                            <option [ngValue]="null">Select parent account</option>
-                            @for (u of parentUsers(); track u.userId) {
-                              <option [ngValue]="u.userId">{{ u.fullName }} ({{ u.email }})</option>
-                            }
-                          </select>
+                            [ngModelOptions]="{ standalone: true }" />
                         </label>
-                        <button type="button" class="btn-secondary" (click)="linkExistingPortal(g.guardianId)" [disabled]="portalBusy() || !linkUserIds[g.guardianId]">
-                          Link selected user
-                        </button>
+                        <div class="flex flex-wrap items-center gap-2">
+                          <p-button
+                            label="Link selected user"
+                            icon="pi pi-link"
+                            severity="secondary"
+                            [outlined]="true"
+                            size="small"
+                            [disabled]="portalBusy() || !linkUserIds[g.guardianId]"
+                            (onClick)="linkExistingPortal(g.guardianId)" />
+                        </div>
                       </div>
                     }
                   </div>
@@ -176,7 +190,7 @@ import { StudentTransferDialogComponent } from '../student-transfer-dialog/stude
                     <p>Account ready for <strong>{{ pr.email }}</strong></p>
                     @if (pr.temporaryPassword) {
                       <p>Temp password: <code>{{ pr.temporaryPassword }}</code>
-                        <button type="button" class="linkish" (click)="copyText(pr.temporaryPassword!)">Copy</button>
+                        <p-button label="Copy" icon="pi pi-copy" [link]="true" size="small" (onClick)="copyText(pr.temporaryPassword!)" />
                       </p>
                     }
                     @if (pr.inviteMessage) {
@@ -184,7 +198,10 @@ import { StudentTransferDialogComponent } from '../student-transfer-dialog/stude
                         <span>Invite message (WhatsApp / SMS)</span>
                         <textarea readonly rows="6">{{ pr.inviteMessage }}</textarea>
                       </label>
-                      <button type="button" class="btn-secondary" (click)="copyText(pr.inviteMessage!)">Copy invite</button>
+                      <div class="flex flex-wrap items-center gap-2">
+                        <p-button label="Copy invite" icon="pi pi-copy" severity="secondary" [outlined]="true" size="small"
+                                  (onClick)="copyText(pr.inviteMessage!)" />
+                      </div>
                     }
                   </div>
                 }
@@ -283,17 +300,6 @@ import { StudentTransferDialogComponent } from '../student-transfer-dialog/stude
       background: var(--accent-s); border: 1px solid var(--accent-g); padding: 2px 9px; border-radius: 5px;
     }
     .hero-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
-    .btn-secondary, .btn-primary {
-      display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px;
-      border-radius: 9px; font-size: 12.5px; font-weight: 700; text-decoration: none; cursor: pointer;
-    }
-    .btn-secondary {
-      border: 1px solid var(--border); background: var(--surface); color: var(--t2);
-    }
-    .btn-secondary.danger:hover { color: #b91c1c; border-color: #fecaca; background: #fef2f2; }
-    .btn-primary { border: none; background: var(--accent); color: #fff; }
-    .btn-secondary .material-icons-round, .btn-primary .material-icons-round { font-size: 16px; }
-
     .profile-grid {
       display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
     }
@@ -380,6 +386,8 @@ export class StudentProfileComponent implements OnInit {
   portalEmails: Record<number, string> = {};
   linkUserIds: Record<number, number | null> = {};
   parentUsers = signal<UserListDto[]>([]);
+  parentUserOptions = computed(() =>
+    this.parentUsers().map(u => ({ value: u.userId as number | null, label: `${u.fullName} (${u.email})` })));
   portalBusy = signal(false);
   portalError = signal('');
   portalResult = signal<GuardianPortalResult | null>(null);

@@ -1,5 +1,9 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { Tag } from 'primeng/tag';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -43,7 +47,7 @@ interface WorkflowStep {
 @Component({
   selector: 'app-classroom-today',
   standalone: true,
-  imports: [CommonModule, RouterModule, LoadingComponent],
+  imports: [CommonModule, FormsModule, RouterModule, LoadingComponent, Button, Select, Tag],
   template: `
     <div class="os-page compact cr">
       @if (loading()) {
@@ -51,9 +55,8 @@ interface WorkflowStep {
       } @else if (session(); as s) {
         <div class="sess-shell" [style.--subj]="accent(s.classId, s.subjectName)">
           <div class="sess-bar">
-            <button type="button" class="back" (click)="exitSession()" title="Back">
-              <span class="material-icons-round">arrow_back</span>
-            </button>
+            <p-button icon="pi pi-arrow-left" severity="secondary" [outlined]="true" size="small"
+              ariaLabel="Back" (onClick)="exitSession()" />
             <div class="sess-av">
               <span class="material-icons-round">{{ subjectIcon(s.subjectName) }}</span>
             </div>
@@ -72,12 +75,10 @@ interface WorkflowStep {
               } @else if (!topics().length) {
                 <a [routerLink]="['/curriculum/workspace', s.planId]">Add topics</a>
               } @else {
-                <select [value]="s.topicId ?? ''" (change)="onTopicChange($event)">
-                  <option value="" disabled>Today’s topic…</option>
-                  @for (t of topics(); track t.courseTopicId) {
-                    <option [value]="t.courseTopicId">{{ t.title }}</option>
-                  }
-                </select>
+                <p-select class="flex-1 min-w-0" size="small" placeholder="Today’s topic…"
+                  [options]="topics()" optionLabel="title" optionValue="courseTopicId"
+                  [filter]="topics().length > 8" filterBy="title" appendTo="body"
+                  [ngModel]="s.topicId" (ngModelChange)="onTopicSelect($event)" />
               }
             </div>
           </div>
@@ -114,9 +115,9 @@ interface WorkflowStep {
                     <strong>
                       {{ st.title }}
                       @if (key === 'attendance' && attendanceState() === 'done') {
-                        <em class="p-badge done">Done</em>
+                        <p-tag value="Done" severity="success" [rounded]="true" />
                       } @else if (key === 'attendance' && attendanceState() === 'pending') {
-                        <em class="p-badge pending">Pending</em>
+                        <p-tag value="Pending" severity="warn" [rounded]="true" />
                       }
                     </strong>
                     <small>{{ locked ? 'Select topic above first' : st.hint }}</small>
@@ -127,10 +128,10 @@ interface WorkflowStep {
             }
           </div>
 
-          <button type="button" class="more-toggle" (click)="moreOpen.set(!moreOpen())" [attr.aria-expanded]="moreOpen()">
-            <span class="material-icons-round">{{ moreOpen() ? 'expand_less' : 'expand_more' }}</span>
-            {{ moreOpen() ? 'Hide more actions' : 'More for this period' }}
-          </button>
+          <p-button class="block w-full" styleClass="w-full" severity="secondary" [outlined]="true" size="small"
+            [icon]="moreOpen() ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
+            [label]="moreOpen() ? 'Hide more actions' : 'More for this period'"
+            [attr.aria-expanded]="moreOpen()" (onClick)="moreOpen.set(!moreOpen())" />
 
           @if (moreOpen()) {
             <div class="more-grid">
@@ -161,18 +162,16 @@ interface WorkflowStep {
                 <strong>{{ nxt.subjectName }} · {{ nxt.className }}{{ nxt.section ? ' — ' + nxt.section : '' }}</strong>
                 <span class="finish-time">{{ fmt(nxt.startTime) }}–{{ fmt(nxt.endTime) }}</span>
               </div>
-              <button type="button" class="btn-primary finish-cta" (click)="startFromEntry(nxt)">
-                Next Class →
-              </button>
+              <p-button class="finish-cta" label="Next Class" icon="pi pi-arrow-right" iconPos="right"
+                (onClick)="startFromEntry(nxt)" />
             } @else {
               <div class="finish-copy done">
                 <span class="finish-label">Schedule</span>
                 <strong>You're done for today</strong>
                 <span class="finish-time">No more periods on your timetable</span>
               </div>
-              <button type="button" class="btn-secondary finish-cta" (click)="exitSession()">
-                Back to class
-              </button>
+              <p-button class="finish-cta" label="Back to class" icon="pi pi-arrow-left" severity="secondary"
+                [outlined]="true" (onClick)="exitSession()" />
             }
           </div>
         </div>
@@ -193,15 +192,11 @@ interface WorkflowStep {
             </p>
           </div>
           <div class="hero-actions">
-            <a routerLink="/attendance/mark" class="h-cta">
-              <span class="material-icons-round">how_to_reg</span> Attendance
-            </a>
-            <a routerLink="/homework/list" class="h-cta">
-              <span class="material-icons-round">menu_book</span> Diary
-            </a>
-            <a routerLink="/curriculum/my-courses" class="h-cta h-cta-p">
-              <span class="material-icons-round">auto_stories</span> Courses
-            </a>
+            <p-button label="Attendance" icon="pi pi-user-edit" severity="secondary" [outlined]="true"
+              routerLink="/attendance/mark" />
+            <p-button label="Diary" icon="pi pi-book" severity="secondary" [outlined]="true"
+              routerLink="/homework/list" />
+            <p-button label="Courses" icon="pi pi-graduation-cap" routerLink="/curriculum/my-courses" />
           </div>
         </section>
 
@@ -263,9 +258,9 @@ interface WorkflowStep {
                     <div class="lesson-tags">
                       <span class="tag class-tag">{{ a.className }}{{ a.classSection ? ' — ' + a.classSection : '' }}</span>
                       @if (course) {
-                        <span class="tag ok">{{ pct }}% complete</span>
+                        <p-tag [value]="pct + '% complete'" severity="success" [rounded]="true" />
                       } @else {
-                        <span class="tag mute">No course plan</span>
+                        <p-tag value="No course plan" severity="secondary" [rounded]="true" />
                       }
                     </div>
                     <strong>{{ a.subjectName }}</strong>
@@ -314,24 +309,10 @@ interface WorkflowStep {
     }
     .hero-sub { margin: 5px 0 0; font-size: 12.5px; color: var(--t4); font-weight: 600; }
     .hero-actions { display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
-    .h-cta {
-      display: inline-flex; align-items: center; gap: 5px;
-      height: 34px; padding: 0 12px; border-radius: 9px;
-      border: 1px solid var(--border); background: var(--surface);
-      color: var(--t2); font-size: 12px; font-weight: 700; text-decoration: none;
-      transition: .15s ease;
-      .material-icons-round { font-size: 15px; }
-    }
-    .h-cta:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
-    .h-cta-p {
-      background: var(--accent); border-color: var(--accent); color: #fff;
-      box-shadow: 0 4px 12px rgba(var(--accent-rgb), .25);
-    }
-    .h-cta-p:hover { background: var(--accent-h); color: #fff; border-color: var(--accent-h); }
     @media (max-width: 700px) {
       .hero { flex-direction: column; align-items: flex-start; }
       .hero-actions { width: 100%; }
-      .h-cta { flex: 1; justify-content: center; }
+      .hero-actions p-button { flex: 1; }
     }
 
     .block-label {
@@ -397,8 +378,6 @@ interface WorkflowStep {
     .class-tag {
       background: color-mix(in srgb, var(--subj) 14%, transparent); color: var(--subj);
     }
-    .tag.ok { background: #d1fae5; color: #047857; }
-    .tag.mute { background: var(--surface-2); color: var(--t4); }
     .bar {
       height: 5px; border-radius: 99px; background: var(--surface-2);
       overflow: hidden; margin-top: 6px; max-width: 200px;
@@ -459,13 +438,6 @@ interface WorkflowStep {
       border: 1px solid var(--border); background: var(--surface);
       box-shadow: 0 1px 2px rgba(15,23,42,.04);
     }
-    .back {
-      width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
-      border: 1px solid var(--border); background: var(--surface-2); color: var(--t2);
-      display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
-      .material-icons-round { font-size: 18px; }
-    }
-    .back:hover { border-color: var(--subj); color: var(--subj); }
     .sess-av {
       width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
       background: var(--subj); color: #fff;
@@ -502,16 +474,6 @@ interface WorkflowStep {
         text-decoration: none; white-space: nowrap;
       }
       a:hover { text-decoration: underline; }
-      select {
-        flex: 1; min-width: 0; height: 28px; min-height: 28px !important;
-        padding: 0 6px;
-        border: 1px solid var(--border); border-radius: 6px;
-        background: var(--surface); font: inherit; font-size: 16px; font-weight: 700; color: var(--t1);
-      }
-      select:focus {
-        outline: none; border-color: var(--subj);
-        box-shadow: 0 0 0 2px color-mix(in srgb, var(--subj) 18%, transparent);
-      }
     }
     .topic-inline.on {
       border-color: color-mix(in srgb, var(--subj) 40%, var(--border));
@@ -568,12 +530,6 @@ interface WorkflowStep {
       }
       small { font-size: 12px; font-weight: 600; color: var(--t4); line-height: 1.25; }
     }
-    .p-badge {
-      font-style: normal; font-size: 10px; font-weight: 800; letter-spacing: .04em;
-      text-transform: uppercase; padding: 2px 7px; border-radius: 999px;
-    }
-    .p-badge.pending { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
-    .p-badge.done { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
     .p-go { font-size: 20px; color: var(--t4); flex-shrink: 0; }
 
     .finish-bar {
@@ -591,17 +547,6 @@ interface WorkflowStep {
     .finish-copy strong { font-size: 14px; font-weight: 800; color: var(--t1); }
     .finish-time { font-size: 12px; font-weight: 600; color: var(--t3); }
     .finish-cta { flex-shrink: 0; min-height: 40px; font-weight: 800 !important; }
-
-    .more-toggle {
-      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-      width: 100%; min-height: 40px; margin-top: 2px;
-      border: 1px dashed var(--border); border-radius: 10px;
-      background: transparent; color: var(--t3);
-      font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer;
-      touch-action: manipulation;
-      .material-icons-round { font-size: 20px; }
-    }
-    .more-toggle:hover { border-color: var(--subj); color: var(--subj); }
 
     .more-grid {
       display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;
@@ -635,7 +580,7 @@ interface WorkflowStep {
     }
     @media (max-width: 560px) {
       .sess-bar { gap: 8px; padding: 10px; }
-      .back, .sess-av { width: 40px; height: 40px; }
+      .sess-av { width: 40px; height: 40px; }
       .path-strip { gap: 4px; }
       .ps-arrow { display: none; }
       .primary-actions { gap: 10px; }
@@ -1030,9 +975,8 @@ export class ClassroomTodayComponent implements OnInit {
     });
   }
 
-  onTopicChange(ev: Event) {
-    const id = Number((ev.target as HTMLSelectElement).value);
-    if (id) this.selectTopic(id);
+  onTopicSelect(id: number | null) {
+    if (id) this.selectTopic(Number(id));
   }
 
   selectTopic(topicId: number, sync = true) {

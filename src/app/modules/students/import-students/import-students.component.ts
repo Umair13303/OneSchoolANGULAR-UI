@@ -7,11 +7,15 @@ import { AcademicService } from '../../../core/services/academic.service';
 import { ClassDto, AcademicYear } from '../../../core/models/academic.model';
 import { environment } from '../../../../environments/environment';
 import { AuthService } from '../../../core/services/auth.service';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { Tag } from 'primeng/tag';
 
 interface ImportRowResult {
   row: number;
   name: string;
   success: boolean;
+  skipped?: boolean;
   admissionNo?: string;
   error?: string;
 }
@@ -19,6 +23,7 @@ interface ImportRowResult {
 interface ImportResponse {
   totalRows: number;
   successCount: number;
+  skipCount: number;
   failCount: number;
   results: ImportRowResult[];
 }
@@ -26,7 +31,7 @@ interface ImportResponse {
 @Component({
   selector: 'app-import-students',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, Button, Select, Tag],
   template: `
     <div class="import-card">
 
@@ -41,9 +46,13 @@ interface ImportResponse {
             <p class="imp-sub">Bulk upload student records from an Excel file, class-wise</p>
           </div>
         </div>
-        <button class="imp-close-btn" (click)="router.navigate(['/students/list'])">
-          <span class="material-icons-round">close</span>
-        </button>
+        <p-button
+          icon="pi pi-times"
+          severity="secondary"
+          [outlined]="true"
+          size="small"
+          ariaLabel="Close"
+          (onClick)="router.navigate(['/students/list'])" />
       </div>
 
       <!-- Step indicator -->
@@ -77,21 +86,27 @@ interface ImportResponse {
             <div class="field-row">
               <div class="field">
                 <label>Academic Year <span class="req">*</span></label>
-                <select [(ngModel)]="selectedYearId" (ngModelChange)="onYearChange()">
-                  <option [ngValue]="null">— Select year —</option>
-                  @for (y of years(); track y.academicYearId) {
-                    <option [ngValue]="y.academicYearId">{{ y.yearLabel }}</option>
-                  }
-                </select>
+                <p-select
+                  class="w-full"
+                  [options]="years()"
+                  optionLabel="yearLabel"
+                  optionValue="academicYearId"
+                  [showClear]="true"
+                  placeholder="— Select year —"
+                  [(ngModel)]="selectedYearId"
+                  (ngModelChange)="onYearChange()" />
               </div>
               <div class="field">
                 <label>Class <span class="req">*</span></label>
-                <select [(ngModel)]="selectedClassId" [disabled]="!selectedYearId || classes().length === 0">
-                  <option [ngValue]="null">— Select class —</option>
-                  @for (c of classes(); track c.classId) {
-                    <option [ngValue]="c.classId">{{ c.className }}{{ c.section ? ' ' + c.section : '' }}</option>
-                  }
-                </select>
+                <p-select
+                  class="w-full"
+                  [options]="classOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  [showClear]="true"
+                  placeholder="— Select class —"
+                  [disabled]="!selectedYearId || classes().length === 0"
+                  [(ngModel)]="selectedClassId" />
               </div>
             </div>
 
@@ -104,9 +119,12 @@ interface ImportResponse {
 
             <div class="step-nav">
               <span></span>
-              <button class="btn-primary" [disabled]="!selectedYearId || !selectedClassId" (click)="step.set(2)">
-                Next <span class="material-icons-round">arrow_forward</span>
-              </button>
+              <p-button
+                label="Next"
+                icon="pi pi-arrow-right"
+                iconPos="right"
+                [disabled]="!selectedYearId || !selectedClassId"
+                (onClick)="step.set(2)" />
             </div>
           </div>
         }
@@ -128,13 +146,15 @@ interface ImportResponse {
                   Fill it in and save.
                 </div>
               </div>
-              <button class="btn-download" (click)="downloadTemplate()" [disabled]="downloading()">
-                @if (downloading()) {
-                  <span class="material-icons-round spin">refresh</span> Downloading…
-                } @else {
-                  <span class="material-icons-round">table_view</span> Download .xlsx
-                }
-              </button>
+              <p-button
+                [label]="downloading() ? 'Downloading…' : 'Download .xlsx'"
+                icon="pi pi-download"
+                severity="success"
+                [outlined]="true"
+                size="small"
+                [loading]="downloading()"
+                [disabled]="downloading()"
+                (onClick)="downloadTemplate()" />
             </div>
 
             <!-- Upload block -->
@@ -151,19 +171,25 @@ interface ImportResponse {
                       {{ selectedFile()!.name }}
                     </strong>
                     <span class="file-size">({{ (selectedFile()!.size / 1024).toFixed(1) }} KB)</span>
-                    <button class="btn-clear" (click)="clearFile()">
-                      <span class="material-icons-round">close</span>
-                    </button>
+                    <p-button
+                      icon="pi pi-times"
+                      severity="danger"
+                      [text]="true"
+                      [rounded]="true"
+                      size="small"
+                      ariaLabel="Remove file"
+                      (onClick)="clearFile()" />
                   } @else {
                     Select the filled .xlsx file to upload. Only .xlsx format is accepted.
                   }
                 </div>
               </div>
-              <label class="btn-upload">
-                <span class="material-icons-round">folder_open</span>
-                {{ selectedFile() ? 'Change file' : 'Browse file' }}
-                <input type="file" accept=".xlsx" (change)="onFileSelected($event)" style="display:none" />
-              </label>
+              <input #fileInput type="file" accept=".xlsx" (change)="onFileSelected($event)" class="hidden" />
+              <p-button
+                [label]="selectedFile() ? 'Change file' : 'Browse file'"
+                icon="pi pi-folder-open"
+                size="small"
+                (onClick)="fileInput.click()" />
             </div>
 
             @if (importError()) {
@@ -173,16 +199,13 @@ interface ImportResponse {
             }
 
             <div class="step-nav">
-              <button class="btn-secondary" (click)="step.set(1)">
-                <span class="material-icons-round">arrow_back</span> Back
-              </button>
-              <button class="btn-primary" [disabled]="!selectedFile() || importing()" (click)="runImport()">
-                @if (importing()) {
-                  <span class="material-icons-round spin">refresh</span> Importing…
-                } @else {
-                  <span class="material-icons-round">upload_file</span> Import Now
-                }
-              </button>
+              <p-button label="Back" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="step.set(1)" />
+              <p-button
+                [label]="importing() ? 'Importing…' : 'Import Now'"
+                icon="pi pi-upload"
+                [loading]="importing()"
+                [disabled]="!selectedFile() || importing()"
+                (onClick)="runImport()" />
             </div>
           </div>
         }
@@ -192,12 +215,22 @@ interface ImportResponse {
           <div class="step-pane">
 
             <!-- Summary banner -->
-            <div class="result-banner" [class.all-ok]="importResult()!.failCount === 0" [class.has-errors]="importResult()!.failCount > 0">
+            <div class="result-banner"
+                 [class.all-ok]="importResult()!.failCount === 0 && importResult()!.skipCount === 0"
+                 [class.has-errors]="importResult()!.failCount > 0 || importResult()!.skipCount > 0">
               <div class="rb-stat">
                 <span class="material-icons-round">check_circle</span>
                 <div>
                   <div class="rb-num">{{ importResult()!.successCount }}</div>
                   <div class="rb-lbl">Imported</div>
+                </div>
+              </div>
+              <div class="rb-divider"></div>
+              <div class="rb-stat skip">
+                <span class="material-icons-round">remove_circle</span>
+                <div>
+                  <div class="rb-num">{{ importResult()!.skipCount ?? 0 }}</div>
+                  <div class="rb-lbl">Skipped</div>
                 </div>
               </div>
               <div class="rb-divider"></div>
@@ -226,24 +259,31 @@ interface ImportResponse {
                     <th>#</th>
                     <th>Student Name</th>
                     <th>Status</th>
-                    <th>Admission No. / Error</th>
+                    <th>Admission No. / Detail</th>
                   </tr>
                 </thead>
                 <tbody>
                   @for (r of importResult()!.results; track r.row) {
-                    <tr [class.row-ok]="r.success" [class.row-fail]="!r.success">
+                    <tr [class.row-ok]="r.success" [class.row-skip]="r.skipped" [class.row-fail]="!r.success && !r.skipped">
                       <td class="row-num">{{ r.row }}</td>
                       <td class="row-name">{{ r.name }}</td>
                       <td class="row-status">
                         @if (r.success) {
-                          <span class="badge ok"><span class="material-icons-round">check</span> Success</span>
+                          <p-tag value="Success" severity="success" icon="pi pi-check" />
+                        } @else if (r.skipped) {
+                          <p-tag value="Skipped" severity="warn" icon="pi pi-minus" />
                         } @else {
-                          <span class="badge fail"><span class="material-icons-round">close</span> Failed</span>
+                          <p-tag value="Failed" severity="danger" icon="pi pi-times" />
                         }
                       </td>
                       <td class="row-detail">
                         @if (r.success) {
                           <span class="adm-no">{{ r.admissionNo }}</span>
+                        } @else if (r.skipped) {
+                          <span class="skip-msg">{{ r.error }}</span>
+                          @if (r.admissionNo) {
+                            <span class="adm-no muted"> · {{ r.admissionNo }}</span>
+                          }
                         } @else {
                           <span class="err-msg">{{ r.error }}</span>
                         }
@@ -255,12 +295,8 @@ interface ImportResponse {
             </div>
 
             <div class="step-nav">
-              <button class="btn-secondary" (click)="resetImport()">
-                <span class="material-icons-round">upload_file</span> Import Another File
-              </button>
-              <button class="btn-primary" (click)="router.navigate(['/students/list'])">
-                <span class="material-icons-round">list</span> View Student List
-              </button>
+              <p-button label="Import Another File" icon="pi pi-upload" severity="secondary" [outlined]="true" (onClick)="resetImport()" />
+              <p-button label="View Student List" icon="pi pi-list" (onClick)="router.navigate(['/students/list'])" />
             </div>
           </div>
         }
@@ -406,6 +442,7 @@ interface ImportResponse {
       .material-icons-round { font-size: 26px; color: var(--green); font-variation-settings: 'FILL' 1; }
     }
     .rb-stat.fail .material-icons-round { color: var(--red); }
+    .rb-stat.skip .material-icons-round { color: #d97706; }
     .rb-stat.total .material-icons-round { color: var(--accent); }
     .rb-num { font-size: 24px; font-weight: 800; color: var(--t1); }
     .rb-lbl { font-size: 11px; color: var(--t3); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
@@ -418,6 +455,7 @@ interface ImportResponse {
     .result-table td { padding: 9px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
     .result-table tr:last-child td { border-bottom: none; }
     .result-table .row-ok { background: #f0fdf4; }
+    .result-table .row-skip { background: #fffbeb; }
     .result-table .row-fail { background: #fff5f5; }
 
     .row-num { font-weight: 700; color: var(--t4); font-size: 12px; }
@@ -430,6 +468,8 @@ interface ImportResponse {
     .badge.ok   { background: var(--green-s); color: var(--green); border: 1px solid var(--green-b); }
     .badge.fail { background: var(--red-s);   color: var(--red);   border: 1px solid var(--red-b); }
     .adm-no { font-weight: 700; color: var(--accent); font-size: 12.5px; }
+    .adm-no.muted { font-weight: 600; color: var(--t3); }
+    .skip-msg { color: #b45309; font-size: 12px; }
     .err-msg { color: var(--red); font-size: 12px; }
 
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -464,6 +504,13 @@ export class ImportStudentsComponent implements OnInit {
     this.classes.set([]);
     if (this.selectedYearId)
       this.academicSvc.getClasses(this.selectedYearId).subscribe(c => this.classes.set(c));
+  }
+
+  classOptions() {
+    return this.classes().map(c => ({
+      value: c.classId,
+      label: `${c.className}${c.section ? ' ' + c.section : ''}`
+    }));
   }
 
   selectedYearLabel() {

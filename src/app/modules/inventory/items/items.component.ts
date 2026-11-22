@@ -1,47 +1,62 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormsModule, FormBuilder, Validators } from '@angular/forms';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
+import { InputNumber } from 'primeng/inputnumber';
+import { Textarea } from 'primeng/textarea';
+import { Tag } from 'primeng/tag';
+import { Dialog } from 'primeng/dialog';
+import { TableModule } from 'primeng/table';
+import { Tooltip } from 'primeng/tooltip';
+import { IconField } from 'primeng/iconfield';
+import { InputIcon } from 'primeng/inputicon';
 import { InventoryService } from '../../../core/services/inventory.service';
 import { ItemDto, ItemCategoryDto, UnitDto } from '../../../core/models/inventory.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { ConfirmDeleteComponent } from '../../../shared/components/confirm-delete/confirm-delete.component';
 import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/confirm-delete.service';
-import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
 
 @Component({
   selector: 'app-items',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, PageHeaderComponent, ConfirmDeleteComponent, OsSelectComponent],
+  imports: [
+    CommonModule, ReactiveFormsModule, FormsModule, PageHeaderComponent, ConfirmDeleteComponent,
+    Button, Select, InputText, InputNumber, Textarea, Tag, Dialog, TableModule, Tooltip, IconField, InputIcon
+  ],
   template: `
     <div class="os-page compact">
     <app-page-header [dense]="true" title="Item Master" subtitle="Books, stationery, uniforms and every other sellable item" routeUrl="/inventory/items">
-      <button class="btn-primary" (click)="openAdd()"><span class="material-icons-round">add</span> Add Item</button>
+      <p-button label="Add Item" icon="pi pi-plus" (onClick)="openAdd()" />
     </app-page-header>
 
     <div class="os-stage">
       <div class="os-stage-bar">
-        <div class="os-toolbar-group">
-          <div class="os-field grow">
-            <div class="search-wrap">
-              <span class="material-icons-round search-icon">search</span>
-              <input class="search-input" placeholder="Search by name, code or barcode…" [value]="search()" (input)="onSearch($any($event.target).value)" />
-            </div>
-          </div>
-          <app-os-select
+        <div class="flex w-full flex-wrap items-center gap-3">
+          <p-iconfield class="min-w-[220px] flex-1">
+            <p-inputicon class="pi pi-search" />
+            <input pInputText class="w-full" placeholder="Search by name, code or barcode…" [value]="search()" (input)="onSearch($any($event.target).value)" />
+          </p-iconfield>
+          <p-select
+            class="w-full sm:w-64"
             [options]="categoryOptions()"
-            [value]="categoryFilter()"
-            (valueChange)="categoryFilter.set($event ?? ''); load()"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="categoryFilter()"
+            (ngModelChange)="categoryFilter.set($event ?? ''); load()"
             placeholder="All Categories"
-            icon="category"
+            appendTo="body"
             ariaLabel="Category" />
         </div>
       </div>
 
       <div class="os-stage-body">
-      <table class="table">
-        <thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Unit</th><th>Stock</th><th>Sale Price</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>
-          @for (i of items(); track i.itemId) {
+        <p-table [value]="items()" dataKey="itemId" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '52rem' }" [scrollable]="true">
+          <ng-template #header>
+            <tr><th>Code</th><th>Name</th><th>Category</th><th>Unit</th><th>Stock</th><th>Sale Price</th><th>Status</th><th class="text-right">Actions</th></tr>
+          </ng-template>
+          <ng-template #body let-i>
             <tr>
               <td>{{ i.itemCode }}</td>
               <td><strong>{{ i.itemName }}</strong>@if (i.barcode) { <div class="sub">{{ i.barcode }}</div> }</td>
@@ -49,99 +64,86 @@ import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os
               <td>{{ i.unitName }}</td>
               <td [class.low]="i.quantityOnHand <= i.reorderLevel">{{ i.quantityOnHand }}</td>
               <td>{{ i.salePrice | number:'1.2-2' }}</td>
-              <td><span [class]="'badge ' + (i.isActive ? 'badge-green' : 'badge-gray')">{{ i.isActive ? 'Active' : 'Inactive' }}</span></td>
-              <td class="actions">
-                <button class="icon-btn" (click)="openEdit(i)" title="Edit"><span class="material-icons-round">edit</span></button>
-                <button class="icon-btn danger" (click)="deleteItem(i)" title="Delete"><span class="material-icons-round">delete</span></button>
+              <td><p-tag [value]="i.isActive ? 'Active' : 'Inactive'" [severity]="i.isActive ? 'success' : 'secondary'" [rounded]="true" /></td>
+              <td>
+                <div class="flex items-center justify-end gap-1 whitespace-nowrap">
+                  <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" severity="secondary" ariaLabel="Edit" pTooltip="Edit" (onClick)="openEdit(i)" />
+                  <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Delete" pTooltip="Delete" (onClick)="deleteItem(i)" />
+                </div>
               </td>
             </tr>
-          }
-          @if (!items().length) { <tr><td colspan="8" class="empty">No items found.</td></tr> }
-        </tbody>
-      </table>
+          </ng-template>
+          <ng-template #emptymessage>
+            <tr><td colspan="8" class="empty">No items found.</td></tr>
+          </ng-template>
+        </p-table>
       </div>
     </div>
     </div>
 
-    @if (showModal()) {
-      <div class="modal-overlay" (click)="showModal.set(false)">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <div class="modal-hd"><h3>{{ editingId() ? 'Edit' : 'Add' }} Item</h3><button class="close-btn" (click)="showModal.set(false)"><span class="material-icons-round">close</span></button></div>
-          <form [formGroup]="form" (ngSubmit)="save()" class="modal-body">
-            <div class="grid2">
-              <div class="field"><label>Item Name <span class="req">*</span></label><input formControlName="itemName" /></div>
-              <div class="field"><label>Item Code</label><input formControlName="itemCode" placeholder="auto if blank" /></div>
-              <div class="field"><label>Barcode</label><input formControlName="barcode" /></div>
-              <div class="field"><label>Brand</label><input formControlName="brand" /></div>
-              <div class="field"><label>Category <span class="req">*</span></label>
-                <select formControlName="itemCategoryId">
-                  <option [ngValue]="null">Select…</option>
-                  @for (c of categories(); track c.itemCategoryId) { <option [ngValue]="c.itemCategoryId">{{ c.categoryName }}</option> }
-                </select>
-              </div>
-              <div class="field"><label>Unit <span class="req">*</span></label>
-                <select formControlName="unitId">
-                  <option [ngValue]="null">Select…</option>
-                  @for (u of units(); track u.unitId) { <option [ngValue]="u.unitId">{{ u.unitName }}</option> }
-                </select>
-              </div>
-              <div class="field"><label>Sale Price <span class="req">*</span></label><input type="number" step="0.01" formControlName="salePrice" /></div>
-              <div class="field"><label>Wholesale Price</label><input type="number" step="0.01" formControlName="wholesalePrice" /></div>
-              <div class="field"><label>Minimum Sale Price</label><input type="number" step="0.01" formControlName="minimumSalePrice" /></div>
-              <div class="field"><label>Tax %</label><input type="number" step="0.01" formControlName="taxPercentage" /></div>
-              <div class="field"><label>Minimum Stock Level</label><input type="number" step="0.01" formControlName="minimumStockLevel" /></div>
-              <div class="field"><label>Reorder Level</label><input type="number" step="0.01" formControlName="reorderLevel" /></div>
-              @if (!editingId()) {
-                <div class="field"><label>Opening Quantity</label><input type="number" step="0.01" formControlName="openingQuantity" /></div>
-                <div class="field"><label>Opening Cost</label><input type="number" step="0.01" formControlName="openingCost" /></div>
-              }
-              @if (editingId()) {
-                <div class="field"><label>Status</label><select formControlName="isActive"><option [ngValue]="true">Active</option><option [ngValue]="false">Inactive</option></select></div>
-              }
+    <p-dialog
+      [header]="(editingId() ? 'Edit' : 'Add') + ' Item'"
+      [visible]="showModal()"
+      (visibleChange)="showModal.set($event)"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '40rem' }"
+      [breakpoints]="{ '640px': '96vw' }">
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <div class="grid grid-cols-1 gap-x-3.5 sm:grid-cols-2">
+          <div class="field"><label for="it-name">Item Name <span class="req">*</span></label><input pInputText id="it-name" class="w-full" formControlName="itemName" /></div>
+          <div class="field"><label for="it-code">Item Code</label><input pInputText id="it-code" class="w-full" formControlName="itemCode" placeholder="auto if blank" /></div>
+          <div class="field"><label for="it-barcode">Barcode</label><input pInputText id="it-barcode" class="w-full" formControlName="barcode" /></div>
+          <div class="field"><label for="it-brand">Brand</label><input pInputText id="it-brand" class="w-full" formControlName="brand" /></div>
+          <div class="field"><label>Category <span class="req">*</span></label>
+            <p-select class="w-full" [options]="categories()" optionLabel="categoryName" optionValue="itemCategoryId"
+                      placeholder="Select…" [filter]="true" appendTo="body" [overlayOptions]="{ baseZIndex: 10050 }"
+                      formControlName="itemCategoryId" />
+          </div>
+          <div class="field"><label>Unit <span class="req">*</span></label>
+            <p-select class="w-full" [options]="units()" optionLabel="unitName" optionValue="unitId"
+                      placeholder="Select…" appendTo="body" [overlayOptions]="{ baseZIndex: 10050 }"
+                      formControlName="unitId" />
+          </div>
+          <div class="field"><label for="it-sale">Sale Price <span class="req">*</span></label><p-inputnumber inputId="it-sale" styleClass="w-full" inputStyleClass="w-full" [minFractionDigits]="0" [maxFractionDigits]="2" formControlName="salePrice" /></div>
+          <div class="field"><label for="it-whole">Wholesale Price</label><p-inputnumber inputId="it-whole" styleClass="w-full" inputStyleClass="w-full" [minFractionDigits]="0" [maxFractionDigits]="2" formControlName="wholesalePrice" /></div>
+          <div class="field"><label for="it-min">Minimum Sale Price</label><p-inputnumber inputId="it-min" styleClass="w-full" inputStyleClass="w-full" [minFractionDigits]="0" [maxFractionDigits]="2" formControlName="minimumSalePrice" /></div>
+          <div class="field"><label for="it-tax">Tax %</label><p-inputnumber inputId="it-tax" styleClass="w-full" inputStyleClass="w-full" [minFractionDigits]="0" [maxFractionDigits]="2" formControlName="taxPercentage" /></div>
+          <div class="field"><label for="it-msl">Minimum Stock Level</label><p-inputnumber inputId="it-msl" styleClass="w-full" inputStyleClass="w-full" [minFractionDigits]="0" [maxFractionDigits]="2" formControlName="minimumStockLevel" /></div>
+          <div class="field"><label for="it-rl">Reorder Level</label><p-inputnumber inputId="it-rl" styleClass="w-full" inputStyleClass="w-full" [minFractionDigits]="0" [maxFractionDigits]="2" formControlName="reorderLevel" /></div>
+          @if (!editingId()) {
+            <div class="field"><label for="it-oq">Opening Quantity</label><p-inputnumber inputId="it-oq" styleClass="w-full" inputStyleClass="w-full" [minFractionDigits]="0" [maxFractionDigits]="2" formControlName="openingQuantity" /></div>
+            <div class="field"><label for="it-oc">Opening Cost</label><p-inputnumber inputId="it-oc" styleClass="w-full" inputStyleClass="w-full" [minFractionDigits]="0" [maxFractionDigits]="2" formControlName="openingCost" /></div>
+          }
+          @if (editingId()) {
+            <div class="field"><label>Status</label>
+              <p-select class="w-full" [options]="statusOptions" optionLabel="label" optionValue="value"
+                        appendTo="body" [overlayOptions]="{ baseZIndex: 10050 }" formControlName="isActive" />
             </div>
-            <div class="field"><label>Description</label><textarea formControlName="description" rows="2"></textarea></div>
-            @if (modalError()) { <div class="alert-err">{{ modalError() }}</div> }
-            <div class="modal-ft">
-              <button type="button" class="btn-secondary" (click)="showModal.set(false)">Cancel</button>
-              <button type="submit" class="btn-primary" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
-            </div>
-          </form>
+          }
         </div>
-      </div>
-    }
+        <div class="field"><label for="it-desc">Description</label><textarea pTextarea id="it-desc" class="w-full" formControlName="description" rows="2"></textarea></div>
+        @if (modalError()) { <div class="alert-err">{{ modalError() }}</div> }
+      </form>
+      <ng-template #footer>
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="showModal.set(false)" />
+          <p-button [label]="saving() ? 'Saving…' : 'Save'" icon="pi pi-check" [loading]="saving()" [disabled]="saving()" (onClick)="save()" />
+        </div>
+      </ng-template>
+    </p-dialog>
 
     <app-confirm-delete />
   `,
   styles: [`
-    /* Removed by the canonical migration: .filters and .search (now the stage
-       bar + global .search-wrap/.search-input), .card (now .os-stage), .actions
-       and the three .icon-btn rules (the global .icon-btn supplies size, hover,
-       disabled and focus, and its .danger variant uses --red tokens instead of
-       the hardcoded #ef4444 these rules used). */
     .sub { font-size:11px; color:var(--t4); }
     td.low { color:#dc2626; font-weight:700; }
-    .badge { padding:3px 9px; border-radius:12px; font-size:11.5px; font-weight:600; }
-    .badge-green { background:var(--green-s); color:var(--green); }
-    .badge-gray { background:var(--surface-2); color:var(--t4); }
     .empty { text-align:center; color:var(--t4); padding:32px 0; font-size:13px; }
-    /* .overlay removed: the template now uses the global .modal-overlay, which
-       supplies the backdrop, centring, --z-modal and scroll containment, and
-       converts to a bottom sheet on mobile. */
-    .modal { background:var(--surface); border-radius:16px; width:100%; max-width:640px; margin:auto; }
-    .modal-hd { display:flex; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid var(--border); background:var(--surface-2); }
-    .modal-hd h3 { font-size:15px; font-weight:700; margin:0; }
-    .close-btn { margin-left:auto; border:none; background:transparent; cursor:pointer; color:var(--t4); padding:6px; border-radius:8px; }
-    .modal-body { padding:20px; max-height:70vh; overflow-y:auto; }
-    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:0 14px; }
-    .modal-ft { display:flex; justify-content:flex-end; gap:10px; padding-top:12px; border-top:1px solid var(--border); margin-top:4px; }
     .field { display:flex; flex-direction:column; gap:5px; margin-bottom:14px; }
     label { font-size:11px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.5px; }
     .req { color:var(--red); }
-    /* Scoped to the modal. Unscoped, this bare rule out-specified the global
-       .search-input on the stage-bar search box (a component-scoped element
-       selector beats a global class), giving it modal padding and an 8px
-       radius inside a square stage. Modal form fields are unchanged. */
-    .modal-body input, .modal-body select, .modal-body textarea { padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13.5px; font-family:inherit; background:var(--surface); color:var(--t1); }
     .alert-err { background:#fee2e2; color:#dc2626; border:1px solid #dc2626; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:10px; }
   `]
 })
@@ -150,6 +152,7 @@ export class ItemsComponent implements OnInit {
   private confirmDelete = inject(ConfirmDeleteService);
   private fb = inject(FormBuilder);
 
+  statusOptions = [{ label: 'Active', value: true }, { label: 'Inactive', value: false }];
   items = signal<ItemDto[]>([]);
   categories = signal<ItemCategoryDto[]>([]);
   units = signal<UnitDto[]>([]);
@@ -163,7 +166,7 @@ export class ItemsComponent implements OnInit {
   // Options for app-os-select. Values stay STRINGS so categoryFilter remains a
   // string signal and load()'s existing `Number(...)` / falsy-'' handling is
   // untouched. Derived from the same categories() signal the old select used.
-  categoryOptions = computed<OsSelectOption<string>[]>(() => [
+  categoryOptions = computed<{ value: string; label: string }[]>(() => [
     { value: '', label: 'All Categories' },
     ...this.categories().map(c => ({ value: String(c.itemCategoryId), label: c.categoryName }))
   ]);

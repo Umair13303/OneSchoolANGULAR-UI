@@ -3,6 +3,11 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
+import { Button } from 'primeng/button';
+import { Dialog } from 'primeng/dialog';
+import { InputText } from 'primeng/inputtext';
+import { Password } from 'primeng/password';
+import { Select } from 'primeng/select';
 import { UserService } from '../../../core/services/user.service';
 import { DatePickerComponent } from '../../../shared/components/date-picker/date-picker.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
@@ -14,7 +19,7 @@ import Swal from 'sweetalert2';
 @Component({
   selector: 'app-teacher-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, DatePickerComponent, LoadingComponent],
+  imports: [CommonModule, ReactiveFormsModule, DatePickerComponent, LoadingComponent, Button, Dialog, InputText, Password, Select],
   template: `
 
     <div class="admission-card">
@@ -33,9 +38,7 @@ import Swal from 'sweetalert2';
         </div>
         <div class="adm-header-right">
           <span class="adm-step-badge">Step {{ activeTab() + 1 }}/{{ totalSteps() }}</span>
-          <button class="adm-back-btn" (click)="router.navigate(['/teachers'])">
-            <span class="material-icons-round">close</span>
-          </button>
+          <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="secondary" ariaLabel="Close" (onClick)="router.navigate(['/teachers'])" />
         </div>
       </div>
 
@@ -91,7 +94,7 @@ import Swal from 'sweetalert2';
                   <label>Full Name <span class="req">*</span></label>
                   <div class="input-wrap">
                     <span class="material-icons-round field-icon">badge</span>
-                    <input formControlName="fullName" placeholder="e.g. Muhammad Ahmed Khan" />
+                    <input pInputText formControlName="fullName" placeholder="e.g. Muhammad Ahmed Khan" />
                   </div>
                   @if (f['fullName'].invalid && f['fullName'].touched) {
                     <span class="ferr">Full name is required</span>
@@ -99,14 +102,7 @@ import Swal from 'sweetalert2';
                 </div>
                 <div class="form-field">
                   <label>Gender</label>
-                  <div class="input-wrap select-wrap">
-                    <span class="material-icons-round field-icon">wc</span>
-                    <select formControlName="gender">
-                      <option value="">Select gender</option>
-                      <option>Male</option>
-                      <option>Female</option>
-                    </select>
-                  </div>
+                  <p-select class="w-full" formControlName="gender" [options]="genders" placeholder="Select gender" [showClear]="true" appendTo="body" />
                 </div>
               </div>
 
@@ -121,7 +117,7 @@ import Swal from 'sweetalert2';
                   <label>Phone Number</label>
                   <div class="input-wrap">
                     <span class="material-icons-round field-icon">call</span>
-                    <input formControlName="phone" placeholder="0300-1234567" />
+                    <input pInputText formControlName="phone" placeholder="0300-1234567" />
                   </div>
                 </div>
               </div>
@@ -131,23 +127,21 @@ import Swal from 'sweetalert2';
                   <label>CNIC</label>
                   <div class="input-wrap">
                     <span class="material-icons-round field-icon">credit_card</span>
-                    <input formControlName="cnic" placeholder="12345-1234567-1" />
+                    <input pInputText formControlName="cnic" placeholder="12345-1234567-1" />
                   </div>
                 </div>
                 <div class="form-field">
                   <label>Home Address</label>
                   <div class="input-wrap">
                     <span class="material-icons-round field-icon">home</span>
-                    <input formControlName="address" placeholder="Street, City, Province" />
+                    <input pInputText formControlName="address" placeholder="Street, City, Province" />
                   </div>
                 </div>
               </div>
 
               <div class="tab-nav">
                 <span></span>
-                <button type="button" class="btn-primary" (click)="next()">
-                  Next <span class="material-icons-round">arrow_forward</span>
-                </button>
+                <p-button label="Next" icon="pi pi-arrow-right" iconPos="right" (onClick)="next()" />
               </div>
             </div>
           }
@@ -165,21 +159,12 @@ import Swal from 'sweetalert2';
                   <label>Qualification</label>
                   <div class="input-wrap">
                     <span class="material-icons-round field-icon">military_tech</span>
-                    <input formControlName="qualification" placeholder="e.g. M.Sc Mathematics" />
+                    <input pInputText formControlName="qualification" placeholder="e.g. M.Sc Mathematics" />
                   </div>
                 </div>
                 <div class="form-field">
                   <label>Subject Specialization</label>
-                  <div class="input-wrap select-wrap">
-                    <span class="material-icons-round field-icon">auto_stories</span>
-                    <select formControlName="specialization">
-                      <option value="">Select subject</option>
-                      @for (s of subjects(); track s.subjectId) {
-                        <option [value]="s.subjectName">{{ s.subjectName }}</option>
-                      }
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
+                  <p-select class="w-full" formControlName="specialization" [options]="specializationOptions()" placeholder="Select subject" [showClear]="true" [filter]="true" appendTo="body" />
                 </div>
               </div>
 
@@ -192,13 +177,7 @@ import Swal from 'sweetalert2';
                 </div>
                 <div class="form-field">
                   <label>Employment Status</label>
-                  <div class="input-wrap select-wrap">
-                    <span class="material-icons-round field-icon">toggle_on</span>
-                    <select formControlName="isActive">
-                      <option [ngValue]="true">Active</option>
-                      <option [ngValue]="false">Inactive</option>
-                    </select>
-                  </div>
+                  <p-select class="w-full" formControlName="isActive" [options]="activeOptions" optionLabel="label" optionValue="value" appendTo="body" />
                 </div>
               </div>
 
@@ -227,23 +206,14 @@ import Swal from 'sweetalert2';
               }
 
               <div class="tab-nav">
-                <button type="button" class="btn-secondary" (click)="activeTab.set(0)">
-                  <span class="material-icons-round">arrow_back</span> Back
-                </button>
+                <p-button label="Back" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="activeTab.set(0)" />
                 @if (editId()) {
                   <div class="tab-nav-end">
-                    <button type="submit" class="btn-secondary" [disabled]="saving()">
-                      @if (saving()) { <span class="material-icons-round spin">refresh</span> Saving… }
-                      @else { <span class="material-icons-round">save</span> Save Changes }
-                    </button>
-                    <button type="button" class="btn-primary" (click)="goAssignments()">
-                      Assignments <span class="material-icons-round">arrow_forward</span>
-                    </button>
+                    <p-button type="submit" [label]="saving() ? 'Saving…' : 'Save Changes'" icon="pi pi-save" severity="secondary" [outlined]="true" [loading]="saving()" [disabled]="saving()" />
+                    <p-button label="Assignments" icon="pi pi-arrow-right" iconPos="right" (onClick)="goAssignments()" />
                   </div>
                 } @else {
-                  <button type="button" class="btn-primary" (click)="next()">
-                    Next <span class="material-icons-round">arrow_forward</span>
-                  </button>
+                  <p-button label="Next" icon="pi pi-arrow-right" iconPos="right" (onClick)="next()" />
                 }
               </div>
             </div>
@@ -262,7 +232,7 @@ import Swal from 'sweetalert2';
                   <label>Email Address <span class="req">*</span></label>
                   <div class="input-wrap">
                     <span class="material-icons-round field-icon">email</span>
-                    <input type="email" formControlName="email" placeholder="teacher@school.edu.pk" />
+                    <input pInputText type="email" formControlName="email" placeholder="teacher@school.edu.pk" />
                   </div>
                   @if (f['email'].invalid && f['email'].touched) {
                     <span class="ferr">Please enter a valid email address</span>
@@ -270,10 +240,7 @@ import Swal from 'sweetalert2';
                 </div>
                 <div class="form-field" [class.has-error]="f['password'].invalid && f['password'].touched">
                   <label>Password <span class="req">*</span></label>
-                  <div class="input-wrap">
-                    <span class="material-icons-round field-icon">lock</span>
-                    <input type="password" formControlName="password" placeholder="Minimum 6 characters" />
-                  </div>
+                  <p-password formControlName="password" [feedback]="false" [toggleMask]="true" placeholder="Minimum 6 characters" styleClass="w-full" inputStyleClass="w-full" />
                   @if (f['password'].invalid && f['password'].touched) {
                     <span class="ferr">Password must be at least 6 characters</span>
                   }
@@ -287,13 +254,8 @@ import Swal from 'sweetalert2';
               }
 
               <div class="tab-nav">
-                <button type="button" class="btn-secondary" (click)="activeTab.set(1)">
-                  <span class="material-icons-round">arrow_back</span> Back
-                </button>
-                <button type="submit" class="btn-primary" [disabled]="saving()">
-                  @if (saving()) { <span class="material-icons-round spin">refresh</span> Saving… }
-                  @else { <span class="material-icons-round">person_add</span> Add Teacher &amp; Assign }
-                </button>
+                <p-button label="Back" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="activeTab.set(1)" />
+                <p-button type="submit" [label]="saving() ? 'Saving…' : 'Add Teacher & Assign'" icon="pi pi-user-plus" [loading]="saving()" [disabled]="saving()" />
               </div>
             </div>
           }
@@ -317,9 +279,7 @@ import Swal from 'sweetalert2';
                       </div>
                     </div>
                   </div>
-                  <button type="button" class="btn-primary btn-sm" (click)="openAssignModal()">
-                    <span class="material-icons-round">add</span> Add assignment
-                  </button>
+                  <p-button label="Add assignment" icon="pi pi-plus" size="small" (onClick)="openAssignModal()" />
                 </div>
 
                 @if (loadingAssignments()) {
@@ -331,9 +291,7 @@ import Swal from 'sweetalert2';
                     </div>
                     <h4>No teaching load yet</h4>
                     <p>Pick the classes and subjects this teacher will handle. You can change this later anytime.</p>
-                    <button type="button" class="btn-primary" (click)="openAssignModal()">
-                      <span class="material-icons-round">add</span> Assign first class
-                    </button>
+                    <p-button label="Assign first class" icon="pi pi-plus" (onClick)="openAssignModal()" />
                   </div>
                 } @else {
                   <div class="assign-body">
@@ -351,10 +309,7 @@ import Swal from 'sweetalert2';
                                 <span class="material-icons-round">{{ subjectIcon(i) }}</span>
                               </span>
                               <span class="assign-chip-name">{{ a.subjectName }}</span>
-                              <button type="button" class="assign-remove" title="Remove assignment" (click)="unassign(a)">
-                                <span class="material-icons-round">person_remove</span>
-                                Remove
-                              </button>
+                              <p-button label="Remove" icon="pi pi-user-minus" size="small" [text]="true" severity="danger" ariaLabel="Remove assignment" (onClick)="unassign(a)" />
                             </div>
                           }
                         </div>
@@ -365,19 +320,12 @@ import Swal from 'sweetalert2';
               </div>
 
               <div class="tab-nav">
-                <button type="button" class="btn-secondary" (click)="activeTab.set(1)">
-                  <span class="material-icons-round">arrow_back</span> Back
-                </button>
+                <p-button label="Back" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="activeTab.set(1)" />
                 <div class="tab-nav-end">
                   @if (assignments().length === 0) {
-                    <button type="button" class="btn-secondary" (click)="finish()">
-                      Skip for now
-                    </button>
+                    <p-button label="Skip for now" severity="secondary" [outlined]="true" (onClick)="finish()" />
                   }
-                  <button type="button" class="btn-primary" (click)="finish()">
-                    <span class="material-icons-round">check</span>
-                    {{ assignments().length === 0 ? 'Finish without assigning' : 'Done' }}
-                  </button>
+                  <p-button [label]="assignments().length === 0 ? 'Finish without assigning' : 'Done'" icon="pi pi-check" (onClick)="finish()" />
                 </div>
               </div>
             </div>
@@ -388,18 +336,18 @@ import Swal from 'sweetalert2';
 
     </div>
 
-    @if (showAssign()) {
-      <div class="modal-overlay" (click)="showAssign.set(false)">
-        <div class="modal assign-modal" (click)="$event.stopPropagation()">
-          <div class="assign-modal-header">
-            <div>
-              <h3>Add classes &amp; subjects</h3>
-              <p class="assign-sub">Tap subjects to select — search or use quick picks to go faster</p>
-            </div>
-            <button type="button" class="icon-act" (click)="showAssign.set(false)">
-              <span class="material-icons-round">close</span>
-            </button>
-          </div>
+    <p-dialog
+      header="Add classes & subjects"
+      [visible]="showAssign()"
+      (visibleChange)="!$event && showAssign.set(false)"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '45rem', maxWidth: '96vw' }"
+      [breakpoints]="{ '640px': '96vw' }">
+        <div class="assign-dialog-body">
+          <p class="assign-sub">Tap subjects to select — search or use quick picks to go faster</p>
 
           @if (loadingModalSubjects()) {
             <div style="padding:24px"><app-loading /></div>
@@ -467,7 +415,7 @@ import Swal from 'sweetalert2';
               @if (filteredModalClassList().length === 0) {
                 <div class="assign-empty soft">
                   <p>No matches for “{{ assignSearch() }}”. Try another class or subject name.</p>
-                  <button type="button" class="btn-secondary btn-sm" (click)="assignSearch.set('')">Clear search</button>
+                  <p-button label="Clear search" size="small" severity="secondary" [outlined]="true" (onClick)="assignSearch.set('')" />
                 </div>
               } @else {
                 @for (cls of filteredModalClassList(); track cls.classId) {
@@ -505,7 +453,9 @@ import Swal from 'sweetalert2';
             <p class="error-msg">{{ assignError() }}</p>
           }
 
-          <div class="modal-actions">
+        </div>
+        <ng-template #footer>
+          <div class="flex flex-wrap items-center gap-2">
             <span class="total-selected">
               @if (totalSelectedCount() > 0) {
                 Ready to assign {{ totalSelectedCount() }} subject{{ totalSelectedCount() === 1 ? '' : 's' }}
@@ -513,16 +463,14 @@ import Swal from 'sweetalert2';
                 Tap subjects above, or search then Select all shown
               }
             </span>
-            <button type="button" class="btn-secondary" (click)="showAssign.set(false)">Cancel</button>
-            <button type="button" class="btn-primary" [disabled]="totalSelectedCount() === 0 || assigning()" (click)="doAssign()">
-              @if (assigning()) { Assigning… }
-              @else if (totalSelectedCount() > 0) { Assign {{ totalSelectedCount() }} }
-              @else { Assign }
-            </button>
+            <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="showAssign.set(false)" />
+            <p-button
+              [label]="assigning() ? 'Assigning…' : (totalSelectedCount() > 0 ? 'Assign ' + totalSelectedCount() : 'Assign')"
+              icon="pi pi-check" [loading]="assigning()"
+              [disabled]="totalSelectedCount() === 0 || assigning()" (onClick)="doAssign()" />
           </div>
-        </div>
-      </div>
-    }
+        </ng-template>
+    </p-dialog>
   `,
   styles: [`
     :host { display: block; width: 100%; }
@@ -563,16 +511,6 @@ import Swal from 'sweetalert2';
       font-size: 12px; font-weight: 700; white-space: nowrap;
       box-shadow: 0 2px 8px var(--accent-g);
     }
-    .adm-back-btn {
-      width: 34px; height: 34px; border-radius: var(--r-md, 8px);
-      border: 1px solid var(--border-2); background: var(--surface);
-      color: var(--t3); cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: all 0.15s ease;
-      .material-icons-round { font-size: 18px; }
-    }
-    .adm-back-btn:hover { background: var(--red-s); border-color: var(--red); color: var(--red); }
-
     .progress-bar { height: 3px; background: var(--border); width: 100%; }
     .progress-fill { height: 100%; background: var(--accent); transition: width 0.35s cubic-bezier(.22,1,.36,1); }
 
@@ -677,15 +615,6 @@ import Swal from 'sweetalert2';
       box-sizing: border-box;
       transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
-    select {
-      cursor: pointer;
-      appearance: none;
-      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-      background-repeat: no-repeat;
-      background-position: right 12px center;
-      background-size: 14px;
-      padding-right: 34px;
-    }
     .date-wrap app-date-picker {
       width: 100%;
     }
@@ -732,17 +661,6 @@ import Swal from 'sweetalert2';
       padding-top: 16px; margin-top: 8px;
       border-top: 1px solid var(--border);
     }
-    .tab-nav .btn-primary, .tab-nav .btn-secondary {
-      height: var(--btn-h, 42px);
-      padding: 0 20px;
-      border-radius: var(--r-md, 8px);
-      font-size: 13.5px;
-      font-weight: 600;
-      display: inline-flex; align-items: center; gap: 6px;
-      cursor: pointer;
-      .material-icons-round { font-size: 16px; }
-    }
-
     .tm-alert {
       display: flex; align-items: center; gap: 8px;
       padding: 12px 16px; border-radius: var(--r-md, 8px);
@@ -752,12 +670,6 @@ import Swal from 'sweetalert2';
     .tm-alert.error { background: var(--red-s); color: var(--red); border: 1.5px solid var(--red-b); }
 
     .tab-nav-end { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-
-    .btn-sm {
-      height: 36px !important; padding: 0 14px !important; font-size: 13px !important;
-      display: inline-flex !important; align-items: center; gap: 6px;
-      .material-icons-round { font-size: 16px !important; }
-    }
 
     .assign-pane { gap: 18px !important; }
     .assign-panel {
@@ -807,18 +719,6 @@ import Swal from 'sweetalert2';
     .assign-chip-name {
       flex: 1; min-width: 0; font-size: 13.5px; font-weight: 700; color: var(--t1);
     }
-    .assign-remove {
-      display: inline-flex; align-items: center; gap: 4px;
-      height: 30px; padding: 0 10px; border-radius: 8px;
-      border: 1px solid transparent; background: transparent;
-      color: var(--t3); font-size: 12px; font-weight: 700; font-family: inherit;
-      cursor: pointer; transition: all .15s ease; flex-shrink: 0;
-      .material-icons-round { font-size: 16px; }
-    }
-    .assign-remove:hover {
-      background: var(--red-s); border-color: var(--red-b, #fecaca); color: var(--red);
-    }
-
     .assign-empty {
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       gap: 8px; padding: 40px 20px; text-align: center;
@@ -833,27 +733,7 @@ import Swal from 'sweetalert2';
       .material-icons-round { font-size: 28px; }
     }
 
-    .icon-act {
-      width: 32px; height: 32px; border: none; border-radius: 8px; background: transparent;
-      color: var(--t4); cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
-      .material-icons-round { font-size: 18px; }
-    }
-    .icon-act:hover { background: var(--surface-2); color: var(--t2); }
-
-    .modal-overlay {
-      position: fixed; inset: 0; z-index: 1000; background: rgba(15,23,42,.45);
-      display: flex; align-items: center; justify-content: center; padding: 16px;
-    }
-    .assign-modal {
-      width: min(720px, 100%); max-height: min(88vh, 820px); overflow: hidden;
-      background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
-      box-shadow: var(--sh-xl); display: flex; flex-direction: column;
-    }
-    .assign-modal-header {
-      display: flex; justify-content: space-between; gap: 12px; padding: 16px 18px;
-      border-bottom: 1px solid var(--border);
-      h3 { margin: 0; font-size: 16px; font-weight: 800; color: var(--t1); }
-    }
+    .assign-dialog-body { display: flex; flex-direction: column; gap: 4px; }
     .assign-sub { margin: 3px 0 0; font-size: 12.5px; color: var(--t4); }
 
     .assign-tools {
@@ -909,7 +789,7 @@ import Swal from 'sweetalert2';
     }
     .link-btn:disabled { opacity: .4; cursor: default; }
 
-    .modal-class-list { overflow: auto; flex: 1; padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 8px; }
+    .modal-class-list { overflow: auto; max-height: 50vh; padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 8px; }
     .mcl-class {
       border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
       padding: 10px 12px 12px;
@@ -952,10 +832,6 @@ import Swal from 'sweetalert2';
     .subj-check { font-size: 15px !important; }
 
     .error-msg { margin: 0; padding: 0 18px 8px; color: var(--red); font-size: 13px; }
-    .modal-actions {
-      display: flex; align-items: center; gap: 8px; padding: 12px 16px;
-      border-top: 1px solid var(--border); background: var(--surface-2);
-    }
     .total-selected { flex: 1; font-size: 12.5px; font-weight: 600; color: var(--t3); }
 
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -989,6 +865,10 @@ export class TeacherFormComponent implements OnInit {
 
   readonly COLORS = ['#7c3aed','#059669','#0891b2','#d97706','#db2777','#ea580c','#0284c7','#16a34a'];
   readonly SUBJECT_ICONS = ['menu_book','calculate','science','language','mosque','computer','sports_soccer','music_note','palette','biotech'];
+
+  readonly genders = ['Male', 'Female'];
+  readonly activeOptions = [{ label: 'Active', value: true }, { label: 'Inactive', value: false }];
+  specializationOptions = computed(() => [...this.subjects().map(s => s.subjectName), 'Other']);
 
   totalSteps = computed(() => 3);
 

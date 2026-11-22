@@ -11,13 +11,15 @@ import { PeriodDto } from '../../../core/models/timetable.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
-import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
+import { OsSelectOption } from '../../../shared/components/os-select/os-select.component';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
 import { MenuService } from '../../../core/services/menu.service';
 
 @Component({
   selector: 'app-view-attendance',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, DatePickerComponent, OsSelectComponent],
+  imports: [CommonModule, FormsModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, DatePickerComponent, Button, Select],
   template: `
     <div class="os-page compact view-att-page">
     <app-page-header [dense]="true" [title]="pageTitle()" routeUrl="/attendance/view" />
@@ -43,36 +45,41 @@ import { MenuService } from '../../../core/services/menu.service';
         <div class="os-toolbar-group">
           <div class="os-field inline grow">
             <label class="os-field-label">Class</label>
-            <app-os-select
-              icon="school"
-              placeholder="Select class…"
-              [searchable]="classOptions().length > 6"
+            <p-select
+              class="w-full"
               [options]="classOptions()"
-              [value]="selectedClass"
-              (valueChange)="selectedClass = $event" />
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Select class…"
+              ariaLabel="Class"
+              appendTo="body"
+              [filter]="classOptions().length > 6"
+              [(ngModel)]="selectedClass" />
           </div>
           <div class="os-field inline grow">
             <label class="os-field-label">Period</label>
-            <app-os-select
-              icon="schedule"
-              placeholder="All periods"
+            <p-select
+              class="w-full"
               [options]="periodOptions()"
-              [value]="selectedPeriod"
-              (valueChange)="selectedPeriod = $event" />
+              optionLabel="label"
+              optionValue="value"
+              placeholder="All periods"
+              ariaLabel="Period"
+              appendTo="body"
+              [(ngModel)]="selectedPeriod" />
           </div>
           <div class="os-field inline">
             <label class="os-field-label">Date</label>
             <div class="os-date-wrap"><app-date-picker [(ngModel)]="date" /></div>
           </div>
         </div>
-        <div class="os-toolbar-group end">
-          <button class="search-btn btn-primary" [disabled]="!selectedClass || !date || loading()" (click)="loadDaily()">
-            @if (loading()) {
-              <span class="spin material-icons-round">sync</span><span>Loading…</span>
-            } @else {
-              <span class="material-icons-round">search</span><span>Search</span>
-            }
-          </button>
+        <div class="os-toolbar-group end flex items-center gap-2">
+          <p-button
+            [label]="loading() ? 'Loading…' : 'Search'"
+            icon="pi pi-search"
+            [loading]="loading()"
+            [disabled]="!selectedClass || !date || loading()"
+            (onClick)="loadDaily()" />
         </div>
       </div>
 
@@ -147,13 +154,16 @@ import { MenuService } from '../../../core/services/menu.service';
         <div class="os-toolbar-group">
           <div class="os-field inline grow">
             <label class="os-field-label">Class</label>
-            <app-os-select
-              icon="school"
-              placeholder="Select class…"
-              [searchable]="classOptions().length > 6"
+            <p-select
+              class="w-full"
               [options]="classOptions()"
-              [value]="selectedClass"
-              (valueChange)="selectedClass = $event" />
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Select class…"
+              ariaLabel="Class"
+              appendTo="body"
+              [filter]="classOptions().length > 6"
+              [(ngModel)]="selectedClass" />
           </div>
           <div class="os-field inline">
             <label class="os-field-label">From</label>
@@ -164,14 +174,13 @@ import { MenuService } from '../../../core/services/menu.service';
             <div class="os-date-wrap"><app-date-picker [(ngModel)]="toDate" /></div>
           </div>
         </div>
-        <div class="os-toolbar-group end">
-          <button class="search-btn btn-primary" [disabled]="!selectedClass || !fromDate || !toDate || loading()" (click)="loadSummary()">
-            @if (loading()) {
-              <span class="spin material-icons-round">sync</span><span>Generating…</span>
-            } @else {
-              <span class="material-icons-round">analytics</span><span>Generate</span>
-            }
-          </button>
+        <div class="os-toolbar-group end flex items-center gap-2">
+          <p-button
+            [label]="loading() ? 'Generating…' : 'Generate'"
+            icon="pi pi-chart-bar"
+            [loading]="loading()"
+            [disabled]="!selectedClass || !fromDate || !toDate || loading()"
+            (onClick)="loadSummary()" />
         </div>
       </div>
 

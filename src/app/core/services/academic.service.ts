@@ -60,8 +60,9 @@ export class AcademicService {
   updateCalendarEvent(yearId: number, eventId: number, dto: CreateCalendarEventDto) { return this.http.put(`${this.base}/academic-years/${yearId}/events/${eventId}`, dto); }
   deleteCalendarEvent(yearId: number, eventId: number) { return this.http.delete(`${this.base}/academic-years/${yearId}/events/${eventId}`); }
 
-  // Classes
+  // Classes (year-independent — yearId param ignored / not sent)
   getClasses(_yearId?: number) {
+    void _yearId;
     if (!this.classes$) {
       this.classes$ = this.http.get<ClassDto[]>(`${this.base}/classes`).pipe(
         tap({ error: () => { this.classes$ = undefined; } }),
@@ -131,7 +132,7 @@ export class AcademicService {
     );
   }
 
-  /** Homeroom / full-day class teacher — also assigns that teacher to all subjects of the class. */
+  /** Homeroom class teacher — fills only subjects with no teacher yet. */
   setClassTeacher(classId: number, teacherId: number | null) {
     return this.http.put<ClassDto>(`${this.base}/classes/${classId}/class-teacher`, { teacherId }).pipe(
       tap(() => { this.classes$ = undefined; })

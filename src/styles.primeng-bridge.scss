@@ -1,0 +1,257 @@
+/* ═══════════════════════════════════════════════════
+   PrimeNG ↔ OneSchool visual bridge
+   Aligned with refined design tokens (radius, density).
+═══════════════════════════════════════════════════ */
+
+/* Full-width form hosts (never stretch toggles/checkboxes) */
+.p-password,
+.p-select,
+.p-multiselect,
+.p-inputnumber,
+.p-datepicker,
+.p-iconfield,
+.p-textarea,
+.field > p-select,
+.field > p-password,
+.field > p-datepicker,
+.field > p-inputnumber,
+.field > p-multiselect,
+.fi-content > p-select,
+.fi-content > p-password,
+.f-group > p-password,
+.f-group > p-select,
+.form-grid p-select,
+.form-grid p-password,
+.form-grid p-datepicker,
+.form-grid p-inputnumber,
+.form-grid p-multiselect,
+.filters-grid .filter-field > p-select,
+.filters-grid .filter-field > p-iconfield {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.p-password,
+.p-iconfield,
+.p-inputnumber {
+  display: flex;
+  align-items: center;
+}
+
+.p-password .p-password-input,
+.p-iconfield .p-inputtext,
+.p-inputnumber-input {
+  width: 100%;
+  flex: 1 1 auto;
+}
+
+.p-toggleswitch {
+  width: auto !important;
+  flex: 0 0 auto !important;
+  display: inline-flex !important;
+}
+
+/* Inputs */
+.p-inputtext:not(textarea),
+.p-password .p-password-input,
+.p-datepicker-input,
+.p-inputnumber-input {
+  min-height: var(--input-h, 40px);
+  font-family: inherit;
+  font-size: 13.5px;
+  color: var(--t1);
+  background: var(--surface);
+  border-color: var(--border);
+  border-radius: var(--r-input, 8px);
+  box-sizing: border-box;
+}
+
+.p-select,
+.p-multiselect,
+.p-datepicker {
+  min-height: var(--input-h, 40px);
+  border-color: var(--border);
+  border-radius: var(--r-input, 8px);
+  background: var(--surface);
+  align-items: center;
+}
+
+.p-inputtext:enabled:focus,
+.p-password .p-password-input:enabled:focus,
+.p-select:not(.p-disabled).p-focus,
+.p-multiselect:not(.p-disabled).p-focus,
+.p-datepicker-input:enabled:focus,
+.p-inputnumber-input:enabled:focus,
+textarea.p-textarea:enabled:focus {
+  border-color: var(--accent);
+  box-shadow: var(--input-shadow-focus);
+}
+
+/* Dialogs */
+.p-dialog {
+  border-radius: var(--r-modal, 16px) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--sh-lg) !important;
+}
+.p-dialog .p-dialog-header {
+  padding: 1rem 1.15rem 0.75rem !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+}
+.p-dialog .p-dialog-title {
+  font-weight: 750 !important;
+  letter-spacing: -0.3px;
+  color: var(--t1);
+}
+.p-dialog .field,
+.p-dialog .f-group,
+.card .field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.p-dialog .p-dialog-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+  padding: 0.85rem 1.15rem 1rem !important;
+}
+
+/* Buttons */
+.p-button {
+  border-radius: var(--r-input, 8px) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.01em;
+}
+.p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(.p-button-success):not(.p-button-info):not(.p-button-warn):not(.p-button-danger):not(.p-button-contrast):not(.p-button-help) {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 1px 2px rgba(var(--accent-rgb), 0.22), 0 4px 10px rgba(var(--accent-rgb), 0.14);
+}
+.p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(.p-button-success):not(.p-button-info):not(.p-button-warn):not(.p-button-danger):not(.p-button-contrast):not(.p-button-help):not(:disabled):hover {
+  background: var(--accent-h);
+  border-color: var(--accent-h);
+}
+
+/* Premium data tables (Classes and other list screens) */
+.card .p-datatable,
+.panel .p-datatable,
+.os-data-table.p-datatable {
+  width: 100%;
+}
+.card .p-datatable .p-datatable-table,
+.panel .p-datatable .p-datatable-table,
+.os-data-table .p-datatable-table {
+  table-layout: auto;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.card .p-datatable .p-datatable-thead > tr > th,
+.panel .p-datatable .p-datatable-thead > tr > th,
+.os-data-table .p-datatable-thead > tr > th {
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.55px;
+  border: none;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+  padding: 0.5rem 0.85rem;
+}
+[data-theme="dark"] .card .p-datatable .p-datatable-thead > tr > th,
+[data-theme="dark"] .panel .p-datatable .p-datatable-thead > tr > th,
+[data-theme="dark"] .os-data-table .p-datatable-thead > tr > th {
+  background: var(--surface-2);
+  color: var(--t3);
+  border-bottom-color: var(--border);
+}
+.card .p-datatable .p-datatable-tbody > tr > td,
+.panel .p-datatable .p-datatable-tbody > tr > td,
+.os-data-table .p-datatable-tbody > tr > td {
+  border: none;
+  border-bottom: 1px solid #eef2f7;
+  color: var(--t1);
+  font-size: 13px;
+  vertical-align: middle;
+  padding: 0.5rem 0.85rem;
+}
+[data-theme="dark"] .card .p-datatable .p-datatable-tbody > tr > td,
+[data-theme="dark"] .panel .p-datatable .p-datatable-tbody > tr > td,
+[data-theme="dark"] .os-data-table .p-datatable-tbody > tr > td {
+  border-bottom-color: var(--border);
+}
+.card .p-datatable .p-datatable-tbody > tr:nth-child(even) > td,
+.panel .p-datatable .p-datatable-tbody > tr:nth-child(even) > td,
+.os-data-table .p-datatable-tbody > tr:nth-child(even) > td {
+  background: #fafbfc;
+}
+[data-theme="dark"] .card .p-datatable .p-datatable-tbody > tr:nth-child(even) > td,
+[data-theme="dark"] .panel .p-datatable .p-datatable-tbody > tr:nth-child(even) > td,
+[data-theme="dark"] .os-data-table .p-datatable-tbody > tr:nth-child(even) > td {
+  background: color-mix(in srgb, var(--surface-2) 55%, transparent);
+}
+.card .p-datatable .p-datatable-tbody > tr:hover > td,
+.panel .p-datatable .p-datatable-tbody > tr:hover > td,
+.os-data-table .p-datatable-tbody > tr:hover > td {
+  background: color-mix(in srgb, var(--accent) 5%, #f8fafc) !important;
+}
+[data-theme="dark"] .card .p-datatable .p-datatable-tbody > tr:hover > td,
+[data-theme="dark"] .panel .p-datatable .p-datatable-tbody > tr:hover > td,
+[data-theme="dark"] .os-data-table .p-datatable-tbody > tr:hover > td {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-2)) !important;
+}
+.card .p-datatable .p-datatable-tbody > tr:last-child > td,
+.panel .p-datatable .p-datatable-tbody > tr:last-child > td,
+.os-data-table .p-datatable-tbody > tr:last-child > td {
+  border-bottom: none;
+}
+
+/* Tags */
+.p-tag {
+  padding: 0.22rem 0.6rem;
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  border-radius: 999px;
+}
+
+/* Login */
+.login-box .p-password,
+.login-box .p-inputtext,
+.login-box p-button {
+  width: 100%;
+}
+.login-box .p-password { display: flex; }
+.login-box p-button .p-button {
+  width: 100%;
+  justify-content: center;
+  min-height: 44px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+.login-box .p-inputtext,
+.login-box .p-password-input {
+  background: var(--surface-2);
+  border-radius: 10px;
+  min-height: 44px;
+  font-size: 14px;
+}
+.login-box .p-inputtext:enabled:focus,
+.login-box .p-password-input:enabled:focus {
+  background: var(--surface);
+}
+
+.os-stage-bar .p-select,
+.os-toolbar-group .p-select {
+  width: auto;
+  min-width: 140px;
+  max-width: 220px;
+}

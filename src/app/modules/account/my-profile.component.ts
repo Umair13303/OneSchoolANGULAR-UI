@@ -1,6 +1,11 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+﻿import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Button } from 'primeng/button';
+import { InputText } from 'primeng/inputtext';
+import { Password } from 'primeng/password';
+import { Select } from 'primeng/select';
+import { Textarea } from 'primeng/textarea';
 import { UserService } from '../../core/services/user.service';
 import { AuthService } from '../../core/services/auth.service';
 import { UserListDto } from '../../core/models/user.model';
@@ -16,7 +21,8 @@ import { FileUploadResponse } from '../../core/models/file-upload.model';
   standalone: true,
   imports: [
     CommonModule, FormsModule, PageHeaderComponent, LoadingComponent,
-    PhotoUploadComponent, DatePickerComponent
+    PhotoUploadComponent, DatePickerComponent,
+    Button, InputText, Password, Select, Textarea
   ],
   template: `
     <div class="os-page compact">
@@ -48,24 +54,19 @@ import { FileUploadResponse } from '../../core/models/file-upload.model';
             <div class="form-grid">
               <div class="os-field">
                 <label class="os-field-label">Full name *</label>
-                <input class="os-input" [(ngModel)]="fullName" />
+                <input pInputText class="w-full" [(ngModel)]="fullName" />
               </div>
               <div class="os-field">
                 <label class="os-field-label">Email *</label>
-                <input class="os-input" type="email" [(ngModel)]="email" />
+                <input pInputText class="w-full" type="email" [(ngModel)]="email" />
               </div>
               <div class="os-field">
                 <label class="os-field-label">Phone</label>
-                <input class="os-input" [(ngModel)]="phone" />
+                <input pInputText class="w-full" [(ngModel)]="phone" />
               </div>
               <div class="os-field">
                 <label class="os-field-label">Gender</label>
-                <select class="os-input" [(ngModel)]="gender">
-                  <option value="">—</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
+                <p-select class="w-full" [options]="genders" placeholder="—" [showClear]="true" [(ngModel)]="gender" appendTo="body" />
               </div>
               <div class="os-field">
                 <label class="os-field-label">Date of birth</label>
@@ -73,26 +74,24 @@ import { FileUploadResponse } from '../../core/models/file-upload.model';
               </div>
               <div class="os-field">
                 <label class="os-field-label">CNIC</label>
-                <input class="os-input" [(ngModel)]="cnic" />
+                <input pInputText class="w-full" [(ngModel)]="cnic" />
               </div>
               <div class="os-field full">
                 <label class="os-field-label">Address</label>
-                <textarea class="os-textarea" rows="2" [(ngModel)]="address"></textarea>
+                <textarea pTextarea class="w-full" rows="2" [(ngModel)]="address"></textarea>
               </div>
               <div class="os-field">
                 <label class="os-field-label">Qualification</label>
-                <input class="os-input" [(ngModel)]="qualification" />
+                <input pInputText class="w-full" [(ngModel)]="qualification" />
               </div>
               <div class="os-field">
                 <label class="os-field-label">Specialization</label>
-                <input class="os-input" [(ngModel)]="specialization" />
+                <input pInputText class="w-full" [(ngModel)]="specialization" />
               </div>
             </div>
             @if (profileError()) { <div class="os-error">{{ profileError() }}</div> }
             <div class="actions">
-              <button type="button" class="btn-primary" [disabled]="savingProfile()" (click)="saveProfile()">
-                {{ savingProfile() ? 'Saving…' : 'Save profile' }}
-              </button>
+              <p-button [label]="savingProfile() ? 'Saving…' : 'Save profile'" icon="pi pi-save" [loading]="savingProfile()" [disabled]="savingProfile()" (onClick)="saveProfile()" />
             </div>
           </section>
 
@@ -101,22 +100,20 @@ import { FileUploadResponse } from '../../core/models/file-upload.model';
             <div class="form-grid">
               <div class="os-field">
                 <label class="os-field-label">Current password</label>
-                <input class="os-input" type="password" [(ngModel)]="currentPassword" autocomplete="current-password" />
+                <p-password [(ngModel)]="currentPassword" [feedback]="false" [toggleMask]="true" styleClass="w-full" inputStyleClass="w-full" autocomplete="current-password" />
               </div>
               <div class="os-field">
                 <label class="os-field-label">New password</label>
-                <input class="os-input" type="password" [(ngModel)]="newPassword" autocomplete="new-password" />
+                <p-password [(ngModel)]="newPassword" [feedback]="false" [toggleMask]="true" styleClass="w-full" inputStyleClass="w-full" autocomplete="new-password" />
               </div>
               <div class="os-field">
                 <label class="os-field-label">Confirm new password</label>
-                <input class="os-input" type="password" [(ngModel)]="confirmPassword" autocomplete="new-password" />
+                <p-password [(ngModel)]="confirmPassword" [feedback]="false" [toggleMask]="true" styleClass="w-full" inputStyleClass="w-full" autocomplete="new-password" />
               </div>
             </div>
             @if (pwdError()) { <div class="os-error">{{ pwdError() }}</div> }
             <div class="actions">
-              <button type="button" class="btn-primary" [disabled]="savingPwd()" (click)="savePassword()">
-                {{ savingPwd() ? 'Updating…' : 'Update password' }}
-              </button>
+              <p-button [label]="savingPwd() ? 'Updating…' : 'Update password'" icon="pi pi-lock" [loading]="savingPwd()" [disabled]="savingPwd()" (onClick)="savePassword()" />
             </div>
           </section>
         </div>
@@ -145,12 +142,6 @@ import { FileUploadResponse } from '../../core/models/file-upload.model';
     }
     .os-field.full { grid-column: 1 / -1; }
     .os-field-label { display: block; font-size: .75rem; font-weight: 600; color: #64748b; margin-bottom: .25rem; }
-    .os-input, .os-textarea {
-      box-sizing: border-box; width: 100%; border: 1px solid #e5e7eb; border-radius: 8px;
-      font: inherit; font-size: 13px; font-weight: 600;
-    }
-    .os-input { height: 36px; padding: 0 10px; }
-    .os-textarea { min-height: 64px; padding: .5rem .65rem; resize: vertical; }
     .actions { display: flex; justify-content: flex-end; margin-top: .85rem; }
     @media (max-width: 640px) {
       .form-grid { grid-template-columns: 1fr; }
@@ -173,7 +164,8 @@ export class MyProfileComponent implements OnInit {
   fullName = '';
   email = '';
   phone = '';
-  gender = '';
+  readonly genders = ['Male', 'Female', 'Other'];
+  gender: string | null = '';
   address = '';
   dateOfBirth: string | null = null;
   cnic = '';

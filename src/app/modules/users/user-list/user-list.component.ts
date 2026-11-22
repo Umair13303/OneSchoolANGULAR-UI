@@ -1,6 +1,16 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+﻿import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Button } from 'primeng/button';
+import { Dialog } from 'primeng/dialog';
+import { IconField } from 'primeng/iconfield';
+import { InputIcon } from 'primeng/inputicon';
+import { InputText } from 'primeng/inputtext';
+import { Password } from 'primeng/password';
+import { Select } from 'primeng/select';
+import { TableModule } from 'primeng/table';
+import { Tag } from 'primeng/tag';
+import { Tooltip } from 'primeng/tooltip';
 import { UserService } from '../../../core/services/user.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { UserListDto } from '../../../core/models/user.model';
@@ -8,59 +18,51 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { environment } from '../../../../environments/environment';
-import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
 
-const ROLE_STYLE: Record<string, string> = {
-  superadmin: 'color:#be123c;background:#fff1f4;border:1px solid #fecdd3',
-  admin:      'color:#c2410c;background:#fff7ed;border:1px solid #fed7aa',
-  principal:  'color:#0369a1;background:#e0f2fe;border:1px solid #bae6fd',
-  teacher:    'color:#15803d;background:#dcfce7;border:1px solid #bbf7d0',
-  parent:     'color:#6d28d9;background:#ede9fe;border:1px solid #ddd6fe',
-  staff:      'color:#4b5563;background:#f3f4f6;border:1px solid #e5e7eb',
+type RoleSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast';
+
+const ROLE_SEVERITY: Record<string, RoleSeverity> = {
+  superadmin: 'danger',
+  admin:      'warn',
+  principal:  'info',
+  teacher:    'success',
+  parent:     'contrast',
+  staff:      'secondary',
 };
 
 @Component({
   selector: 'app-user-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, OsSelectComponent],
+  imports: [
+    CommonModule, FormsModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent,
+    Button, Dialog, IconField, InputIcon, InputText, Password, Select, TableModule, Tag, Tooltip
+  ],
   template: `
-    <div class="os-page compact">
-    <app-page-header [dense]="true" title="Users" routeUrl="/users">
-      <button class="btn-primary" (click)="showModal.set(true)">
-        <span class="material-icons-round">person_add</span>
-        Add User
-      </button>
+    <app-page-header title="Users" subtitle="Manage user accounts, roles and signatures" routeUrl="/users">
+      <p-button label="Add User" icon="pi pi-user-plus" (onClick)="showModal.set(true)" />
     </app-page-header>
 
-    <div class="os-stage">
-      <div class="os-stage-bar">
-        <div class="os-toolbar-group">
-          <div class="os-field grow">
-            <div class="search-wrap">
-              <span class="material-icons-round search-icon">search</span>
-              <input class="search-input" placeholder="Search by name or email..." [(ngModel)]="search" />
-            </div>
-          </div>
-          <app-os-select
-            [options]="roleFilterOptions()"
-            [value]="roleFilter"
-            (valueChange)="roleFilter = $event ?? ''"
-            placeholder="All Roles"
-            icon="badge"
-            ariaLabel="Role" />
-        </div>
-      </div>
+    <!-- Toolbar -->
+    <div class="card mb-4 flex flex-wrap items-center gap-2.5 px-4 py-3.5">
+      <p-iconfield class="min-w-[200px] flex-1">
+        <p-inputicon class="pi pi-search" />
+        <input pInputText class="w-full" placeholder="Search by name or email..." [(ngModel)]="search" />
+      </p-iconfield>
+      <p-select class="w-full sm:w-48" [options]="roleFilterOptions()" optionLabel="label" optionValue="value"
+        placeholder="All Roles" [showClear]="true" [(ngModel)]="roleFilter" />
+    </div>
 
     @if (loading()) {
-      <div class="os-stage-body pad"><app-loading /></div>
+      <div class="card"><app-loading /></div>
     } @else if (filtered().length === 0) {
-      <div class="os-stage-body pad">
+      <div class="card">
         <app-empty-state icon="manage_accounts" title="No users found" message="Add a user or adjust filters." />
       </div>
     } @else {
-      <div class="os-stage-body">
-        <table class="table">
-          <thead>
+      <div class="card overflow-hidden p-0">
+        <p-table [value]="filtered()" dataKey="userId" styleClass="p-datatable-sm"
+          [tableStyle]="{ 'min-width': '52rem' }" [scrollable]="true">
+          <ng-template #header>
             <tr>
               <th>User</th>
               <th>Email</th>
@@ -70,172 +72,136 @@ const ROLE_STYLE: Record<string, string> = {
               <th>Signature</th>
               <th>Joined</th>
             </tr>
-          </thead>
-          <tbody>
-            @for (u of filtered(); track u.userId) {
-              <tr>
+          </ng-template>
+          <ng-template #body let-u>
+            <tr>
+              <td>
+                <div class="flex items-center gap-2.5">
+                  <div class="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg bg-[var(--accent)] text-[10.5px] font-extrabold text-white">
+                    {{ initials(u.fullName) }}
+                  </div>
+                  <span class="text-[13.5px] font-semibold text-[var(--t1)]">{{ u.fullName }}</span>
+                </div>
+              </td>
+              <td class="text-[13px] text-[var(--t4)]">{{ u.email }}</td>
+              @if (canSeePassword()) {
                 <td>
-                  <div class="u-cell">
-                    <div class="u-av">{{ initials(u.fullName) }}</div>
-                    <span class="u-name">{{ u.fullName }}</span>
+                  <div class="flex items-center gap-1.5">
+                    <span class="min-w-[80px] font-mono text-[13px] tracking-wide text-[var(--t2)]">{{ visiblePasswords.has(u.userId) ? (u.password || '—') : '••••••••' }}</span>
+                    <p-button [icon]="visiblePasswords.has(u.userId) ? 'pi pi-eye-slash' : 'pi pi-eye'" [text]="true" [rounded]="true"
+                      size="small" severity="secondary" [ariaLabel]="visiblePasswords.has(u.userId) ? 'Hide' : 'Show'"
+                      (onClick)="togglePassword(u.userId)" />
                   </div>
                 </td>
-                <td class="muted">{{ u.email }}</td>
-                @if (canSeePassword()) {
-                  <td>
-                    <div class="pwd-cell">
-                      <span class="pwd-text">{{ visiblePasswords.has(u.userId) ? (u.password || '—') : '••••••••' }}</span>
-                      <button class="pwd-eye" (click)="togglePassword(u.userId)" title="{{ visiblePasswords.has(u.userId) ? 'Hide' : 'Show' }}">
-                        <span class="material-icons-round">{{ visiblePasswords.has(u.userId) ? 'visibility_off' : 'visibility' }}</span>
-                      </button>
-                    </div>
-                  </td>
-                }
-                <td>
-                  <span class="role-tag" [style]="roleStyle(u.roleName)">{{ u.roleName | titlecase }}</span>
-                </td>
-                <td>
-                  <span class="badge" [class.active]="u.isActive" [class.inactive]="!u.isActive">
-                    {{ u.isActive ? 'Active' : 'Inactive' }}
-                  </span>
-                </td>
-                <td>
-                  <div class="sig-cell">
-                    @if (u.signatureUrl) {
-                      <img class="sig-thumb" [src]="apiBase + u.signatureUrl" alt="signature" />
-                    } @else {
-                      <span class="no-sig">—</span>
-                    }
-                    <button class="sig-upload-btn" (click)="openSigUpload(u)" title="Upload Signature">
-                      <span class="material-icons-round">upload</span>
-                    </button>
-                  </div>
-                </td>
-                <td class="muted">{{ u.createdAt | date:'mediumDate' }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-
-      <div class="os-stage-foot">
-        <span class="tbl-count">{{ filtered().length }} users</span>
+              }
+              <td><p-tag [value]="u.roleName | titlecase" [severity]="roleSeverity(u.roleName)" [rounded]="true" /></td>
+              <td><p-tag [value]="u.isActive ? 'Active' : 'Inactive'" [severity]="u.isActive ? 'success' : 'secondary'" [rounded]="true" /></td>
+              <td>
+                <div class="flex items-center gap-1.5">
+                  @if (u.signatureUrl) {
+                    <img class="h-8 rounded border border-[var(--border)] bg-white p-0.5" [src]="apiBase + u.signatureUrl" alt="signature" />
+                  } @else {
+                    <span class="text-[13px] text-[var(--t4)]">—</span>
+                  }
+                  <p-button icon="pi pi-upload" size="small" severity="secondary" [outlined]="true"
+                    ariaLabel="Upload Signature" pTooltip="Upload Signature" (onClick)="openSigUpload(u)" />
+                </div>
+              </td>
+              <td class="text-[13px] text-[var(--t4)]">{{ u.createdAt | date:'mediumDate' }}</td>
+            </tr>
+          </ng-template>
+          <ng-template #footer>
+            <tr>
+              <td [attr.colspan]="canSeePassword() ? 7 : 6" class="text-[11px] font-semibold uppercase tracking-wider text-[var(--t4)]">
+                {{ filtered().length }} users
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
       </div>
     }
-    </div>
-    </div>
 
-    <!-- Add User Modal -->
-    @if (showModal()) {
-      <div class="modal-overlay" (click)="closeModal()">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <div class="modal-hd">
-            <h3>Add User</h3>
-            <button class="close-btn" (click)="closeModal()">
-              <span class="material-icons-round">close</span>
-            </button>
-          </div>
-          <div class="field"><label>Full Name *</label><input [(ngModel)]="newUser.fullName" placeholder="Full name" /></div>
-          <div class="field"><label>Email *</label><input type="email" [(ngModel)]="newUser.email" placeholder="email@school.edu" /></div>
-          <div class="field"><label>Password *</label><input type="password" [(ngModel)]="newUser.password" placeholder="Min. 6 characters" /></div>
-          <div class="field">
-            <label>Role *</label>
-            <select [(ngModel)]="newUser.roleId">
-              @for (r of roleOptions; track r.id) { <option [ngValue]="r.id">{{ r.label }}</option> }
-            </select>
-          </div>
-          @if (modalError()) { <p class="error-msg">{{ modalError() }}</p> }
-          <div class="modal-actions">
-            <button class="btn-secondary" (click)="closeModal()">Cancel</button>
-            <button class="btn-primary" (click)="save()" [disabled]="saving()">
-              {{ saving() ? 'Saving...' : 'Create User' }}
-            </button>
-          </div>
+    <!-- Add User Dialog -->
+    <p-dialog
+      header="Add User"
+      [visible]="showModal()"
+      (visibleChange)="!$event && closeModal()"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '28rem' }"
+      [breakpoints]="{ '640px': '96vw' }">
+      <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-1.5">
+          <label for="nu-name" class="text-[11px] font-semibold uppercase tracking-wide text-[var(--t3)]">Full Name *</label>
+          <input pInputText id="nu-name" class="w-full" [(ngModel)]="newUser.fullName" placeholder="Full name" />
         </div>
-      </div>
-    }
-
-    <!-- Signature Upload Modal -->
-    @if (sigUser()) {
-      <div class="modal-overlay" (click)="closeSigModal()">
-        <div class="modal" style="max-width:400px" (click)="$event.stopPropagation()">
-          <div class="modal-hd">
-            <h3>Upload Signature — {{ sigUser()!.fullName }}</h3>
-            <button class="close-btn" (click)="closeSigModal()">
-              <span class="material-icons-round">close</span>
-            </button>
-          </div>
-          <p style="font-size:13px;color:var(--t3);margin:0 0 14px">Upload a clear signature image (PNG/JPG). It will appear on fee receipts.</p>
-          @if (sigUser()!.signatureUrl) {
-            <div style="text-align:center;margin-bottom:14px">
-              <img [src]="apiBase + sigUser()!.signatureUrl" style="max-height:80px;border:1px solid var(--border);border-radius:6px;padding:6px;background:#fff" />
-              <p style="font-size:11px;color:var(--t4);margin:4px 0 0">Current signature</p>
-            </div>
-          }
-          <div class="field">
-            <label>Select Image *</label>
-            <input type="file" accept="image/*" (change)="onSigFileChange($event)" />
-          </div>
-          @if (sigPreview()) {
-            <div style="text-align:center;margin-bottom:14px">
-              <img [src]="sigPreview()!" style="max-height:80px;border:1px solid #d1fae5;border-radius:6px;padding:6px;background:#fff" />
-              <p style="font-size:11px;color:var(--t4);margin:4px 0 0">Preview</p>
-            </div>
-          }
-          @if (sigError()) { <p class="error-msg">{{ sigError() }}</p> }
-          <div class="modal-actions">
-            <button class="btn-secondary" (click)="closeSigModal()">Cancel</button>
-            <button class="btn-primary" (click)="saveSig()" [disabled]="!sigFile || sigSaving()">
-              {{ sigSaving() ? 'Uploading...' : 'Save Signature' }}
-            </button>
-          </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="nu-email" class="text-[11px] font-semibold uppercase tracking-wide text-[var(--t3)]">Email *</label>
+          <input pInputText id="nu-email" type="email" class="w-full" [(ngModel)]="newUser.email" placeholder="email@school.edu" />
         </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="nu-pass" class="text-[11px] font-semibold uppercase tracking-wide text-[var(--t3)]">Password *</label>
+          <p-password inputId="nu-pass" [(ngModel)]="newUser.password" [feedback]="false" [toggleMask]="true"
+            placeholder="Min. 6 characters" styleClass="w-full" inputStyleClass="w-full" appendTo="body" />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[11px] font-semibold uppercase tracking-wide text-[var(--t3)]">Role *</label>
+          <p-select class="w-full" [options]="roleOptions" optionLabel="label" optionValue="id"
+            [(ngModel)]="newUser.roleId" appendTo="body" [overlayOptions]="{ baseZIndex: 1100 }" />
+        </div>
+        @if (modalError()) { <p class="m-0 text-xs text-red-500">{{ modalError() }}</p> }
       </div>
-    }
-  `,
-  styles: [`
-    /* .tbl-meta removed — .os-stage-foot now provides the row and divider. */
-    .tbl-count { font-size: 11px; font-weight: 600; color: var(--t4); text-transform: uppercase; letter-spacing: 0.6px; }
-    .u-cell { display: flex; align-items: center; gap: 10px; }
-    .u-av {
-      width: 30px; height: 30px; border-radius: 8px;
-      background: var(--accent);
-      color: #fff; display: flex; align-items: center; justify-content: center;
-      font-size: 10.5px; font-weight: 800; flex-shrink: 0;
-    }
-    .u-name { font-weight: 600; color: var(--t1); font-size: 13.5px; }
-    .muted { color: var(--t4) !important; font-size: 13px; }
-    .role-tag {
-      display: inline-flex; align-items: center;
-      padding: 3px 10px; border-radius: 99px;
-      font-size: 11.5px; font-weight: 600;
-    }
-    .pwd-cell { display:flex; align-items:center; gap:6px; }
-    .pwd-text { font-size:13px; color:var(--t2); font-family:monospace; letter-spacing:.5px; min-width:80px; }
-    .pwd-eye { background:none; border:none; cursor:pointer; color:var(--t4); display:flex; align-items:center; padding:2px; border-radius:4px; }
-    .pwd-eye:hover { color:var(--accent); background:var(--surface2,#f1f5f9); }
-    .pwd-eye .material-icons-round { font-size:16px; }
-    .sig-cell { display:flex; align-items:center; gap:6px; }
-    .sig-thumb { height:32px; border:1px solid var(--border); border-radius:4px; background:#fff; padding:2px; }
-    .no-sig { font-size:13px; color:var(--t4); }
-    .sig-upload-btn {
-      background:none; border:1px solid var(--border); border-radius:6px;
-      cursor:pointer; color:var(--t3); padding:3px 6px;
-      display:flex; align-items:center;
-      .material-icons-round { font-size:15px; }
-    }
-    .sig-upload-btn:hover { color:var(--accent); border-color:var(--accent); }
-    .modal-hd { display: flex; justify-content: space-between; align-items: center; }
-    .close-btn {
-      width: 30px; height: 30px; border-radius: 8px;
-      border: 1px solid var(--border); background: transparent;
-      color: var(--t3); cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: all 0.15s;
-      .material-icons-round { font-size: 17px; }
-    }
-    .close-btn:hover { background: var(--surface-2); color: var(--t1); }
-  `]
+      <ng-template #footer>
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="closeModal()" />
+          <p-button [label]="saving() ? 'Saving...' : 'Create User'" icon="pi pi-check" [loading]="saving()"
+            [disabled]="saving()" (onClick)="save()" />
+        </div>
+      </ng-template>
+    </p-dialog>
+
+    <!-- Signature Upload Dialog -->
+    <p-dialog
+      [header]="'Upload Signature — ' + (sigUser()?.fullName ?? '')"
+      [visible]="!!sigUser()"
+      (visibleChange)="!$event && closeSigModal()"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '26rem' }"
+      [breakpoints]="{ '640px': '96vw' }">
+      <div class="flex flex-col gap-3.5">
+        <p class="m-0 text-[13px] text-[var(--t3)]">Upload a clear signature image (PNG/JPG). It will appear on fee receipts.</p>
+        @if (sigUser()?.signatureUrl) {
+          <div class="text-center">
+            <img class="inline-block max-h-20 rounded-md border border-[var(--border)] bg-white p-1.5" [src]="apiBase + sigUser()!.signatureUrl" alt="Current signature" />
+            <p class="mx-0 mb-0 mt-1 text-[11px] text-[var(--t4)]">Current signature</p>
+          </div>
+        }
+        <div class="flex flex-col gap-1.5">
+          <label for="sig-file" class="text-[11px] font-semibold uppercase tracking-wide text-[var(--t3)]">Select Image *</label>
+          <input id="sig-file" type="file" accept="image/*" class="text-[13px]" (change)="onSigFileChange($event)" />
+        </div>
+        @if (sigPreview()) {
+          <div class="text-center">
+            <img class="inline-block max-h-20 rounded-md border border-emerald-100 bg-white p-1.5" [src]="sigPreview()!" alt="Preview" />
+            <p class="mx-0 mb-0 mt-1 text-[11px] text-[var(--t4)]">Preview</p>
+          </div>
+        }
+        @if (sigError()) { <p class="m-0 text-xs text-red-500">{{ sigError() }}</p> }
+      </div>
+      <ng-template #footer>
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="closeSigModal()" />
+          <p-button [label]="sigSaving() ? 'Uploading...' : 'Save Signature'" icon="pi pi-check" [loading]="sigSaving()"
+            [disabled]="!sigFile || sigSaving()" (onClick)="saveSig()" />
+        </div>
+      </ng-template>
+    </p-dialog>
+  `
 })
 export class UserListComponent implements OnInit {
   private svc     = inject(UserService);
@@ -249,13 +215,10 @@ export class UserListComponent implements OnInit {
   saving          = signal(false);
   modalError      = signal('');
   search          = '';
-  roleFilter      = '';
+  roleFilter: string | null = '';
 
-  // Options for app-os-select (options + value + valueChange; it is not a
-  // ControlValueAccessor). Derived from the existing `roles` list; the
-  // roleFilter value and filtered() behaviour are unchanged.
-  roleFilterOptions = computed<OsSelectOption<string>[]>(() => [
-    { value: '', label: 'All Roles' },
+  // Options for the role filter p-select; derived from the existing `roles` list.
+  roleFilterOptions = computed<{ value: string; label: string }[]>(() => [
     ...this.roles.map(r => ({ value: r, label: r.charAt(0).toUpperCase() + r.slice(1) }))
   ]);
   visiblePasswords = new Set<number>();
@@ -306,8 +269,8 @@ export class UserListComponent implements OnInit {
     return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
   }
 
-  roleStyle(role: string): string {
-    return ROLE_STYLE[role.toLowerCase()] ?? ROLE_STYLE['staff'];
+  roleSeverity(role: string): RoleSeverity {
+    return ROLE_SEVERITY[role.toLowerCase()] ?? 'secondary';
   }
 
   closeModal() {

@@ -2,6 +2,12 @@ import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
+import Swal from 'sweetalert2';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { InputText } from 'primeng/inputtext';
+import { Checkbox } from 'primeng/checkbox';
+import { Message } from 'primeng/message';
 import { ExamService } from '../../../core/services/exam.service';
 import { AcademicService } from '../../../core/services/academic.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -9,13 +15,14 @@ import { MenuService } from '../../../core/services/menu.service';
 import { ExamPaperDto, ExamResultDto } from '../../../core/models/exam.model';
 import { ClassDto } from '../../../core/models/academic.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
-import { OsSelectComponent, OsSelectOption } from '../../../shared/components/os-select/os-select.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import {
   classroomReturnQueryFromParamMap,
   isFromClassroom
 } from '../../classroom/classroom-context.util';
+
+interface SelectOpt { value: string; label: string; }
 
 interface ResultRow {
   studentId:    number;
@@ -30,35 +37,48 @@ interface ResultRow {
 @Component({
   selector: 'app-exam-results-entry',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PageHeaderComponent, OsSelectComponent, LoadingComponent, EmptyStateComponent],
+  imports: [
+    CommonModule, FormsModule, RouterModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent,
+    Button, Select, InputText, Checkbox, Message
+  ],
   template: `
     <div class="os-page compact exam-results-entry-page">
     <app-page-header [dense]="true" [title]="pageTitle()" routeUrl="/exams/results/enter">
       @if (fromClassroom()) {
-        <a class="btn-secondary" [routerLink]="['/classroom/today']" [queryParams]="classroomReturnQp()">Back to class</a>
+        <p-button label="Back to class" icon="pi pi-arrow-left" severity="secondary" [outlined]="true"
+          [routerLink]="['/classroom/today']" [queryParams]="classroomReturnQp()" />
       }
     </app-page-header>
 
     <div class="os-toolbar">
-      <div class="os-toolbar-group">
-        <div class="os-field inline grow">
+      <div class="flex w-full flex-wrap items-end gap-3">
+        <div class="flex min-w-[200px] flex-1 flex-col gap-1">
           <label class="os-field-label">Class</label>
-          <app-os-select
-            icon="school"
+          <p-select
+            class="w-full"
             placeholder="Select class…"
-            [searchable]="classOptions().length > 6"
             [options]="classOptions()"
-            [value]="selectedClass"
-            (valueChange)="selectedClass = $event ?? ''; onClassChange()" />
+            optionLabel="label"
+            optionValue="value"
+            [filter]="classOptions().length > 6"
+            filterBy="label"
+            [showClear]="true"
+            [ngModel]="selectedClass"
+            (ngModelChange)="selectedClass = $event ?? ''; onClassChange()" />
         </div>
-        <div class="os-field inline grow">
+        <div class="flex min-w-[200px] flex-1 flex-col gap-1">
           <label class="os-field-label">Paper</label>
-          <app-os-select
+          <p-select
+            class="w-full"
             placeholder="Select paper…"
-            [searchable]="paperOptions().length > 6"
             [options]="paperOptions()"
-            [value]="selectedPaper"
-            (valueChange)="selectedPaper = $event ?? ''; onPaperChange()" />
+            optionLabel="label"
+            optionValue="value"
+            [filter]="paperOptions().length > 6"
+            filterBy="label"
+            [showClear]="true"
+            [ngModel]="selectedPaper"
+            (ngModelChange)="selectedPaper = $event ?? ''; onPaperChange()" />
         </div>
       </div>
     </div>
@@ -79,9 +99,8 @@ interface ResultRow {
         <div class="results-card-header">
           <span>{{ rows().length }} Students</span>
           <div class="quick-actions">
-            <button class="btn-sm btn-outline" (click)="markAllPresent()">
-              <span class="material-icons-round">check_circle</span> All Present
-            </button>
+            <p-button label="All Present" icon="pi pi-check-circle" size="small"
+              severity="secondary" [outlined]="true" (onClick)="markAllPresent()" />
           </div>
         </div>
         <div class="results-table-wrap">
@@ -103,33 +122,31 @@ interface ResultRow {
                   <td class="roll-cell">{{ row.rollNumber }}</td>
                   <td>{{ row.studentName }}</td>
                   <td>
-                    <label class="checkbox-label">
-                      <input type="checkbox" [(ngModel)]="row.isAbsent" (ngModelChange)="onAbsentChange(row)" />
-                      <span>Absent</span>
-                    </label>
+                    <p-checkbox [binary]="true" [inputId]="'abs-' + row.studentId" label="Absent"
+                      [(ngModel)]="row.isAbsent" (ngModelChange)="onAbsentChange(row)" />
                   </td>
                   <td>
-                    <input type="number" class="marks-input" [(ngModel)]="row.obtainedMarks"
+                    <input pInputText type="number" class="marks-input" [(ngModel)]="row.obtainedMarks"
                            [disabled]="row.isAbsent"
                            [min]="0" [max]="activePaper()?.totalMarks ?? 9999"
                            [class.over-max]="row.obtainedMarks > (activePaper()?.totalMarks ?? 999)"
                            placeholder="0" />
                   </td>
                   <td>
-                    <input class="remarks-input" [(ngModel)]="row.remarks" placeholder="Optional…" [disabled]="row.isAbsent" />
+                    <input pInputText class="remarks-input" [(ngModel)]="row.remarks" placeholder="Optional…" [disabled]="row.isAbsent" />
                   </td>
                 </tr>
               }
             </tbody>
           </table>
         </div>
-        @if (saveError()) { <div class="alert-error"><span class="material-icons-round">error_outline</span> {{ saveError() }}</div> }
+        @if (saveError()) {
+          <div class="px-4 py-2"><p-message severity="error" icon="pi pi-exclamation-circle" [text]="saveError()" /></div>
+        }
         <div class="results-footer">
           <span class="footer-note">{{ presentCount() }} present, {{ absentCount() }} absent</span>
-          <button class="btn-primary" (click)="submitResults()" [disabled]="saving()">
-            @if (saving()) { <span class="material-icons-round spin">refresh</span> Saving… }
-            @else { <span class="material-icons-round">save</span> Save Results }
-          </button>
+          <p-button class="save-btn" [label]="saving() ? 'Saving…' : 'Save Results'" icon="pi pi-save"
+            [loading]="saving()" [disabled]="saving()" (onClick)="submitResults()" />
         </div>
       </div>
     } @else if (selectedPaper) {
@@ -198,13 +215,13 @@ interface ResultRow {
       padding:12px 16px; border-top:1px solid var(--border); background:var(--surface-2);
       position: sticky; bottom: 0; z-index: 5;
     }
-    .results-footer .btn-primary { margin-left: auto; }
+    .results-footer .save-btn { margin-left: auto; }
     .footer-note { font-size:12.5px; color:var(--t3); font-weight:600; }
     @keyframes spin { to { transform:rotate(360deg); } }
     .spin { animation:spin .8s linear infinite; display:inline-block; }
     @media (max-width: 640px) {
       .results-footer { flex-direction: column-reverse; align-items: stretch; }
-      .results-footer .btn-primary { margin-left: 0; width: 100%; justify-content: center; }
+      .results-footer .save-btn { margin-left: 0; width: 100%; }
       .fg.two { flex-direction: column; }
     }
   `]
@@ -239,11 +256,11 @@ export class ExamResultsEntryComponent implements OnInit {
     this.menuSvc.titleForRoute('/exams/results/enter', 'Enter Results')
   );
 
-  classOptions = computed<OsSelectOption<string>[]>(() =>
+  classOptions = computed<SelectOpt[]>(() =>
     this.classes().map(c => ({ value: String(c.classId), label: c.className as string }))
   );
 
-  paperOptions = computed<OsSelectOption<string>[]>(() =>
+  paperOptions = computed<SelectOpt[]>(() =>
     this.filteredPapers().map(p => ({
       value: String(p.examPaperId),
       label: `${p.title} (${p.examType})`
@@ -348,7 +365,7 @@ export class ExamResultsEntryComponent implements OnInit {
       results: this.rows().map(r => ({ studentId: r.studentId, obtainedMarks: r.obtainedMarks, isAbsent: r.isAbsent, remarks: r.remarks || undefined }))
     };
     this.examSvc.enterBulkResults(dto).subscribe({
-      next: () => { this.saving.set(false); alert('Results saved successfully!'); },
+      next: () => { this.saving.set(false); Swal.fire({ icon: 'success', title: 'Saved', text: 'Results saved successfully!', timer: 2000, showConfirmButton: false }); },
       error: (e: any) => { this.saving.set(false); this.saveError.set(e?.error?.error ?? 'Failed to save results.'); }
     });
   }
