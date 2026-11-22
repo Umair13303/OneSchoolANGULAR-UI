@@ -21,11 +21,13 @@ import { Select } from 'primeng/select';
 import { InputText } from 'primeng/inputtext';
 import { Tag } from 'primeng/tag';
 import { Tooltip } from 'primeng/tooltip';
+import { ConfirmDeleteComponent } from '../../../shared/components/confirm-delete/confirm-delete.component';
+import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/confirm-delete.service';
 
 @Component({
   selector: 'app-student-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, StudentLeavingComponent, StudentTransferDialogComponent, StudentPromoteBulkDialogComponent, Button, Select, InputText, Tag, Tooltip],
+  imports: [CommonModule, RouterModule, FormsModule, PageHeaderComponent, LoadingComponent, EmptyStateComponent, StudentLeavingComponent, StudentTransferDialogComponent, StudentPromoteBulkDialogComponent, ConfirmDeleteComponent, Button, Select, InputText, Tag, Tooltip],
   template: `
     <div class="os-page compact">
     <app-page-header [dense]="true" title="Student List" routeUrl="/students/list">
@@ -288,6 +290,7 @@ import { Tooltip } from 'primeng/tooltip';
         [presetSourceClassId]="selectedClass"
         (closed)="onPromoteBulkClosed($event)" />
     }
+    <app-confirm-delete />
   `,
   styles: [`
     /* .tbl-meta and .pager removed: .os-stage-foot now provides the row
@@ -415,6 +418,7 @@ export class StudentListComponent implements OnInit {
   private academicSvc  = inject(AcademicService);
   private instituteSvc = inject(InstituteService);
   private auth         = inject(AuthService);
+  private confirmDelete = inject(ConfirmDeleteService);
 
   students       = signal<StudentListDto[]>([]);
   years          = signal<AcademicYear[]>([]);
@@ -496,8 +500,13 @@ export class StudentListComponent implements OnInit {
   }
 
   restoreStudent(s: StudentListDto): void {
-    if (!confirm(`Restore ${s.fullName}? They will appear as inactive until re-admitted.`)) return;
-    this.studentSvc.restore(s.studentId).subscribe({ next: () => this.load() });
+    this.confirmDelete.open(
+      `Restore ${s.fullName}?`,
+      'They will appear as inactive until re-admitted.',
+      () => this.studentSvc.restore(s.studentId),
+      () => this.load(),
+      'Restore'
+    );
   }
 
   openTransfer(s: StudentListDto, mode: 'Transfer' | 'Promote' | 'Readmit'): void {

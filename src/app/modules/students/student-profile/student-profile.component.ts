@@ -17,6 +17,8 @@ import { Button } from 'primeng/button';
 import { Select } from 'primeng/select';
 import { InputText } from 'primeng/inputtext';
 import { Tag } from 'primeng/tag';
+import { ConfirmDeleteComponent } from '../../../shared/components/confirm-delete/confirm-delete.component';
+import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/confirm-delete.service';
 
 @Component({
   selector: 'app-student-profile',
@@ -25,6 +27,7 @@ import { Tag } from 'primeng/tag';
     CommonModule, RouterModule, FormsModule,
     PageHeaderComponent, LoadingComponent, PhotoUploadComponent,
     StudentLeavingComponent, StudentTransferDialogComponent,
+    ConfirmDeleteComponent,
     Button, Select, InputText, Tag
   ],
   template: `
@@ -274,6 +277,7 @@ import { Tag } from 'primeng/tag';
         [initialMode]="transferMode()!"
         (closed)="onTransferClosed($event)" />
     }
+    <app-confirm-delete />
   `,
   styles: [`
     .profile-hero {
@@ -376,6 +380,7 @@ export class StudentProfileComponent implements OnInit {
   private instituteSvc = inject(InstituteService);
   private fileSvc = inject(FileUploadService);
   private userSvc = inject(UserService);
+  private confirmDelete = inject(ConfirmDeleteService);
 
   loading = signal(true);
   student = signal<any | null>(null);
@@ -492,13 +497,16 @@ export class StudentProfileComponent implements OnInit {
   unlinkPortal(guardianId: number): void {
     const s = this.student();
     if (!s || this.portalBusy()) return;
-    if (!confirm('Unlink parent portal from this guardian? The user account stays — only the link is removed.')) return;
-    this.portalBusy.set(true);
-    this.portalError.set('');
-    this.studentSvc.unlinkGuardianPortal(s.studentId, guardianId).subscribe({
-      next: () => { this.portalBusy.set(false); this.portalResult.set(null); this.reload(s.studentId); },
-      error: e => { this.portalBusy.set(false); this.portalError.set(e?.error?.error ?? 'Could not unlink.'); }
-    });
+    this.confirmDelete.open(
+      'Unlink parent portal?',
+      'The user account stays — only the link to this guardian is removed.',
+      () => this.studentSvc.unlinkGuardianPortal(s.studentId, guardianId),
+      () => {
+        this.portalResult.set(null);
+        this.reload(s.studentId);
+      },
+      'Unlink'
+    );
   }
 
   copyText(text: string): void {
@@ -526,12 +534,13 @@ export class StudentProfileComponent implements OnInit {
   confirmSoftDelete(): void {
     const s = this.student();
     if (!s || this.deleteBusy()) return;
-    if (!confirm(`Delete ${this.fullName(s)}? They will be hidden from lists (can restore later).`)) return;
-    this.deleteBusy.set(true);
-    this.studentSvc.softDelete(s.studentId).subscribe({
-      next: () => { this.deleteBusy.set(false); this.router.navigate(['/students/list']); },
-      error: () => this.deleteBusy.set(false)
-    });
+    const name = this.fullName(s);
+    this.confirmDelete.open(
+      `Delete ${name}?`,
+      'They will be hidden from lists and can be restored later.',
+      () => this.studentSvc.softDelete(s.studentId),
+      () => this.router.navigate(['/students/list'])
+    );
   }
 
   onDocUploaded(fileId: number, entityType: string): void {
