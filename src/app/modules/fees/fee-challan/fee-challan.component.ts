@@ -485,14 +485,19 @@ export class FeeChallanComponent implements OnInit {
       g.fees.push(f);
       g.totalDue      += f.amountDue;
       g.totalDiscount += f.discount;
-      g.netPayable    += f.balance;
+      g.netPayable    += this.outstandingOf(f);
     }
     return Array.from(map.values());
   }
 
   totalDue()      { return this.fees().reduce((s, f) => s + f.amountDue, 0); }
   totalDiscount() { return this.fees().reduce((s, f) => s + f.discount, 0); }
-  totalBalance()  { return this.fees().reduce((s, f) => s + f.balance, 0); }
+  totalBalance()  { return this.fees().reduce((s, f) => s + this.outstandingOf(f), 0); }
+
+  outstandingOf(f: StudentFeeDto): number {
+    if ((f.status || '').toLowerCase() === 'waived') return 0;
+    return Math.max(0, f.balance ?? (f.amountDue - f.discount - f.amountPaid));
+  }
 
   previewStudent: null = null; // kept to avoid template errors — modal removed
 

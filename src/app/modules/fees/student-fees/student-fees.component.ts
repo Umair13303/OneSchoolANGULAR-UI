@@ -221,8 +221,8 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
                     {{ fee.discount ? (fee.discount | number:'1.0-0') : '—' }}
                   </td>
                   <td style="text-align:right">{{ fee.amountPaid | number:'1.0-0' }}</td>
-                  <td style="text-align:right" [class.balance-due]="fee.balance > 0">
-                    {{ fee.balance | number:'1.0-0' }}
+                  <td style="text-align:right" [class.balance-due]="outstandingOf(fee) > 0">
+                    {{ outstandingOf(fee) | number:'1.0-0' }}
                   </td>
                   <td><p-tag [value]="fee.status" [severity]="statusSeverity(fee.status)" [rounded]="true" /></td>
                   <td class="actions">
@@ -896,7 +896,7 @@ export class StudentFeesComponent implements OnInit {
       g.totalDue      += f.amountDue;
       g.totalDiscount += f.discount;
       g.totalPaid     += f.amountPaid;
-      g.totalBalance  += f.balance;
+      g.totalBalance  += this.outstandingOf(f);
       if (this.isOverdue(f)) g.hasOverdue = true;
     }
     return Array.from(map.values());
@@ -1079,6 +1079,12 @@ export class StudentFeesComponent implements OnInit {
 
   isOverdue(fee: StudentFeeDto) {
     return fee.status !== 'Paid' && fee.status !== 'Waived' && new Date(fee.dueDate) < new Date();
+  }
+
+  /** Outstanding for one fee line — waived never counts. */
+  outstandingOf(fee: StudentFeeDto): number {
+    if ((fee.status || '').toLowerCase() === 'waived') return 0;
+    return Math.max(0, fee.balance ?? (fee.amountDue - fee.discount - fee.amountPaid));
   }
 
   toggleExpand(studentId: number) {

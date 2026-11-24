@@ -17,6 +17,7 @@ import { Button } from 'primeng/button';
 import { Select } from 'primeng/select';
 import { InputText } from 'primeng/inputtext';
 import { Tag } from 'primeng/tag';
+import { Tooltip } from 'primeng/tooltip';
 import { ConfirmDeleteComponent } from '../../../shared/components/confirm-delete/confirm-delete.component';
 import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/confirm-delete.service';
 
@@ -28,7 +29,7 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
     PageHeaderComponent, LoadingComponent, PhotoUploadComponent,
     StudentLeavingComponent, StudentTransferDialogComponent,
     ConfirmDeleteComponent,
-    Button, Select, InputText, Tag
+    Button, Select, InputText, Tag, Tooltip
   ],
   template: `
     <div class="os-page compact">
@@ -82,8 +83,19 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
                 } @else {
                   <p-button label="Re-admit" icon="pi pi-user-plus" size="small" (onClick)="openTransfer('Readmit')" />
                 }
-                <p-button label="Fees" icon="pi pi-wallet" severity="secondary" [outlined]="true" size="small" tabindex="-1"
-                          [routerLink]="['/fees/student-fees']" [queryParams]="{ studentId: s.studentId }" />
+                <p-button
+                  [label]="feesBtnLabel()"
+                  icon="pi pi-wallet"
+                  [severity]="outstandingDues() > 0 ? 'warn' : 'secondary'"
+                  [outlined]="true"
+                  size="small"
+                  tabindex="-1"
+                  [routerLink]="['/fees/student-fees']"
+                  [queryParams]="{ studentId: s.studentId }"
+                  [pTooltip]="feesBtnTooltip()" />
+                @if (outstandingDues() > 0) {
+                  <span class="dues-chip">Outstanding Rs {{ outstandingDues() | number:'1.0-0' }}</span>
+                }
                 <p-button label="Reports" icon="pi pi-chart-line" severity="secondary" [outlined]="true" size="small" tabindex="-1"
                           [routerLink]="['/reports']" [queryParams]="{ studentId: s.studentId, tab: 'student' }" />
                 <p-button label="Delete" icon="pi pi-trash" severity="danger" [outlined]="true" size="small"
@@ -303,7 +315,13 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
       font-family: 'Courier New', monospace; font-size: 11.5px; font-weight: 700; color: var(--accent);
       background: var(--accent-s); border: 1px solid var(--accent-g); padding: 2px 9px; border-radius: 5px;
     }
-    .hero-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; align-items: center; }
+    .dues-chip {
+      display: inline-flex; align-items: center;
+      padding: 4px 10px; border-radius: 999px;
+      background: #fff7ed; color: #c2410c; border: 1px solid #fdba74;
+      font-size: 12px; font-weight: 700;
+    }
     .profile-grid {
       display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
     }
@@ -398,11 +416,21 @@ export class StudentProfileComponent implements OnInit {
   portalResult = signal<GuardianPortalResult | null>(null);
   pdfBusy = signal(false);
   deleteBusy = signal(false);
+  outstandingDues = signal(0);
 
   docBusy = signal(false);
   docError = signal('');
 
   private institute: any = null;
+
+  feesBtnLabel(): string {
+    const d = this.outstandingDues();
+    return d > 0 ? `Fees · Rs ${Math.round(d).toLocaleString()}` : 'Fees';
+  }
+  feesBtnTooltip(): string {
+    const d = this.outstandingDues();
+    return d > 0 ? `Outstanding balance: Rs ${Math.round(d).toLocaleString()}` : 'No outstanding dues';
+  }
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
@@ -426,6 +454,10 @@ export class StudentProfileComponent implements OnInit {
         this.student.set(s);
         this.loading.set(false);
         this.studentSvc.getDocuments(id).subscribe({ next: d => this.docs.set(d), error: () => this.docs.set([]) });
+        this.studentSvc.getDues(id).subscribe({
+          next: d => this.outstandingDues.set(Number(d?.totalDues) || 0),
+          error: () => this.outstandingDues.set(0)
+        });
       },
       error: () => { this.loading.set(false); this.router.navigate(['/students/list']); }
     });

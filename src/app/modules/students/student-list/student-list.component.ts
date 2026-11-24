@@ -552,15 +552,28 @@ export class StudentListComponent implements OnInit {
     this.printingId.set(studentId);
     this.studentSvc.getById(studentId).subscribe({
       next: (r: any) => {
-        this.instituteSvc.getMyInstitute().subscribe({
-          next: (inst: any) => {
-            this.printingId.set(null);
-            this.openCertWindow(r, inst);
+        this.studentSvc.getDues(studentId).subscribe({
+          next: (dues: any) => {
+            r._totalDues = Number(dues?.totalDues) || 0;
+            this.finishCertificate(r);
           },
-          error: () => { this.printingId.set(null); this.openCertWindow(r, null); }
+          error: () => {
+            r._totalDues = 0;
+            this.finishCertificate(r);
+          }
         });
       },
       error: () => this.printingId.set(null)
+    });
+  }
+
+  private finishCertificate(r: any) {
+    this.instituteSvc.getMyInstitute().subscribe({
+      next: (inst: any) => {
+        this.printingId.set(null);
+        this.openCertWindow(r, inst);
+      },
+      error: () => { this.printingId.set(null); this.openCertWindow(r, null); }
     });
   }
 
@@ -611,7 +624,7 @@ export class StudentListComponent implements OnInit {
     const guardianPhone = guardian?.phone ?? '';
     const className     = [r.currentClassName, r.currentSection].filter(Boolean).join(' ') || '—';
     const yearLabel     = r.currentAcademicYearLabel ?? '—';
-    const totalDues     = 0;
+    const totalDues     = Number(r._totalDues) || 0;
 
     const win = window.open('', '_blank');
     if (!win) { alert('Allow popups to print.'); return; }
