@@ -50,12 +50,12 @@ export class ConfirmDeleteService {
       },
       error: (e: any) => {
         const status = e?.status as number | undefined;
-        const server = e?.error?.error as string | undefined;
+        const server = this.readServerError(e);
         let msg = server || 'Something went wrong. Please try again.';
         if (!server) {
           if (status === 403) msg = 'You do not have permission to delete this item.';
           else if (status === 404) msg = 'This item was already removed.';
-          else if (status === 409) msg = e?.error?.error || 'This item cannot be deleted right now.';
+          else if (status === 409) msg = 'This item cannot be deleted right now.';
           else if (typeof e?.message === 'string' && !e.message.startsWith('Http failure')) msg = e.message;
         }
         this.state.update(s => ({ ...s, loading: false, error: msg }));
@@ -72,5 +72,23 @@ export class ConfirmDeleteService {
     this._deleteFn  = null;
     this._onSuccess = null;
     this.state.set({ open: false, title: '', message: '', loading: false, error: '' });
+  }
+
+  /** Supports JSON bodies and `responseType: 'text'` deletes (204/409). */
+  private readServerError(e: any): string | undefined {
+    const err = e?.error;
+    if (err && typeof err === 'object') {
+      const msg = err.error ?? err.message ?? err.title;
+      return typeof msg === 'string' && msg.trim() ? msg : undefined;
+    }
+    if (typeof err === 'string' && err.trim()) {
+      try {
+        const parsed = JSON.parse(err);
+        const msg = parsed?.error ?? parsed?.message ?? parsed?.title;
+        if (typeof msg === 'string' && msg.trim()) return msg;
+      } catch { /* plain text */ }
+      return err;
+    }
+    return undefined;
   }
 }
