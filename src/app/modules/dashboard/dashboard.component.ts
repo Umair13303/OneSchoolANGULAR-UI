@@ -605,7 +605,7 @@ import { Button } from 'primeng/button';
         <div class="chart-header">
           <div>
             <div class="chart-title">Attendance This Week</div>
-            <div class="chart-sub">Present vs Absent — last 7 days</div>
+            <div class="chart-sub">Marked students — last 7 days. Late counts as present.</div>
           </div>
           <div class="legend">
             <span class="leg-dot" style="background:#4f6ef7"></span> Present
@@ -617,15 +617,19 @@ import { Button } from 'primeng/button';
           <div class="chart-loading">
             <span class="material-icons-round spin">refresh</span>
           </div>
+        } @else if (attendanceEmpty()) {
+          <div class="chart-empty">No attendance marked in the last 7 days</div>
         } @else {
           <div class="bar-chart">
-            @for (d of weeklyAttendance(); track d.day) {
+            @for (d of weeklyAttendance(); track d.date) {
               <div class="bar-group">
                 <div class="bars">
-                  <div class="bar present" [style.height.%]="barPct(d.present)"
-                       [title]="d.present + ' present'"></div>
-                  <div class="bar absent" [style.height.%]="barPct(d.absent)"
-                       [title]="d.absent + ' absent'"></div>
+                  <div class="bar present" [class.bar-zero]="d.present === 0"
+                       [style.height.%]="barPct(d.present)"
+                       [title]="d.date + ' — ' + d.present + ' present'"></div>
+                  <div class="bar absent" [class.bar-zero]="d.absent === 0"
+                       [style.height.%]="barPct(d.absent)"
+                       [title]="d.date + ' — ' + d.absent + ' absent'"></div>
                 </div>
                 <div class="bar-label">{{ d.day }}</div>
               </div>
@@ -867,6 +871,7 @@ import { Button } from 'primeng/button';
       flex: 1; border-radius: 5px 5px 0 0; min-height: 3px;
       transition: height 0.5s cubic-bezier(.22,1,.36,1);
     }
+    .bar.bar-zero { min-height: 0; height: 0 !important; }
     .bar.present { background: #4f6ef7; }
     .bar.absent  { background: #f87171; }
     .bar-label { font-size: 10.5px; font-weight: 700; color: var(--t4); }
@@ -1449,14 +1454,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   loading = signal(true);
   stats   = signal({ students: 0, teachers: 0, classes: 0, subjects: 0, male: 0, female: 0 });
   classStats    = signal<{ name: string; count: number; pct: number }[]>([]);
-  weeklyAttendance = signal<{ day: string; present: number; absent: number }[]>([
-    { day: 'Mon', present: 0, absent: 0 },
-    { day: 'Tue', present: 0, absent: 0 },
-    { day: 'Wed', present: 0, absent: 0 },
-    { day: 'Thu', present: 0, absent: 0 },
-    { day: 'Fri', present: 0, absent: 0 },
-    { day: 'Sat', present: 0, absent: 0 },
-  ]);
+  weeklyAttendance = signal<{ day: string; date: string; present: number; absent: number }[]>([]);
 
   get timeOfDay(): string {
     const h = new Date().getHours();
@@ -1466,9 +1464,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
   maleArc()   { const t = this.stats().students || 1; return (this.stats().male / t) * this.circumference; }
   femaleArc() { const t = this.stats().students || 1; return (this.stats().female / t) * this.circumference; }
 
+  attendanceEmpty = computed(() =>
+    this.weeklyAttendance().every(d => d.present === 0 && d.absent === 0));
+
   maxBar = computed(() => {
     const w = this.weeklyAttendance();
-    return Math.max(...w.map(d => d.present + d.absent), 1);
+    return Math.max(...w.map(d => Math.max(d.present, d.absent)), 1);
   });
   barPct(val: number) { return (val / this.maxBar()) * 100; }
 
@@ -1553,18 +1554,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             .map(([name, count]) => ({ name, count, pct: (count / maxCount) * 100 }))
         );
 
-        // Simulate weekly attendance from total students (unchanged formula)
-        const total = summary.totalStudents;
-        if (total > 0) {
-          this.weeklyAttendance.set([
-            { day: 'Mon', present: Math.round(total * 0.92), absent: Math.round(total * 0.08) },
-            { day: 'Tue', present: Math.round(total * 0.88), absent: Math.round(total * 0.12) },
-            { day: 'Wed', present: Math.round(total * 0.95), absent: Math.round(total * 0.05) },
-            { day: 'Thu', present: Math.round(total * 0.85), absent: Math.round(total * 0.15) },
-            { day: 'Fri', present: Math.round(total * 0.90), absent: Math.round(total * 0.10) },
-            { day: 'Sat', present: Math.round(total * 0.60), absent: Math.round(total * 0.40) },
-          ]);
-        }
+        this.weeklyAttendance.set(summary.weeklyAttendance ?? []);
       },
       error: () => { /* loading cleared in finalize */ }
     });

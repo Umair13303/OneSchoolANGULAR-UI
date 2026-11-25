@@ -191,6 +191,31 @@ export interface RecordPaymentDto {
   remarks?: string;
 }
 
+export interface StudentOpeningBalanceDto {
+  studentOpeningBalanceId: number;
+  studentId: number;
+  studentName: string;
+  admissionNo: string;
+  className: string;
+  academicYearId: number;
+  yearLabel: string;
+  amount: number;
+  amountPaid: number;
+  balance: number;
+  asOfDate: string;
+  status: string;
+  remarks?: string;
+}
+
+export interface CreateStudentOpeningBalanceDto {
+  studentId: number;
+  academicYearId: number;
+  amount: number;
+  amountPaid?: number;
+  asOfDate?: string;
+  remarks?: string;
+}
+
 export interface FeeReportRowDto {
   studentId: number;
   studentName: string;

@@ -290,6 +290,12 @@ export const routes: Routes = [
         loadComponent: () => import('./modules/fees/fee-discounts/fee-discounts.component').then(m => m.FeeDiscountsComponent)
       },
       {
+        path: 'fees/opening-balance',
+        canActivate: [roleGuard],
+        data: { roles: ['superadmin','admin','principal'] },
+        loadComponent: () => import('./modules/fees/opening-balance/opening-balance.component').then(m => m.OpeningBalanceComponent)
+      },
+      {
         path: 'fees/student-fees',
         canActivate: [roleGuard],
         data: { roles: ['superadmin','admin','principal','parent','teacher'] },

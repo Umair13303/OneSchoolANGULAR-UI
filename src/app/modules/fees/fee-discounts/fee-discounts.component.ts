@@ -4,6 +4,7 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Button } from 'primeng/button';
 import { Select } from 'primeng/select';
 import { InputText } from 'primeng/inputtext';
+import { Textarea } from 'primeng/textarea';
 import { InputNumber } from 'primeng/inputnumber';
 import { Tag } from 'primeng/tag';
 import { Dialog } from 'primeng/dialog';
@@ -20,7 +21,7 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
   standalone: true,
   imports: [
     CommonModule, ReactiveFormsModule, PageHeaderComponent, ConfirmDeleteComponent,
-    Button, Select, InputText, InputNumber, Tag, Dialog, TableModule, Tooltip
+    Button, Select, InputText, Textarea, InputNumber, Tag, Dialog, TableModule, Tooltip
   ],
   template: `
     <app-page-header title="Discount Policies" subtitle="Reusable discount rules applied automatically during fee generation" />
@@ -88,18 +89,17 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
       [dismissableMask]="true"
       [style]="{ width: '36rem' }"
       [breakpoints]="{ '640px': '96vw' }">
-      <form [formGroup]="form" (ngSubmit)="save()">
-        <p class="sub mb-3">{{ editingId() ? 'Update this discount rule.' : 'Create a reusable discount rule.' }}</p>
-        <div class="row-2">
-          <div class="field flex-2">
+      <form class="dp-form" [formGroup]="form" (ngSubmit)="save()">
+        <p class="sub">{{ editingId() ? 'Update this discount rule.' : 'Create a reusable discount rule.' }}</p>
+        <div class="dp-grid">
+          <div class="field dp-span">
             <label for="dp-name">Policy Name <span class="req">*</span></label>
             <input pInputText id="dp-name" class="w-full" formControlName="name" placeholder="e.g. Sibling Discount – 2nd Child" />
             @if (f('name')?.invalid && f('name')?.touched) { <span class="err">Name is required.</span> }
           </div>
-          <div class="field flex-1">
+          <div class="field">
             <label>Type <span class="req">*</span></label>
             <p-select
-              class="w-full"
               [options]="discountTypes"
               optionLabel="label"
               optionValue="value"
@@ -111,13 +111,9 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
               (onChange)="onTypeChange()" />
             @if (f('discountType')?.invalid && f('discountType')?.touched) { <span class="err">Required.</span> }
           </div>
-        </div>
-
-        <div class="row-2">
-          <div class="field flex-1">
+          <div class="field">
             <label>Value Type <span class="req">*</span></label>
             <p-select
-              class="w-full"
               [options]="valueTypes"
               optionLabel="label"
               optionValue="value"
@@ -125,7 +121,7 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
               [overlayOptions]="{ baseZIndex: 10050 }"
               formControlName="valueType" />
           </div>
-          <div class="field flex-1">
+          <div class="field">
             <label>Value {{ form.value.valueType === 'Percentage' ? '(%)' : '(PKR)' }} <span class="req">*</span></label>
             <p-inputnumber
               formControlName="value"
@@ -140,10 +136,9 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
             @if (f('value')?.invalid && f('value')?.touched) { <span class="err">Valid value required.</span> }
           </div>
           @if (showSiblingOrder) {
-            <div class="field flex-1">
+            <div class="field">
               <label>Applies to (Child #)</label>
               <p-select
-                class="w-full"
                 [options]="siblingOrderOptions"
                 optionLabel="label"
                 optionValue="value"
@@ -154,26 +149,24 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
                 formControlName="maxSiblingOrder" />
             </div>
           }
+          @if (editingId()) {
+            <div class="field">
+              <label>Status</label>
+              <p-select
+                [options]="statusOptions"
+                optionLabel="label"
+                optionValue="value"
+                appendTo="body"
+                [overlayOptions]="{ baseZIndex: 10050 }"
+                formControlName="isActive" />
+            </div>
+          }
         </div>
 
-        <div class="field">
+        <div class="field dp-full">
           <label for="dp-desc">Description</label>
-          <input pInputText id="dp-desc" class="w-full" formControlName="description" placeholder="Brief description of this discount policy" />
+          <textarea pTextarea id="dp-desc" rows="3" class="w-full" formControlName="description" placeholder="Brief description of this discount policy"></textarea>
         </div>
-
-        @if (editingId()) {
-          <div class="field">
-            <label>Status</label>
-            <p-select
-              class="w-full"
-              [options]="statusOptions"
-              optionLabel="label"
-              optionValue="value"
-              appendTo="body"
-              [overlayOptions]="{ baseZIndex: 10050 }"
-              formControlName="isActive" />
-          </div>
-        }
 
         @if (form.value.discountType === 'FullWaiver') {
           <div class="info-box">
@@ -220,11 +213,22 @@ import { ConfirmDeleteService } from '../../../shared/components/confirm-delete/
     .dt-earlypayment { background:#ede9fe; color:#6d28d9; }
     .dt-custom       { background:#f3f4f6; color:#374151; }
 
-    .sub { font-size:12px; color:var(--t4); }
-    .row-2 { display:flex; gap:12px; flex-wrap:wrap; }
-    .field { display:flex; flex-direction:column; gap:5px; margin-bottom:14px; min-width:120px; }
-    .field.flex-1 { flex:1; }
-    .field.flex-2 { flex:2; }
+    .sub { font-size:12px; color:var(--t4); margin:0 0 14px; }
+    .dp-grid {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:14px 12px;
+      margin-bottom:14px;
+    }
+    .field { display:flex; flex-direction:column; gap:5px; margin:0; min-width:0; width:auto; }
+    .dp-span { grid-column: 1 / -1; }
+    .dp-full { margin-bottom:14px; }
+    .dp-form p-select { display:inline-flex; width:100%; max-width:100%; }
+    .dp-form p-inputnumber { display:flex; width:100%; max-width:100%; }
+    .dp-form textarea { width:100%; min-height:84px; resize:vertical; }
+    @media (max-width: 640px) {
+      .dp-grid { grid-template-columns: 1fr; }
+    }
     label { font-size:11px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.5px; }
     .req { color:var(--red); }
     .err { font-size:11.5px; color:var(--red); }

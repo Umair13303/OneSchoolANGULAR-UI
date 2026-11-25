@@ -10,7 +10,8 @@ import {
   FeeGenerationPreviewDto,
   StudentFeeDto, CreateStudentFeeDto, BulkAssignFeeDto,
   FeePaymentDto, RecordPaymentDto,
-  FeeReportRowDto
+  FeeReportRowDto,
+  StudentOpeningBalanceDto, CreateStudentOpeningBalanceDto
 } from '../models/fee.model';
 import { SetupNotificationService } from './setup-notification.service';
 
@@ -93,14 +94,16 @@ export class FeeService {
   deleteStudentDiscount(id: number)                      { return this.http.delete(`${this.base}/student-discounts/${id}`); }
 
   // ── Preview ────────────────────────────────────────────────────────────────
-  previewStudentFee(studentId: number, feeStructureId: number, academicYearId: number) {
-    const p = new HttpParams()
+  previewStudentFee(studentId: number, feeStructureId: number, academicYearId: number, month?: number) {
+    let p = new HttpParams()
       .set('studentId', studentId).set('feeStructureId', feeStructureId).set('academicYearId', academicYearId);
+    if (month) p = p.set('month', month);
     return this.http.get<FeeGenerationPreviewDto>(`${this.base}/preview/student`, { params: p });
   }
-  previewBulkAssign(feeStructureId: number, classId: number, academicYearId: number) {
-    const p = new HttpParams()
+  previewBulkAssign(feeStructureId: number, classId: number, academicYearId: number, month?: number) {
+    let p = new HttpParams()
       .set('feeStructureId', feeStructureId).set('classId', classId).set('academicYearId', academicYearId);
+    if (month) p = p.set('month', month);
     return this.http.get<FeeGenerationPreviewDto[]>(`${this.base}/preview/bulk`, { params: p });
   }
 
@@ -125,6 +128,23 @@ export class FeeService {
   recordPayment(dto: RecordPaymentDto)                   { return this.http.post<FeePaymentDto>(`${this.base}/payments`, dto); }
 
   // ── Report ─────────────────────────────────────────────────────────────────
+  getOpeningBalances(academicYearId?: number, classId?: number, studentId?: number) {
+    let p = new HttpParams();
+    if (academicYearId) p = p.set('academicYearId', academicYearId);
+    if (classId)        p = p.set('classId', classId);
+    if (studentId)      p = p.set('studentId', studentId);
+    return this.http.get<StudentOpeningBalanceDto[]>(`${this.base}/opening-balances`, { params: p });
+  }
+  createOpeningBalance(dto: CreateStudentOpeningBalanceDto) {
+    return this.http.post<StudentOpeningBalanceDto>(`${this.base}/opening-balances`, dto);
+  }
+  updateOpeningBalance(id: number, dto: { amount: number; amountPaid: number; asOfDate: string; remarks?: string }) {
+    return this.http.put<StudentOpeningBalanceDto>(`${this.base}/opening-balances/${id}`, dto);
+  }
+  deleteOpeningBalance(id: number) {
+    return this.http.delete(`${this.base}/opening-balances/${id}`);
+  }
+
   getFeeReport(academicYearId: number, classId?: number) {
     let p = new HttpParams().set('academicYearId', academicYearId);
     if (classId) p = p.set('classId', classId);

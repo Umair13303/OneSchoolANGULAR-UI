@@ -1139,7 +1139,8 @@ export class StudentFeesComponent implements OnInit {
     const v = this.bulkForm.value;
     if (!v.feeStructureId || !v.classId || !v.academicYearId) return;
     this.loadingPreview.set(true);
-    this.feeSvc.previewBulkAssign(v.feeStructureId, v.classId, v.academicYearId).subscribe({
+    const month = v.dueDate ? this.billingMonth(v.dueDate) : undefined;
+    this.feeSvc.previewBulkAssign(v.feeStructureId, v.classId, v.academicYearId, month).subscribe({
       next: (p) => { this.bulkPreview.set(p); this.loadingPreview.set(false); },
       error: (e: any) => { this.bulkError.set(e?.error?.error ?? 'Preview failed.'); this.loadingPreview.set(false); }
     });
@@ -1154,7 +1155,7 @@ export class StudentFeesComponent implements OnInit {
     const dto: BulkAssignFeeDto = {
       feeStructureId: v.feeStructureId!, classId: v.classId!,
       academicYearId: v.academicYearId!, dueDate,
-      month: new Date(dueDate).getMonth() + 1   // billing month from due date
+      month: this.billingMonth(dueDate)
     };
     this.feeSvc.bulkAssign(dto).subscribe({
       next: (r) => {
@@ -1166,6 +1167,12 @@ export class StudentFeesComponent implements OnInit {
   }
 
   closeBulkModal() { this.showBulkModal.set(false); }
+
+  /** Calendar month from a yyyy-MM-dd value, without a UTC shift. */
+  private billingMonth(dueDate: string): number {
+    const month = Number(dueDate.slice(5, 7));
+    return month >= 1 && month <= 12 ? month : new Date().getMonth() + 1;
+  }
 
   // ── Payment ───────────────────────────────────────────────────────────────
 

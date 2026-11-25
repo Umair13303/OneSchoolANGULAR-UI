@@ -1297,7 +1297,42 @@ input.ng-invalid.ng-touched:focus {
 ═══════════════════════════════════════════════════ */
 .filter-bar {
   display: flex; gap: 10px; flex-wrap: wrap;
-  margin-bottom: 20px; align-items: center;
+  margin-bottom: 20px; align-items: flex-end;
+}
+/* .field is width:100% globally, so flex rows stacked one control per line. */
+.filter-bar > .field,
+.gen-row > .field,
+.filter-row > .field,
+.form-row > .field {
+  width: auto;
+  min-width: 160px;
+  flex: 1 1 180px;
+  margin-bottom: 0;
+}
+.row-2 > .field,
+.bulk-form-grid > .field {
+  width: auto;
+  min-width: 0;
+  flex: 1 1 160px;
+  margin-bottom: 0;
+}
+.filter-bar > .field p-select,
+.filter-bar > .field p-inputnumber,
+.filter-bar > .field app-date-picker,
+.gen-row > .field p-select,
+.gen-row > .field p-inputnumber,
+.gen-row > .field app-date-picker,
+.filter-row > .field p-select,
+.filter-row > .field app-date-picker,
+.form-row > .field p-select,
+.form-row > .field p-inputnumber,
+.row-2 > .field p-select,
+.row-2 > .field p-inputnumber,
+.row-2 > .field app-date-picker,
+.bulk-form-grid > .field p-select,
+.bulk-form-grid > .field app-date-picker {
+  display: block;
+  width: 100%;
 }
 .search-wrap { position: relative; flex: 1; min-width: 200px; }
 .search-icon {
@@ -1608,6 +1643,13 @@ input.ng-invalid.ng-touched:focus {
 
   /* Filter bar wraps */
   .filter-bar { gap: 8px; flex-direction: column; align-items: stretch; }
+  .filter-bar > .field,
+  .gen-row > .field,
+  .filter-row > .field,
+  .form-row > .field {
+    width: 100%;
+    flex: 1 1 auto;
+  }
   .search-wrap { min-width: 0; width: 100%; flex: 1 1 100%; }
   .filter-select { min-width: 0; width: 100%; flex: 1 1 100%; }
 

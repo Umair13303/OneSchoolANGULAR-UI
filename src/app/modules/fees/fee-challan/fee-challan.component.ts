@@ -18,7 +18,7 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
   standalone: true,
   imports: [CommonModule, FormsModule, PageHeaderComponent, DatePickerComponent, Button, Select],
   template: `
-    <app-page-header title="Fee Challan" subtitle="Generate challans for a class then print 3-copy slips" />
+    <app-page-header title="Fee Challan" subtitle="Monthly challan includes tuition. Tick admission or examination only when they are due." />
 
     <!-- ── STEP 1: GENERATE (no-print) ── -->
     <div class="no-print">
@@ -91,12 +91,18 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
                     <div class="struct-preview-title">{{ selectedGroup()!.title }}</div>
                     <div class="struct-preview-sub">{{ selectedGroup()!.className }} &nbsp;·&nbsp; {{ selectedGroup()!.yearLabel }}</div>
                   </div>
-                  <div class="struct-preview-total">PKR {{ selectedGroup()!.grandTotal | number:'1.0-0' }}</div>
+                  <div class="struct-preview-total">PKR {{ selectedChallanTotal() | number:'1.0-0' }}</div>
                 </div>
+                <p class="challan-hint">Tuition is selected for this month. Admission is charged when a student is admitted. Tick Examination Fee only in an exam month.</p>
                 <table class="preview-fee-table">
                   <tbody>
                     @for (fs of selectedGroup()!.items; track fs.feeStructureId) {
-                      <tr>
+                      <tr [class.line-off]="!isStructureSelected(fs.feeStructureId)">
+                        <td class="chk">
+                          <input type="checkbox"
+                            [checked]="isStructureSelected(fs.feeStructureId)"
+                            (change)="toggleStructure(fs.feeStructureId, $event)" />
+                        </td>
                         <td>{{ fs.feeTypeName }}</td>
                         <td><span [class]="'cat-pill cat-' + (fs.feeCategory||'recurring').toLowerCase()">{{ fs.feeCategory }}</span></td>
                         <td class="amt">PKR {{ fs.amount | number:'1.0-0' }}</td>
@@ -105,16 +111,16 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
                   </tbody>
                   <tfoot>
                     <tr class="preview-total-row">
-                      <td colspan="2">Total Fee Structure</td>
-                      <td class="amt"><strong>PKR {{ selectedGroup()!.grandTotal | number:'1.0-0' }}</strong></td>
+                      <td colspan="3">This challan</td>
+                      <td class="amt"><strong>PKR {{ selectedChallanTotal() | number:'1.0-0' }}</strong></td>
                     </tr>
                     @if (selectedGroup()!.admissionTotal > 0) {
                       <tr class="preview-sub-row">
-                        <td colspan="2">Payable on Admission</td>
+                        <td colspan="3">Payable on Admission</td>
                         <td class="amt">PKR {{ selectedGroup()!.admissionTotal | number:'1.0-0' }}</td>
                       </tr>
                       <tr class="preview-sub-row">
-                        <td colspan="2">Remaining</td>
+                        <td colspan="3">Remaining monthly fees</td>
                         <td class="amt">PKR {{ selectedGroup()!.grandTotal - selectedGroup()!.admissionTotal | number:'1.0-0' }}</td>
                       </tr>
                     }
@@ -131,7 +137,7 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
               [label]="generating() ? 'Generating...' : 'Generate Challans for ' + (selectedGroup()?.className || '...')"
               icon="pi pi-bolt"
               [loading]="generating()"
-              [disabled]="generating() || !selectedGroup() || !genMonth || !genDueDate"
+              [disabled]="generating() || !selectedGroup() || !genMonth || !genDueDate || selectedStructureIds().length === 0"
               (onClick)="generate()" />
           </div>
         </div>
@@ -269,6 +275,9 @@ import { DatePickerComponent } from '../../../shared/components/date-picker/date
     .preview-fee-table { width:100%; border-collapse:collapse; font-size:13px; }
     .preview-fee-table tbody tr { border-bottom:1px solid var(--border); }
     .preview-fee-table td { padding:9px 16px; color:var(--t2); }
+    .preview-fee-table td.chk { width:36px; padding-right:0; }
+    .preview-fee-table tr.line-off { opacity:.45; }
+    .challan-hint { margin:0; padding:8px 16px; font-size:12px; color:var(--t3); background:var(--surface); }
     .preview-fee-table td.amt { text-align:right; font-family:monospace; font-weight:600; color:var(--t1); }
     .preview-total-row td { padding:10px 16px; background:var(--surface-2); font-weight:700;
       color:var(--t1); border-top:2px solid var(--border); }
@@ -382,6 +391,7 @@ export class FeeChallanComponent implements OnInit {
   allStructures = signal<FeeStructureDto[]>([]);
 
   selectedGroupKey = '';
+  selectedStructureIds = signal<number[]>([]);
 
   structureOptions = computed(() =>
     this.structureGroups().map(g => ({ label: g.title, value: g.key })));
@@ -400,12 +410,34 @@ export class FeeChallanComponent implements OnInit {
 
   onGenYearChange() {
     this.selectedGroupKey = '';
+    this.selectedStructureIds.set([]);
     this.allStructures.set([]);
     if (this.genYearId)
       this.feeSvc.getFeeStructures(this.genYearId).subscribe(s => this.allStructures.set(s.filter(x => x.isActive)));
   }
 
-  onStructureGroupChange() { /* selectedGroup() reacts automatically */ }
+  onStructureGroupChange() {
+    const items = this.selectedGroup()?.items ?? [];
+    this.selectedStructureIds.set(
+      items.filter(fs => (fs.feeCategory || 'Recurring') === 'Recurring').map(fs => fs.feeStructureId)
+    );
+  }
+
+  isStructureSelected(id: number) { return this.selectedStructureIds().includes(id); }
+
+  toggleStructure(id: number, event: Event) {
+    const checked = (event.target as HTMLInputElement).checked;
+    this.selectedStructureIds.update(ids =>
+      checked ? (ids.includes(id) ? ids : [...ids, id]) : ids.filter(x => x !== id)
+    );
+  }
+
+  selectedChallanTotal() {
+    const ids = new Set(this.selectedStructureIds());
+    return (this.selectedGroup()?.items ?? [])
+      .filter(fs => ids.has(fs.feeStructureId))
+      .reduce((sum, fs) => sum + fs.amount, 0);
+  }
 
   // Default the due date to the 10th of the selected billing month, resolved
   // to the right calendar year within the selected academic year.
@@ -452,9 +484,17 @@ export class FeeChallanComponent implements OnInit {
 
     const dueDate = this.genDueDate;
     const month   = this.genMonth ?? undefined;
-    const requests = group.items.map(fs =>
-      this.feeSvc.bulkAssign({ feeStructureId: fs.feeStructureId, classId: group.classId, academicYearId: group.academicYearId, dueDate, month })
-    );
+    const chosen = new Set(this.selectedStructureIds());
+    const requests = group.items
+      .filter(fs => chosen.has(fs.feeStructureId))
+      .map(fs =>
+        this.feeSvc.bulkAssign({ feeStructureId: fs.feeStructureId, classId: group.classId, academicYearId: group.academicYearId, dueDate, month })
+      );
+    if (!requests.length) {
+      this.generating.set(false);
+      this.genError.set('Select at least one fee to generate.');
+      return;
+    }
 
     forkJoin(requests).subscribe({
       next: (results) => {

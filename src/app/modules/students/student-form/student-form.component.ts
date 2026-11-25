@@ -648,7 +648,7 @@ interface SelectedFee {
               <div class="tab-pane">
                 <div class="section-hint">
                   <span class="material-icons-round">payments</span>
-                  <span>Select applicable fees for this student. You may also apply discounts or mark initial payments directly.</span>
+                  <span>Admission and security fees are selected automatically. Leave monthly tuition and examination fee off — those are generated on the fee challan.</span>
                 </div>
 
                 @if (feeLoadError()) {
@@ -685,10 +685,12 @@ interface SelectedFee {
                               (change)="toggleFee(fs, $event)" />
                             <div class="fee-info">
                               <span class="fee-title">{{ fs.feeTypeName }}</span>
-                              @if (fs.dueDay === 'Once') {
-                                <span class="fee-badge once">Admission / One-time</span>
+                              @if (fs.feeCategory === 'OneTime' || fs.feeCategory === 'RefundableDeposit') {
+                                <span class="fee-badge once">Charged at admission</span>
+                              } @else if (fs.feeCategory === 'OnDemand') {
+                                <span class="fee-badge recurring">Exam month only</span>
                               } @else {
-                                <span class="fee-badge recurring">{{ fs.dueDay }}</span>
+                                <span class="fee-badge recurring">Monthly</span>
                               }
                             </div>
                           </label>
@@ -2076,10 +2078,25 @@ export class StudentFormComponent implements OnInit {
     this.feeLoadError.set('');
     this.feeSvc.getFeeStructures(academicYearId, classId).subscribe({
       next: structures => {
+        const atAdmission = (fs: FeeStructureDto) =>
+          fs.feeCategory === 'OneTime' || fs.feeCategory === 'RefundableDeposit';
         const sorted = [...structures].sort((a, b) =>
-          (a.dueDay === 'Once' ? 0 : 1) - (b.dueDay === 'Once' ? 0 : 1)
+          (atAdmission(a) ? 0 : 1) - (atAdmission(b) ? 0 : 1)
         );
         this.feeStructures.set(sorted);
+        if (this.selectedFees().length === 0) {
+          const due = this.f['admissionDate'].value || new Date().toISOString().slice(0, 10);
+          this.selectedFees.set(sorted.filter(atAdmission).map(fs => ({
+            feeStructureId: fs.feeStructureId,
+            feeTypeName: fs.feeTypeName,
+            dueDay: fs.dueDay,
+            amountDue: fs.amount,
+            discount: 0,
+            dueDate: due,
+            isPaid: false,
+            amountPaid: 0
+          })));
+        }
         this.loadingFees.set(false);
       },
       error: (err: any) => {

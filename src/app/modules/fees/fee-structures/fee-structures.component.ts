@@ -40,10 +40,9 @@ interface StructureGroup {
     <app-page-header title="Fee Structures" subtitle="Assign fee amounts to classes per academic year" />
 
     <!-- Toolbar -->
-    <div class="toolbar mb-3 flex flex-wrap items-center justify-between gap-3">
-      <div class="flex flex-wrap items-center gap-2">
+    <div class="fs-toolbar">
+      <div class="fs-filters">
         <p-select
-          class="w-full sm:w-52"
           [options]="years()"
           optionLabel="yearLabel"
           optionValue="academicYearId"
@@ -53,7 +52,6 @@ interface StructureGroup {
           [(ngModel)]="filterYearId"
           (onChange)="load()" />
         <p-select
-          class="w-full sm:w-52"
           [options]="classes()"
           optionLabel="className"
           optionValue="classId"
@@ -211,6 +209,26 @@ interface StructureGroup {
     <app-confirm-delete />
   `,
   styles: [`
+    .fs-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .fs-filters {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .fs-filters p-select {
+      width: 13rem;
+      max-width: 100%;
+      flex: 0 0 13rem;
+    }
+
     .card { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
 
     .empty-state { display:flex; flex-direction:column; align-items:center; gap:10px; text-align:center; padding:48px 20px; color:var(--t4); }
@@ -287,6 +305,11 @@ interface StructureGroup {
     .req  { color:var(--red); }
     .err { font-size:11px; color:var(--red); }
     .alert-err { background:#fee2e2; color:#dc2626; border:1px solid #dc2626; border-radius:8px; padding:9px 13px; font-size:13px; margin-bottom:10px; }
+
+    @media (max-width: 640px) {
+      .fs-filters { width: 100%; }
+      .fs-filters p-select { width: 100%; flex: 1 1 100%; }
+    }
   `]
 })
 export class FeeStructuresComponent implements OnInit {
